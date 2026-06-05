@@ -456,6 +456,9 @@ export class Player {
       
       if (!cameraTouch) return;
       
+      // 阻止默认行为以防触发移动端手势返回上一页
+      e.preventDefault();
+      
       const deltaX = cameraTouch.clientX - previousMousePosition.x;
       const deltaY = cameraTouch.clientY - previousMousePosition.y;
 
@@ -463,7 +466,7 @@ export class Player {
       this.cameraAngleV = Math.max(0.1, Math.min(1.2, this.cameraAngleV + deltaY * 0.005));
 
       previousMousePosition = { x: cameraTouch.clientX, y: cameraTouch.clientY };
-    });
+    }, { passive: false });
 
     const handleCameraTouchEnd = (e) => {
       if (cameraTouchId === null) return;

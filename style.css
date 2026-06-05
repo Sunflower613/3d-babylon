@@ -642,7 +642,7 @@ body, html {
    Media Queries & Responsive Styling
    ========================================================================== */
 
-@media (max-width: 768px) {
+@media (max-width: 768px), (pointer: coarse) {
   .hud-controls-hint {
     display: none; /* Hide keyboard shortcuts on mobile */
   }
