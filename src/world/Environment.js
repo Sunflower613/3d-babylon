@@ -45,9 +45,10 @@ export class Environment {
     dirLight.position.set(20, 40, 20);
     dirLight.castShadow = true;
     
-    // Shadows
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
+    // Shadows (Lower resolution on mobile for performance)
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    dirLight.shadow.mapSize.width = isMobile ? 1024 : 2048;
+    dirLight.shadow.mapSize.height = isMobile ? 1024 : 2048;
     dirLight.shadow.camera.near = 0.5;
     dirLight.shadow.camera.far = 100;
     

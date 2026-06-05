@@ -1321,10 +1321,10 @@ export class IslandGenerator {
     );
 
     // String 2: From cottage front-right corner to the cottage pathway streetlamp post top
-    // Cottage corner: x = -8.1, y = 3.8, z = -7.1
+    // Cottage corner: x = -8.1, y = 3.2, z = -6.9 (lowered and shifted forward to avoid roof clipping)
     // Streetlamp post top: x = -8.0, y = 0.6 + 2.2 = 2.8, z = -4.0 (avoiding bulb and shade clipping)
     this.createFairyLightString(
-      new THREE.Vector3(-8.1, 3.8, -7.1),
+      new THREE.Vector3(-8.1, 3.2, -6.9),
       new THREE.Vector3(-8.0, 2.8, -4.0),
       12, // bulbCount
       0.5 // sag

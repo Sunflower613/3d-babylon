@@ -377,7 +377,7 @@ export class HouseGenerator {
 
     const wardrobeLight = new THREE.PointLight(0xffecc2, 2.2, 10, 1.2);
     wardrobeLight.position.set(0, 1.9, 0);
-    wardrobeLight.castShadow = true;
+    wardrobeLight.castShadow = false;
     wLampGroup.add(wardrobeLight);
 
     wardrobeGroup.add(wLampGroup);
@@ -658,10 +658,7 @@ export class HouseGenerator {
     // Point Light source (warm gold tone, made brighter and larger range)
     const light = new THREE.PointLight(0xffecc2, 1.7, 28, 1.2);
     light.position.set(0, 3.82, 0); // slightly below bulb
-    light.castShadow = true;
-    light.shadow.bias = -0.003;
-    light.shadow.mapSize.width = 1024;
-    light.shadow.mapSize.height = 1024;
+    light.castShadow = false;
     this.group.add(light);
   }
 
@@ -773,7 +770,7 @@ export class HouseGenerator {
     // Light
     const floorLampLight = new THREE.PointLight(0xffd180, 1.2, 12, 1.2);
     floorLampLight.position.set(0, 2.0, 0);
-    floorLampLight.castShadow = true;
+    floorLampLight.castShadow = false;
     lampGroup.add(floorLampLight);
 
     this.group.add(lampGroup);

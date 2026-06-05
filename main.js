@@ -71,9 +71,10 @@ class GameApp {
     // 3. Create WebGL Renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    this.renderer.setPixelRatio(isMobile ? Math.min(window.devicePixelRatio, 1.35) : Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = isMobile ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.LinearToneMapping;
     this.renderer.toneMappingExposure = 1.35;
     this.container.appendChild(this.renderer.domElement);
