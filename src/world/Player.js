@@ -699,15 +699,18 @@ export class Player {
     // Touch support for mobile camera look
     let cameraTouchId = null;
 
-    window.addEventListener('touchstart', (e) => {
+    document.addEventListener('touchstart', (e) => {
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
         
-        const isUI = touch.target.closest('#mobile-controls') || 
-                     touch.target.closest('.hud-header') || 
-                     touch.target.closest('.modal-overlay') || 
-                     touch.target.closest('.modal-card') ||
-                     touch.target.id === 'audio-btn';
+        const targetEl = touch.target && touch.target.closest ? touch.target : null;
+        const isUI = targetEl ? (
+                     targetEl.closest('#mobile-controls') || 
+                     targetEl.closest('.hud-header') || 
+                     targetEl.closest('.modal-overlay') || 
+                     targetEl.closest('.modal-card') ||
+                     targetEl.id === 'audio-btn'
+                    ) : false;
                      
         const isLeftHalf = touch.clientX < window.innerWidth * 0.45;
                      
@@ -720,7 +723,7 @@ export class Player {
       }
     });
 
-    window.addEventListener('touchmove', (e) => {
+    document.addEventListener('touchmove', (e) => {
       if (!isDragging || cameraTouchId === null) return;
       
       let cameraTouch = null;
@@ -762,8 +765,8 @@ export class Player {
       }
     };
 
-    window.addEventListener('touchend', handleCameraTouchEnd);
-    window.addEventListener('touchcancel', handleCameraTouchEnd);
+    document.addEventListener('touchend', handleCameraTouchEnd);
+    document.addEventListener('touchcancel', handleCameraTouchEnd);
 
     // Lock/Unlock controls based on modal popups
     window.addEventListener('modal-opened', () => {

@@ -300,12 +300,15 @@ class GameApp {
         const touch = e.changedTouches[i];
         const isLeftHalf = touch.clientX < window.innerWidth * 0.45;
         
-        const isUI = touch.target.closest('.hud-header') || 
-                     touch.target.closest('.modal-overlay') || 
-                     touch.target.closest('.modal-card') || 
-                     touch.target.closest('.action-buttons') || 
-                     touch.target.id === 'audio-btn' ||
-                     touch.target.id === 'btn-back-2d';
+        const targetEl = touch.target && touch.target.closest ? touch.target : null;
+        const isUI = targetEl ? (
+                     targetEl.closest('.hud-header') || 
+                     targetEl.closest('.modal-overlay') || 
+                     targetEl.closest('.modal-card') || 
+                     targetEl.closest('.action-buttons') || 
+                     targetEl.id === 'audio-btn' ||
+                     targetEl.id === 'btn-back-2d'
+                    ) : false;
                      
         if (isLeftHalf && !isUI && joystickTouchId === null) {
           isTouching = true;
@@ -384,10 +387,10 @@ class GameApp {
       }
     };
 
-    window.addEventListener('touchstart', handleTouchStart);
-    window.addEventListener('touchmove', handleTouchMove, { passive: false });
-    window.addEventListener('touchend', handleTouchEnd);
-    window.addEventListener('touchcancel', handleTouchEnd);
+    document.addEventListener('touchstart', handleTouchStart);
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
+    document.addEventListener('touchcancel', handleTouchEnd);
   }
 
   initAudioSynth() {
