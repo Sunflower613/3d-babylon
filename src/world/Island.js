@@ -228,13 +228,13 @@ export class IslandGenerator {
     const centerGroup = new THREE.Group();
     centerGroup.position.set(0, 0.6, 0);
 
-    // Beach/Snow Campfire Logs
+    // Beach/Snow Campfire Logs (leaning inwards at the top, forming a stable tripod)
     const logGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.8, 5);
-    logGeo.rotateZ(-Math.PI / 3); // Reversed to lean inwards at the top
+    logGeo.rotateZ(Math.PI / 6); 
     for (let i = 0; i < 3; i++) {
       const log = new THREE.Mesh(logGeo, this.materials.wood);
-      log.position.set(-1.8, 0.15, 1.8); // Lifted to Y = 0.15 to stand on ground
-      log.rotation.y = (i * Math.PI) / 3;
+      log.position.set(-1.8, 0.15, 1.8); // Resting slightly below the flame center to anchor in sand
+      log.rotation.y = (i * Math.PI * 2) / 3; // Distributed symmetrically around the full 360 degrees
       log.castShadow = true;
       centerGroup.add(log);
     }
