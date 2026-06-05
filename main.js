@@ -79,7 +79,7 @@ class GameApp {
     this.player = new Player(this.scene, this.camera, this.islandGen.colliders, this.themeConfig);
     
     // Interaction prompt sensor
-    this.interactMgr = new InteractsManager(this.player, this.islandGen, this.modalMgr);
+    this.interactMgr = new InteractsManager(this.player, this.islandGen, this.modalMgr, this);
 
     const isChristmas = siteConfig.activeTheme === 'christmas';
 
@@ -95,10 +95,19 @@ class GameApp {
       const ball = new BeachBall(this.scene, spawnX, 1.3, spawnZ, color);
       this.beachBallsList.push(ball);
 
-      // Keep at most 5 balls on screen (FIFO)
+      // Keep at most 5 balls on screen (FIFO, excluding carried ones)
       if (this.beachBallsList.length > 5) {
-        const oldBall = this.beachBallsList.shift();
-        oldBall.destroy();
+        let oldestIndex = -1;
+        for (let i = 0; i < this.beachBallsList.length; i++) {
+          if (!this.beachBallsList[i].isCarried) {
+            oldestIndex = i;
+            break;
+          }
+        }
+        if (oldestIndex !== -1) {
+          const oldBall = this.beachBallsList.splice(oldestIndex, 1)[0];
+          oldBall.destroy();
+        }
       }
 
       // Play cute bubble pop / snowball sound

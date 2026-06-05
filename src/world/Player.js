@@ -531,47 +531,52 @@ export class Player {
 
   update(delta, time) {
     if (this.isSitting && this.swingRef) {
-      const rotationX = this.swingRef.rotation.x;
-      const seatLength = 1.1;
-      this.position.x = this.swingRef.parent.position.x + this.swingRef.position.x;
-      this.position.y = (this.swingRef.parent.position.y + this.swingRef.position.y) - (seatLength * Math.cos(rotationX)) - 0.28;
-      this.position.z = this.swingRef.parent.position.z + this.swingRef.position.z - (seatLength * Math.sin(rotationX));
+      // If the player presses any movement key or jump, stand up!
+      if (this.keys.w || this.keys.s || this.keys.a || this.keys.d || this.keys.space) {
+        this.standUp();
+      } else {
+        const rotationX = this.swingRef.rotation.x;
+        const seatLength = 1.1;
+        this.position.x = this.swingRef.parent.position.x + this.swingRef.position.x;
+        this.position.y = (this.swingRef.parent.position.y + this.swingRef.position.y) - (seatLength * Math.cos(rotationX)) - 0.28;
+        this.position.z = this.swingRef.parent.position.z + this.swingRef.position.z - (seatLength * Math.sin(rotationX));
 
-      this.velocity.set(0, 0, 0);
-      this.isGrounded = true;
-      this.group.position.copy(this.position);
-      this.group.rotation.y = 0; // Face Z axis
+        this.velocity.set(0, 0, 0);
+        this.isGrounded = true;
+        this.group.position.copy(this.position);
+        this.group.rotation.y = 0; // Face Z axis
 
-      // Sitting pose
-      this.footL.position.set(-0.16, 0.15, 0.18);
-      this.footR.position.set(0.16, 0.15, 0.18);
-      this.body.position.y = 0.3; 
-      this.head.position.y = 0.8;
+        // Sitting pose
+        this.footL.position.set(-0.16, 0.15, 0.18);
+        this.footR.position.set(0.16, 0.15, 0.18);
+        this.body.position.y = 0.3; 
+        this.head.position.y = 0.8;
 
-      // Cape and twins sway with swing
-      this.cape.rotation.x = -0.1 + Math.sin(time * 0.002) * 0.05;
-      const capePositions = this.cape.geometry.attributes.position;
-      for (let i = 0; i < capePositions.count; i++) {
-        capePositions.setZ(i, 0);
+        // Cape and twins sway with swing
+        this.cape.rotation.x = -0.1 + Math.sin(time * 0.002) * 0.05;
+        const capePositions = this.cape.geometry.attributes.position;
+        for (let i = 0; i < capePositions.count; i++) {
+          capePositions.setZ(i, 0);
+        }
+        capePositions.needsUpdate = true;
+
+        this.tailL.rotation.z = -0.2 - Math.sin(time * 0.002) * 0.1;
+        this.tailR.rotation.z = 0.2 + Math.sin(time * 0.002) * 0.1;
+
+        // Camera follow sitting
+        const targetCamX = this.position.x + Math.sin(this.cameraAngleH) * Math.cos(this.cameraAngleV) * this.cameraDistance;
+        const targetCamY = this.position.y + Math.sin(this.cameraAngleV) * this.cameraDistance + 0.8;
+        const targetCamZ = this.position.z + Math.cos(this.cameraAngleH) * Math.cos(this.cameraAngleV) * this.cameraDistance;
+
+        this.camera.position.x += (targetCamX - this.camera.position.x) * 0.08;
+        this.camera.position.y += (targetCamY - this.camera.position.y) * 0.08;
+        this.camera.position.z += (targetCamZ - this.camera.position.z) * 0.08;
+
+        const lookAtTarget = this.position.clone().add(new THREE.Vector3(0, 0.8, 0));
+        this.camera.lookAt(lookAtTarget);
+
+        return;
       }
-      capePositions.needsUpdate = true;
-
-      this.tailL.rotation.z = -0.2 - Math.sin(time * 0.002) * 0.1;
-      this.tailR.rotation.z = 0.2 + Math.sin(time * 0.002) * 0.1;
-
-      // Camera follow sitting
-      const targetCamX = this.position.x + Math.sin(this.cameraAngleH) * Math.cos(this.cameraAngleV) * this.cameraDistance;
-      const targetCamY = this.position.y + Math.sin(this.cameraAngleV) * this.cameraDistance + 0.8;
-      const targetCamZ = this.position.z + Math.cos(this.cameraAngleH) * Math.cos(this.cameraAngleV) * this.cameraDistance;
-
-      this.camera.position.x += (targetCamX - this.camera.position.x) * 0.08;
-      this.camera.position.y += (targetCamY - this.camera.position.y) * 0.08;
-      this.camera.position.z += (targetCamZ - this.camera.position.z) * 0.08;
-
-      const lookAtTarget = this.position.clone().add(new THREE.Vector3(0, 0.8, 0));
-      this.camera.lookAt(lookAtTarget);
-
-      return;
     }
 
     // 1. Movement vector relative to camera direction

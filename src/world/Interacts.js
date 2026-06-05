@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 
 export class InteractsManager {
-  constructor(player, generator, modalManager) {
+  constructor(player, generator, modalManager, app) {
     this.player = player;
     this.generator = generator;
     this.modalManager = modalManager;
+    this.app = app;
     
     this.promptEl = document.getElementById('interact-prompt');
     this.promptTextEl = this.promptEl ? this.promptEl.querySelector('.prompt-text') : null;
@@ -48,6 +49,13 @@ export class InteractsManager {
   }
 
   update() {
+    // If the player is carrying a ball, they can drop it anywhere!
+    if (this.player.carriedBall) {
+      this.activeInteractZone = { id: 'drop_ball', name: '放下' };
+      this.showPrompt('放下');
+      return;
+    }
+
     if (this.player.controlsLocked) return;
 
     let closestZone = null;
@@ -66,6 +74,28 @@ export class InteractsManager {
         if (distance < minDistance) {
           minDistance = distance;
           closestZone = zone;
+        }
+      }
+    }
+
+    // Also search for closest beach ball to pick up
+    if (this.app && this.app.beachBallsList) {
+      for (const ball of this.app.beachBallsList) {
+        if (ball.isCarried) continue;
+        const dx = playerPos.x - ball.position.x;
+        const dy = playerPos.y - ball.position.y;
+        const dz = playerPos.z - ball.position.z;
+        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+        if (distance < 1.6) { // Pick up radius
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestZone = {
+              id: 'pick_ball',
+              name: '抱起',
+              ball: ball
+            };
+          }
         }
       }
     }
@@ -98,15 +128,56 @@ export class InteractsManager {
     }
   }
 
+  pickUpBall(ball) {
+    ball.isCarried = true;
+    this.player.carriedBall = ball;
+    this.hidePrompt();
+    if (this.mobileInteractBtn) {
+      this.mobileInteractBtn.textContent = '👐';
+    }
+  }
+
+  dropCarriedBall() {
+    const ball = this.player.carriedBall;
+    if (!ball) return;
+
+    ball.isCarried = false;
+    this.player.carriedBall = null;
+
+    // Toss forward slightly based on player facing direction
+    const playerForward = new THREE.Vector3(0, 0, 1).applyQuaternion(this.player.group.quaternion);
+    ball.velocity.copy(playerForward).multiplyScalar(5.5); // Toss force
+    ball.velocity.y = 2.8; // Hop up slightly on drop
+    ball.isGrounded = false;
+
+    this.hidePrompt();
+    if (this.mobileInteractBtn) {
+      this.mobileInteractBtn.textContent = '✨';
+    }
+  }
+
   triggerActiveInteraction() {
     if (!this.activeInteractZone) return;
 
     const zone = this.activeInteractZone;
 
+    if (zone.id === 'drop_ball') {
+      this.dropCarriedBall();
+      return;
+    }
+
+    if (zone.id === 'pick_ball') {
+      this.pickUpBall(zone.ball);
+      return;
+    }
+
     if (zone.id === 'swing') {
       if (this.player.isSitting) {
         this.player.standUp();
       } else {
+        if (this.player.carriedBall) {
+          this.dropCarriedBall();
+        }
         this.player.sit(this.generator.swingSeat);
         this.hidePrompt();
       }

@@ -51,6 +51,18 @@ export class BeachBall {
   }
 
   update(delta, player) {
+    if (this.isCarried) {
+      // Hold ball in front of player's chest
+      const playerForward = new THREE.Vector3(0, 0, 1).applyQuaternion(player.group.quaternion);
+      this.position.copy(player.position).addScaledVector(playerForward, 0.65);
+      this.position.y += 0.65;
+      
+      this.velocity.set(0, 0, 0);
+      this.isGrounded = false;
+      this.group.position.copy(this.position);
+      return;
+    }
+
     // 1. Apply gravity if in the air
     if (!this.isGrounded) {
       this.velocity.y -= this.gravity * delta;
