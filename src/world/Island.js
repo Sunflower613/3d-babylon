@@ -1045,7 +1045,7 @@ export class IslandGenerator {
     const gableShape = new THREE.Shape();
     gableShape.moveTo(-1.9, 3.2);
     gableShape.lineTo(1.9, 3.2);
-    gableShape.lineTo(0, 4.12); // Reduced from 4.27 to 4.12 to hide the peak inside the roof
+    gableShape.lineTo(0, 4.15); // Adjusted to hide inside the new roof height
     gableShape.closePath();
 
     const gableGeo = new THREE.ExtrudeGeometry(gableShape, {
@@ -1069,16 +1069,16 @@ export class IslandGenerator {
     const roofColor = isChristmas ? 0xd50000 : 0xff7043;
     const roofMat = new THREE.MeshLambertMaterial({ color: roofColor, flatShading: true });
     
-    // Width reduced to 2.45, depth reduced to 4.0 to make it smaller and avoid clipping
-    const roofL = new THREE.Mesh(new THREE.BoxGeometry(2.45, 0.08, 4.0), roofMat);
-    roofL.position.set(-1.05, 3.55, 0); // Position shifted slightly inward and down
-    roofL.rotation.z = 0.55;
+    // Width adjusted to 2.5, Y height raised to 3.68, slope rotation reduced to 0.48 to cover walls and pillars
+    const roofL = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.08, 4.0), roofMat);
+    roofL.position.set(-1.05, 3.68, 0); 
+    roofL.rotation.z = 0.48;
     roofL.castShadow = true;
     houseGroup.add(roofL);
 
-    const roofR = new THREE.Mesh(new THREE.BoxGeometry(2.45, 0.08, 4.0), roofMat);
-    roofR.position.set(1.05, 3.55, 0);
-    roofR.rotation.z = -0.55;
+    const roofR = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.08, 4.0), roofMat);
+    roofR.position.set(1.05, 3.68, 0);
+    roofR.rotation.z = -0.48;
     roofR.castShadow = true;
     houseGroup.add(roofR);
 
@@ -1321,10 +1321,10 @@ export class IslandGenerator {
     );
 
     // String 2: From cottage front-right corner to the cottage pathway streetlamp post top
-    // Cottage corner: x = -8.1, y = 3.2, z = -6.9 (lowered and shifted forward to avoid roof clipping)
+    // Cottage corner: x = -8.1, y = 3.65, z = -6.9 (adjusted under the new roof overhang to avoid clipping)
     // Streetlamp post top: x = -8.0, y = 0.6 + 2.2 = 2.8, z = -4.0 (avoiding bulb and shade clipping)
     this.createFairyLightString(
-      new THREE.Vector3(-8.1, 3.2, -6.9),
+      new THREE.Vector3(-8.1, 3.65, -6.9),
       new THREE.Vector3(-8.0, 2.8, -4.0),
       12, // bulbCount
       0.5 // sag
