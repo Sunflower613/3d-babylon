@@ -10,10 +10,47 @@ import { BeachBall } from './src/world/BeachBall.js';
 
 class GameApp {
   constructor() {
+    // Prevent double click selection / zoom and dictionary translation popups
+    document.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('selectstart', (e) => {
+      // Allow select in input fields if any, but prevent globally
+      if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+      }
+    });
+
     // Detect mobile touch capability and add class to body
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
     if (isTouchDevice) {
       document.body.classList.add('is-mobile');
+      
+      // Auto-enter fullscreen mode on first user interaction (touch or click)
+      const enableAutoFullscreen = () => {
+        if (!document.fullscreenElement && 
+            !document.webkitFullscreenElement && 
+            !document.mozFullScreenElement && 
+            !document.msFullscreenElement) {
+          
+          const docEl = document.documentElement;
+          if (docEl.requestFullscreen) {
+            docEl.requestFullscreen().catch(() => {});
+          } else if (docEl.webkitRequestFullscreen) {
+            docEl.webkitRequestFullscreen();
+          } else if (docEl.mozRequestFullScreen) {
+            docEl.mozRequestFullScreen();
+          } else if (docEl.msRequestFullscreen) {
+            docEl.msRequestFullscreen();
+          }
+        }
+        document.removeEventListener('touchstart', enableAutoFullscreen);
+        document.removeEventListener('click', enableAutoFullscreen);
+      };
+      
+      document.addEventListener('touchstart', enableAutoFullscreen);
+      document.addEventListener('click', enableAutoFullscreen);
     } else {
       const detectTouch = () => {
         document.body.classList.add('is-mobile');
