@@ -510,6 +510,18 @@ export class Player {
         this.keys.space = false;
       });
     }
+
+    const btnRun = document.getElementById('btn-run');
+    if (btnRun) {
+      btnRun.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (!this.controlsLocked) this.keys.shift = true;
+      });
+      btnRun.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        this.keys.shift = false;
+      });
+    }
   }
 
   resetInputs() {

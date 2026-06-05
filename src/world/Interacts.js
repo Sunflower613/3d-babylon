@@ -85,7 +85,7 @@ export class InteractsManager {
       this.promptEl.classList.add('visible');
     }
     if (this.mobileInteractBtn) {
-      this.mobileInteractBtn.style.display = 'block';
+      this.mobileInteractBtn.style.display = 'flex';
     }
   }
 
@@ -93,7 +93,9 @@ export class InteractsManager {
     if (this.promptEl) {
       this.promptEl.classList.remove('visible');
     }
-    // We keep button styled but we can dim or hide it
+    if (this.mobileInteractBtn) {
+      this.mobileInteractBtn.style.display = 'none';
+    }
   }
 
   triggerActiveInteraction() {

@@ -45,16 +45,14 @@
       <div id="joystick-zone"></div>
     </div>
     <div class="action-buttons">
-      <button class="action-btn" id="btn-interact">Interact (E)</button>
-      <button class="action-btn" id="btn-jump">Jump</button>
+      <button class="action-btn" id="btn-interact" aria-label="交互" title="交互">✨</button>
+      <button class="action-btn" id="btn-run" aria-label="加速" title="加速">🏃</button>
+      <button class="action-btn" id="btn-jump" aria-label="跳跃" title="跳跃">🦘</button>
     </div>
   </div>
 
   <!-- 交互感应提示（走进触发区域时显示） -->
-  <div class="interact-prompt" id="interact-prompt">
-    <span class="prompt-icon">💡</span>
-    <span class="prompt-text">按下 <kbd class="key-kbd">E</kbd> 键交互</span>
-  </div>
+  <div class="interact-prompt" id="interact-prompt">E</div>
 
   <!-- -------------------- 弹窗层 (Modal Overlays) -------------------- -->
 
