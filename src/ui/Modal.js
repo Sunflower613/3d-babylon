@@ -175,7 +175,7 @@ export class ModalManager {
     if (id === 'easel') {
       const easelIframe = document.getElementById('easel-iframe');
       if (easelIframe) {
-        easelIframe.src = '../../games/paint/paint2.html';
+        easelIframe.src = './paint.html';
       }
     }
 

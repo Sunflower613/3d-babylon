@@ -1193,12 +1193,17 @@ export class IslandGenerator {
 
   createStreetlamps() {
     this.streetlights = [];
-    this.createStreetlamp(-8.0, -4.0); // near cottage pathway
-    this.createStreetlamp(-4.0, -11.0); // near arcade
-    this.createStreetlamp(2.0, 4.0); // near swing
+    
+    // Colorful Neon lights: Pink near cottage, Cyan near arcade, Lime Green near swing
+    this.createStreetlamp(-8.0, -4.0, 0xff007f); 
+    this.createStreetlamp(-4.0, -11.0, 0x00f5ff); 
+    this.createStreetlamp(2.0, 4.0, 0x39ff14); 
+
+    // Create fairy lights strings
+    this.createFairyLightsDecoration();
   }
 
-  createStreetlamp(x, z) {
+  createStreetlamp(x, z, colorHex = 0xffeb3b) {
     const lampGroup = new THREE.Group();
     lampGroup.position.set(x, 0.6, z); // 0.6 is ground Y
 
@@ -1209,8 +1214,9 @@ export class IslandGenerator {
     post.castShadow = true;
     lampGroup.add(post);
 
-    // 2. Golden frame hanger
-    const hanger = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.06, 0.06), this.materials.neonBlue || this.materials.neonRed);
+    // 2. Neon-colored frame hanger
+    const hangerMat = new THREE.MeshBasicMaterial({ color: colorHex });
+    const hanger = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.06, 0.06), hangerMat);
     hanger.position.set(0.18, 2.1, 0);
     lampGroup.add(hanger);
 
@@ -1220,8 +1226,8 @@ export class IslandGenerator {
     shade.castShadow = true;
     lampGroup.add(shade);
 
-    // 4. Glowing bulb
-    const bulbMat = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
+    // 4. Glowing bulb matching neon color
+    const bulbMat = new THREE.MeshBasicMaterial({ color: colorHex });
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.08, 5, 5), bulbMat);
     bulb.position.set(0.36, 1.76, 0);
     lampGroup.add(bulb);
@@ -1229,9 +1235,83 @@ export class IslandGenerator {
     this.scene.add(lampGroup);
 
     // 5. Point Light (initially 0 intensity, faded in/out dynamically)
-    const light = new THREE.PointLight(0xffb74d, 0.0, 9, 1.3);
+    const light = new THREE.PointLight(colorHex, 0.0, 9, 1.3);
     light.position.set(x + 0.36, 2.3, z); // world position slightly below bulb
     this.scene.add(light);
     this.streetlights.push(light);
+  }
+
+  createFairyLightString(p1, p2, bulbCount = 12, sag = 0.4) {
+    const colors = [0xff0055, 0x00f5ff, 0x39ff14, 0xffeb3b, 0xbd00ff, 0xff9100];
+    
+    // Draw a thin dark wire/line between the endpoints
+    const points = [];
+    const segments = 20;
+    for (let i = 0; i <= segments; i++) {
+      const t = i / segments;
+      const x = p1.x + (p2.x - p1.x) * t;
+      const z = p1.z + (p2.z - p1.z) * t;
+      const y = p1.y + (p2.y - p1.y) * t - sag * Math.sin(t * Math.PI);
+      points.push(new THREE.Vector3(x, y, z));
+    }
+    
+    const curve = new THREE.CatmullRomCurve3(points);
+    const wireGeo = new THREE.TubeGeometry(curve, 20, 0.012, 4, false);
+    const wireMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
+    const wire = new THREE.Mesh(wireGeo, wireMat);
+    this.scene.add(wire);
+
+    // Add glowing colorful bulbs along the wire
+    const bulbGeo = new THREE.SphereGeometry(0.06, 5, 5);
+    
+    for (let i = 0; i < bulbCount; i++) {
+      const t = (i + 0.5) / bulbCount;
+      const pos = curve.getPointAt(t);
+      const color = colors[i % colors.length];
+      
+      const bulbMat = new THREE.MeshBasicMaterial({ color: color });
+      const bulbMesh = new THREE.Mesh(bulbGeo, bulbMat);
+      bulbMesh.position.copy(pos);
+      this.scene.add(bulbMesh);
+
+      // Create a small point light on every 3rd bulb to give real night illumination
+      if (i % 3 === 1) {
+        const pLight = new THREE.PointLight(color, 0.0, 4, 1.5);
+        pLight.position.copy(pos);
+        pLight.userData = { maxIntensity: 0.85 };
+        this.scene.add(pLight);
+        this.streetlights.push(pLight);
+      }
+    }
+  }
+
+  createFairyLightsDecoration() {
+    // String 1: Draped across cottage front entrance pillars
+    // left pillar is at x = -11.9, z = -7.1, right pillar is at x = -8.1, z = -7.1 (pillars top at y = 3.8)
+    this.createFairyLightString(
+      new THREE.Vector3(-11.9, 3.8, -7.1),
+      new THREE.Vector3(-8.1, 3.8, -7.1),
+      10, // bulbCount
+      0.35 // sag
+    );
+
+    // String 2: From cottage front-right corner to the cottage pathway streetlamp
+    // Cottage corner: x = -8.1, y = 3.8, z = -7.1
+    // Streetlamp bulb: x = -8.0 + 0.36 = -7.64, y = 0.6 + 1.76 = 2.36, z = -4.0
+    this.createFairyLightString(
+      new THREE.Vector3(-8.1, 3.8, -7.1),
+      new THREE.Vector3(-7.64, 2.36, -4.0),
+      12, // bulbCount
+      0.5 // sag
+    );
+
+    // String 3: Draped under the swing crossbar
+    // Swing crossbar left end: (3.5, 2.65, 6.0), right end: (5.5, 2.65, 6.0)
+    this.createFairyLightString(
+      new THREE.Vector3(3.5, 2.65, 6.0),
+      new THREE.Vector3(5.5, 2.65, 6.0),
+      8, // bulbCount
+      0.25 // sag
+    );
   }
 }

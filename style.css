@@ -671,7 +671,7 @@ body, html {
    Media Queries & Responsive Styling
    ========================================================================== */
 
-@media (max-width: 950px), (pointer: coarse), (hover: none) {
+@media (max-width: 1150px), (max-height: 600px), (pointer: coarse), (hover: none) {
   .hud-controls-hint {
     display: none; /* Hide keyboard shortcuts on mobile */
   }
@@ -708,6 +708,36 @@ body, html {
   .project-item {
     padding: 16px;
   }
+}
+
+/* Explicit class-based mobile triggers */
+body.is-mobile .hud-controls-hint {
+  display: none !important;
+}
+body.is-mobile .mobile-controls {
+  display: flex !important;
+}
+body.is-mobile .interact-prompt {
+  display: none !important;
+}
+body.is-mobile .modal-card {
+  width: 92%;
+  border-radius: 20px;
+}
+body.is-mobile .modal-header {
+  padding: 20px 20px 10px;
+}
+body.is-mobile .modal-body {
+  padding: 10px 20px 20px;
+}
+body.is-mobile .modal-body.scrollable {
+  max-height: calc(70vh - 90px);
+}
+body.is-mobile .projects-grid {
+  grid-template-columns: 1fr;
+}
+body.is-mobile .project-item {
+  padding: 16px;
 }
 
 /* ==========================================================================
@@ -945,7 +975,7 @@ body, html {
 }
 
 /* Responsive Wardrobe Modals for Mobile devices */
-@media (max-width: 950px), (pointer: coarse), (hover: none) {
+@media (max-width: 1150px), (pointer: coarse), (hover: none) {
   .wardrobe-container {
     flex-direction: column;
     justify-content: flex-end;
@@ -1053,14 +1083,14 @@ body, html {
   50% { transform: rotate(-90deg); }
 }
 
-@media (max-width: 950px) and (orientation: portrait) {
+@media (max-width: 1150px) and (orientation: portrait) {
   #rotation-overlay {
     display: flex;
   }
 }
 
 /* Modal Game responsive sizing (near-fullscreen on mobile) */
-@media (max-width: 950px) {
+@media (max-width: 1150px) {
   .modal-game {
     width: 96vw !important;
     height: 94vh !important;
@@ -1072,7 +1102,7 @@ body, html {
 }
 
 /* Responsive Wardrobe Modals for Mobile Landscape */
-@media (max-width: 950px) and (orientation: landscape) {
+@media (max-width: 1150px) and (orientation: landscape) {
   .wardrobe-container {
     flex-direction: row !important;
     justify-content: space-between !important;

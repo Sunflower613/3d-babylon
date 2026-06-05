@@ -10,6 +10,18 @@ import { BeachBall } from './src/world/BeachBall.js';
 
 class GameApp {
   constructor() {
+    // Detect mobile touch capability and add class to body
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+    if (isTouchDevice) {
+      document.body.classList.add('is-mobile');
+    } else {
+      const detectTouch = () => {
+        document.body.classList.add('is-mobile');
+        window.removeEventListener('touchstart', detectTouch);
+      };
+      window.addEventListener('touchstart', detectTouch);
+    }
+
     this.container = document.getElementById('canvas-container');
     this.clock = new THREE.Clock();
     
