@@ -241,7 +241,7 @@ export class HouseGenerator {
     bedGroup.add(lampShade);
 
     const bedsideLight = new THREE.PointLight(0xffb74d, 0.9, 8, 1.5);
-    besideLight.position.set(-1.8, 0.65, -1.0);
+    bedsideLight.position.set(-1.8, 0.65, -1.0);
     bedGroup.add(bedsideLight);
 
     this.group.add(bedGroup);
