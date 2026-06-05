@@ -276,7 +276,7 @@ export class HouseGenerator {
 
     const leg3 = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 2.4, 4), this.materials.wood);
     leg3.position.set(0, 1.15, -0.5);
-    leg3.rotation.x = -0.22;
+    leg3.rotation.x = 0.22; // Corrected sign to lean forward at the top and spread back at the bottom
     leg3.castShadow = true;
     easelGroup.add(leg3);
 
@@ -345,13 +345,49 @@ export class HouseGenerator {
     wHandleR.position.set(-0.52, 1.4, 0.08);
     wardrobeGroup.add(wHandleR);
 
+    // Warm golden carpet in front of wardrobe
+    const wCarpetGeo = new THREE.BoxGeometry(2.0, 0.01, 1.8);
+    const wCarpet = new THREE.Mesh(wCarpetGeo, this.materials.carpet);
+    wCarpet.position.set(-1.4, 0.005, 0);
+    wCarpet.receiveShadow = true;
+    wardrobeGroup.add(wCarpet);
+
+    // Floor lamp to illuminate player during wardrobe customization (placed front-left to avoid blocking camera)
+    const wLampGroup = new THREE.Group();
+    wLampGroup.position.set(-2.4, 0.0, 1.0);
+
+    const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.05, 6), this.materials.metalGold);
+    lampBase.position.y = 0.025;
+    lampBase.castShadow = true;
+    wLampGroup.add(lampBase);
+
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 2.0, 4), this.materials.wood);
+    pole.position.y = 1.0;
+    pole.castShadow = true;
+    wLampGroup.add(pole);
+
+    const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.3, 0.35, 8), this.materials.white);
+    shade.position.y = 2.0;
+    shade.castShadow = true;
+    wLampGroup.add(shade);
+
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 6), new THREE.MeshBasicMaterial({ color: 0xfff59d }));
+    bulb.position.y = 1.9;
+    wLampGroup.add(bulb);
+
+    const wardrobeLight = new THREE.PointLight(0xffecc2, 2.2, 10, 1.2);
+    wardrobeLight.position.set(0, 1.9, 0);
+    wardrobeLight.castShadow = true;
+    wLampGroup.add(wardrobeLight);
+
+    wardrobeGroup.add(wLampGroup);
     this.group.add(wardrobeGroup);
 
     // Register wardrobe interaction (positioned in front of wardrobe)
     this.interactables.push({
       id: 'house_wardrobe',
       name: '衣柜换装',
-      x: x - 1.2,
+      x: x - 1.4,
       y: 0.12,
       z: z,
       triggerRadius: 2.0

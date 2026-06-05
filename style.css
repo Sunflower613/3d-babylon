@@ -702,7 +702,7 @@ body, html {
   }
   
   .modal-header {
-    padding: 14px 20px 8px !important;
+    padding: 26px 20px 8px !important;
     gap: 10px !important;
   }
 
@@ -837,7 +837,7 @@ body.is-mobile .modal-card {
   border: none !important;
 }
 body.is-mobile .modal-header {
-  padding: 14px 20px 8px !important;
+  padding: 26px 20px 8px !important;
   gap: 10px !important;
 }
 body.is-mobile .modal-header h2 {
@@ -1334,7 +1334,7 @@ body.is-mobile .arcade-game-title {
     width: 250px !important;
     height: 100% !important;
     max-height: none !important; /* Fix mobile landscape height cutoff */
-    padding: 16px 14px !important;
+    padding: 26px 14px 16px !important;
     background: rgba(255, 255, 255, 0.75) !important;
     border: 1px solid rgba(0, 0, 0, 0.1) !important;
   }

@@ -230,10 +230,10 @@ export class IslandGenerator {
 
     // Beach/Snow Campfire Logs
     const logGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.8, 5);
-    logGeo.rotateZ(Math.PI / 3);
+    logGeo.rotateZ(-Math.PI / 3); // Reversed to lean inwards at the top
     for (let i = 0; i < 3; i++) {
       const log = new THREE.Mesh(logGeo, this.materials.wood);
-      log.position.set(-1.8, 0, 1.8);
+      log.position.set(-1.8, 0.15, 1.8); // Lifted to Y = 0.15 to stand on ground
       log.rotation.y = (i * Math.PI) / 3;
       log.castShadow = true;
       centerGroup.add(log);
@@ -1045,7 +1045,7 @@ export class IslandGenerator {
     const gableShape = new THREE.Shape();
     gableShape.moveTo(-1.9, 3.2);
     gableShape.lineTo(1.9, 3.2);
-    gableShape.lineTo(0, 4.27);
+    gableShape.lineTo(0, 4.12); // Reduced from 4.27 to 4.12 to hide the peak inside the roof
     gableShape.closePath();
 
     const gableGeo = new THREE.ExtrudeGeometry(gableShape, {
@@ -1069,14 +1069,15 @@ export class IslandGenerator {
     const roofColor = isChristmas ? 0xd50000 : 0xff7043;
     const roofMat = new THREE.MeshLambertMaterial({ color: roofColor, flatShading: true });
     
-    const roofL = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.08, 4.2), roofMat);
-    roofL.position.set(-1.1, 3.6, 0);
+    // Width reduced to 2.45, depth reduced to 4.0 to make it smaller and avoid clipping
+    const roofL = new THREE.Mesh(new THREE.BoxGeometry(2.45, 0.08, 4.0), roofMat);
+    roofL.position.set(-1.05, 3.55, 0); // Position shifted slightly inward and down
     roofL.rotation.z = 0.55;
     roofL.castShadow = true;
     houseGroup.add(roofL);
 
-    const roofR = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.08, 4.2), roofMat);
-    roofR.position.set(1.1, 3.6, 0);
+    const roofR = new THREE.Mesh(new THREE.BoxGeometry(2.45, 0.08, 4.0), roofMat);
+    roofR.position.set(1.05, 3.55, 0);
     roofR.rotation.z = -0.55;
     roofR.castShadow = true;
     houseGroup.add(roofR);

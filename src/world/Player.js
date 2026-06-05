@@ -516,13 +516,13 @@ export class Player {
     for (let i = 0; i < 3; i++) {
       const wL = new THREE.Mesh(whiskerGeo, whiskerMat);
       wL.position.set(-0.26, 0.86 + (i - 1) * 0.04, 0.25);
-      wL.rotation.z = (i - 1) * 0.12 - 0.05;
+      wL.rotation.z = -(i - 1) * 0.12 - 0.05;
       wL.rotation.y = 0.2;
       this.group.add(wL);
 
       const wR = new THREE.Mesh(whiskerGeo, whiskerMat);
       wR.position.set(0.26, 0.86 + (i - 1) * 0.04, 0.25);
-      wR.rotation.z = -(i - 1) * 0.12 + 0.05;
+      wR.rotation.z = (i - 1) * 0.12 + 0.05;
       wR.rotation.y = -0.2;
       this.group.add(wR);
     }
@@ -569,12 +569,12 @@ export class Player {
     this.hatMat = bellMat;
     const bellGeo = new THREE.SphereGeometry(0.07, 6, 6);
     const bell = new THREE.Mesh(bellGeo, bellMat);
-    bell.position.set(0, 0.69, 0.21);
+    bell.position.set(0, 0.69, 0.28);
     this.group.add(bell);
 
     const loopGeo = new THREE.TorusGeometry(0.03, 0.01, 4, 8);
     const loop = new THREE.Mesh(loopGeo, bellMat);
-    loop.position.set(0, 0.74, 0.18);
+    loop.position.set(0, 0.74, 0.25);
     this.group.add(loop);
 
     // Cat Tail
@@ -1064,7 +1064,7 @@ export class Player {
     this.isLyingDown = true;
     this.controlsLocked = true;
     this.position.copy(bedPos);
-    this.position.y = bedPos.y + 0.26; // relative bed elevation
+    this.position.y = bedPos.y + 0.58; // relative bed elevation (lies on top of mattress)
   }
 
   updateOutfit(type, colorHex) {
@@ -1085,7 +1085,7 @@ export class Player {
       this.group.rotation.x = 0;
       this.group.rotation.z = 0;
       this.position.z += 1.4; // Dismount forward from bed
-      this.position.y = this.position.y - 0.26; // Reset height to deck floor Y
+      this.position.y = 0.8; // Set standing height directly to indoor floor level
       
       const bedHud = document.getElementById('bed-hud');
       if (bedHud) bedHud.style.display = 'none';
