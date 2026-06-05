@@ -288,6 +288,18 @@
     <button id="btn-stand-up" class="hud-btn">起身 🏃</button>
   </div>
 
+  <!-- Device rotation overlay (visible on mobile in portrait mode) -->
+  <div id="rotation-overlay">
+    <div class="rotation-message">
+      <div class="phone-icon-animate">🔄📱</div>
+      <p style="font-size: 1.1rem; font-weight: 700; margin-bottom: 8px;">为了获得最佳体验，请旋转手机至横屏模式</p>
+      <span style="font-size:0.75rem; color:var(--text-muted);">Please rotate your device to landscape</span>
+    </div>
+  </div>
+
+  <!-- Screen fade transition overlay -->
+  <div id="fade-overlay"></div>
+
   <!-- 引入主逻辑 -->
   <script type="module" src="./main.js"></script>
   

@@ -671,7 +671,7 @@ body, html {
    Media Queries & Responsive Styling
    ========================================================================== */
 
-@media (max-width: 768px), (pointer: coarse) {
+@media (max-width: 950px), (pointer: coarse), (hover: none) {
   .hud-controls-hint {
     display: none; /* Hide keyboard shortcuts on mobile */
   }
@@ -787,7 +787,7 @@ body, html {
 }
 
 #modal-wardrobe.open {
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .wardrobe-container {
@@ -945,7 +945,7 @@ body, html {
 }
 
 /* Responsive Wardrobe Modals for Mobile devices */
-@media (max-width: 768px) {
+@media (max-width: 950px), (pointer: coarse), (hover: none) {
   .wardrobe-container {
     flex-direction: column;
     justify-content: flex-end;
@@ -996,5 +996,129 @@ body, html {
   
   .model-desc {
     display: none !important;
+  }
+}
+
+/* Map Switch Fade Overlay */
+#fade-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #0c0e14;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9999;
+  transition: opacity 0.45s ease;
+}
+
+#fade-overlay.fade-in {
+  opacity: 1;
+}
+
+/* Device Rotation Lock Warning Overlay */
+#rotation-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #0c0e14;
+  z-index: 99999;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  text-align: center;
+  font-family: var(--font-body);
+  padding: 20px;
+}
+
+.rotation-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.phone-icon-animate {
+  font-size: 3.5rem;
+  margin-bottom: 20px;
+  animation: rotatePhone 2.4s ease-in-out infinite;
+}
+
+@keyframes rotatePhone {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-90deg); }
+}
+
+@media (max-width: 950px) and (orientation: portrait) {
+  #rotation-overlay {
+    display: flex;
+  }
+}
+
+/* Modal Game responsive sizing (near-fullscreen on mobile) */
+@media (max-width: 950px) {
+  .modal-game {
+    width: 96vw !important;
+    height: 94vh !important;
+    max-width: none !important;
+  }
+  #modal-easel .modal-body {
+    padding: 0 !important;
+  }
+}
+
+/* Responsive Wardrobe Modals for Mobile Landscape */
+@media (max-width: 950px) and (orientation: landscape) {
+  .wardrobe-container {
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: stretch !important;
+  }
+  
+  .wardrobe-sidebar {
+    width: 250px !important;
+    height: 100% !important;
+    padding: 16px 14px !important;
+    background: rgba(15, 17, 21, 0.88) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+  
+  .wardrobe-sidebar.left {
+    transform: translateX(-100%) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-left: none !important;
+  }
+  
+  .wardrobe-sidebar.right {
+    transform: translateX(100%) !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-right: none !important;
+  }
+  
+  #modal-wardrobe.open .wardrobe-sidebar.left {
+    transform: translateX(0) !important;
+  }
+  
+  #modal-wardrobe.open .wardrobe-sidebar.right {
+    transform: translateX(0) !important;
+  }
+  
+  .model-options {
+    flex-direction: column !important;
+    overflow-x: visible !important;
+    padding-bottom: 0 !important;
+  }
+  
+  .model-btn {
+    padding: 10px 12px !important;
+    width: 100% !important;
+  }
+  
+  .model-desc {
+    display: block !important;
   }
 }

@@ -80,8 +80,8 @@ export class BeachBall {
     // Update position
     this.position.addScaledVector(this.velocity, delta);
 
-    // 2. Island sand floor collision (Ground height Y = 0.6)
-    const floorY = 0.6;
+    // 2. Floor collision
+    const floorY = (this.app && this.app.currentMap === 'house') ? 0.12 : 0.6;
     if (this.position.y - this.radius <= floorY) {
       this.position.y = floorY + this.radius;
 
@@ -96,26 +96,51 @@ export class BeachBall {
       this.isGrounded = false;
     }
 
-    // 3. Circular island boundary bounce (Outer radius 21.8)
-    const maxRadius = 21.5;
-    const distFromCenter = Math.sqrt(this.position.x * this.position.x + this.position.z * this.position.z);
-
-    if (distFromCenter + this.radius > maxRadius) {
-      const nx = this.position.x / distFromCenter;
-      const nz = this.position.z / distFromCenter;
-
-      // Reflect horizontal velocity off boundary wall
-      const dot = this.velocity.x * nx + this.velocity.z * nz;
-      if (dot > 0) {
-        this.velocity.x -= 2 * dot * nx;
-        this.velocity.z -= 2 * dot * nz;
-        this.velocity.x *= 0.68;
-        this.velocity.z *= 0.68;
+    // 3. Boundary bounce (rectangular house walls vs circular island boundary)
+    if (this.app && this.app.currentMap === 'house') {
+      const limit = 11.8 - this.radius; // Wall inside face is at 11.75
+      // Check X wall collision
+      if (this.position.x < -limit) {
+        this.position.x = -limit;
+        this.velocity.x = -this.velocity.x * this.bounceElasticity;
+        this.playKickSound();
+      } else if (this.position.x > limit) {
+        this.position.x = limit;
+        this.velocity.x = -this.velocity.x * this.bounceElasticity;
+        this.playKickSound();
       }
+      // Check Z wall collision
+      if (this.position.z < -limit) {
+        this.position.z = -limit;
+        this.velocity.z = -this.velocity.z * this.bounceElasticity;
+        this.playKickSound();
+      } else if (this.position.z > limit) {
+        this.position.z = limit;
+        this.velocity.z = -this.velocity.z * this.bounceElasticity;
+        this.playKickSound();
+      }
+    } else {
+      // Circular island boundary bounce (Outer radius 21.8)
+      const maxRadius = 21.5;
+      const distFromCenter = Math.sqrt(this.position.x * this.position.x + this.position.z * this.position.z);
 
-      // Clamp position to boundary
-      this.position.x = nx * (maxRadius - this.radius);
-      this.position.z = nz * (maxRadius - this.radius);
+      if (distFromCenter + this.radius > maxRadius) {
+        const nx = this.position.x / distFromCenter;
+        const nz = this.position.z / distFromCenter;
+
+        // Reflect horizontal velocity off boundary wall
+        const dot = this.velocity.x * nx + this.velocity.z * nz;
+        if (dot > 0) {
+          this.velocity.x -= 2 * dot * nx;
+          this.velocity.z -= 2 * dot * nz;
+          this.velocity.x *= 0.68;
+          this.velocity.z *= 0.68;
+        }
+
+        // Clamp position to boundary
+        this.position.x = nx * (maxRadius - this.radius);
+        this.position.z = nz * (maxRadius - this.radius);
+      }
     }
 
     // 4. Collision/Kick interaction with the player

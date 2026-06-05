@@ -189,6 +189,22 @@ export class InteractsManager {
       return;
     }
 
+    if (zone.id === 'enter_house') {
+      if (this.player.carriedBall) {
+        this.dropCarriedBall();
+      }
+      this.app.switchMap('house');
+      return;
+    }
+
+    if (zone.id === 'exit_house') {
+      if (this.player.carriedBall) {
+        this.dropCarriedBall();
+      }
+      this.app.switchMap('island');
+      return;
+    }
+
     if (zone.id === 'swing') {
       if (this.player.isSitting) {
         this.player.standUp();

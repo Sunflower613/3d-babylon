@@ -920,11 +920,19 @@ export class Player {
     this.position.addScaledVector(this.velocity, delta);
 
     // Clamp coordinates
-    const maxRadius = 21.2;
-    const distFromCenter = Math.sqrt(this.position.x * this.position.x + this.position.z * this.position.z);
-    if (distFromCenter > maxRadius) {
-      this.position.x = (this.position.x / distFromCenter) * maxRadius;
-      this.position.z = (this.position.z / distFromCenter) * maxRadius;
+    if (this.app && this.app.currentMap === 'house') {
+      const boundary = 11.5;
+      if (this.position.x < -boundary) this.position.x = -boundary;
+      if (this.position.x > boundary) this.position.x = boundary;
+      if (this.position.z < -boundary) this.position.z = -boundary;
+      if (this.position.z > boundary) this.position.z = boundary;
+    } else {
+      const maxRadius = 21.2;
+      const distFromCenter = Math.sqrt(this.position.x * this.position.x + this.position.z * this.position.z);
+      if (distFromCenter > maxRadius) {
+        this.position.x = (this.position.x / distFromCenter) * maxRadius;
+        this.position.z = (this.position.z / distFromCenter) * maxRadius;
+      }
     }
 
     // 3. Collisions
@@ -1056,7 +1064,7 @@ export class Player {
     this.isLyingDown = true;
     this.controlsLocked = true;
     this.position.copy(bedPos);
-    this.position.y = 0.72 + 0.26; // deck Y + bed elevation
+    this.position.y = bedPos.y + 0.26; // relative bed elevation
   }
 
   updateOutfit(type, colorHex) {
@@ -1077,7 +1085,7 @@ export class Player {
       this.group.rotation.x = 0;
       this.group.rotation.z = 0;
       this.position.z += 1.4; // Dismount forward from bed
-      this.position.y = 0.72; // Stand on house deck floor
+      this.position.y = this.position.y - 0.26; // Reset height to deck floor Y
       
       const bedHud = document.getElementById('bed-hud');
       if (bedHud) bedHud.style.display = 'none';

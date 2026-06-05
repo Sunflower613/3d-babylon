@@ -6,6 +6,8 @@ export class IslandGenerator {
     this.themeConfig = themeConfig;
     this.colliders = []; // Store floor colliders
     this.interactables = []; // Store trigger zones
+    this.streetlights = []; // Store streetlights PointLights
+    this.group = new THREE.Group();
 
     const colors = this.themeConfig.colors;
     const isChristmas = colors.sky === 0x050c18;
@@ -27,7 +29,21 @@ export class IslandGenerator {
       neonBlue: new THREE.MeshBasicMaterial({ color: 0x40c4ff })
     };
 
+    // Redirect scene.add to group.add during buildWorld
+    const originalAdd = this.scene.add;
+    this.scene.add = (obj) => {
+      if (obj.isLight) {
+        originalAdd.call(this.scene, obj);
+      } else {
+        this.group.add(obj);
+      }
+    };
+
     this.buildWorld();
+
+    // Restore original add method
+    this.scene.add = originalAdd;
+    originalAdd.call(this.scene, this.group);
   }
 
   buildWorld() {
@@ -62,6 +78,9 @@ export class IslandGenerator {
 
     // 9. Create the cozy house (North-West)
     this.createCozyHouse(-10.0, 0.6, -9.0);
+
+    // 10. Create streetlamps (for night lighting)
+    this.createStreetlamps();
   }
 
   createMainGround(x, y, z, radius) {
@@ -209,7 +228,7 @@ export class IslandGenerator {
     const centerGroup = new THREE.Group();
     centerGroup.position.set(0, 0.6, 0);
 
-    // Beach/Snow Campfire
+    // Beach/Snow Campfire Logs
     const logGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.8, 5);
     logGeo.rotateZ(Math.PI / 3);
     for (let i = 0; i < 3; i++) {
@@ -219,6 +238,37 @@ export class IslandGenerator {
       log.castShadow = true;
       centerGroup.add(log);
     }
+
+    // Low-poly bonfire fire mesh (flames)
+    const fireGroup = new THREE.Group();
+    fireGroup.position.set(-1.8, 0.15, 1.8);
+    
+    const fireMat = new THREE.MeshBasicMaterial({ color: 0xff5722 }); // Orange-Red flame
+    const flameGeo = new THREE.ConeGeometry(0.18, 0.45, 5);
+    
+    const f1 = new THREE.Mesh(flameGeo, fireMat);
+    f1.position.set(0, 0.2, 0);
+    fireGroup.add(f1);
+
+    const f2 = new THREE.Mesh(flameGeo, new THREE.MeshBasicMaterial({ color: 0xff9100 })); // Yellow-orange
+    f2.position.set(0.08, 0.15, -0.05);
+    f2.rotation.z = 0.2;
+    f2.scale.set(0.8, 0.8, 0.8);
+    fireGroup.add(f2);
+
+    const f3 = new THREE.Mesh(flameGeo, new THREE.MeshBasicMaterial({ color: 0xffd600 })); // Yellow
+    f3.position.set(-0.08, 0.12, 0.06);
+    f3.rotation.z = -0.2;
+    f3.scale.set(0.7, 0.7, 0.7);
+    fireGroup.add(f3);
+
+    centerGroup.add(fireGroup);
+
+    // Warm PointLight for campfire (fades in/out and flickers at night)
+    const fireLight = new THREE.PointLight(0xff5722, 0.0, 10, 1.2);
+    fireLight.position.set(-1.8, 0.8, 1.8);
+    this.scene.add(fireLight);
+    this.streetlights.push(fireLight);
 
     if (isChristmas) {
       // Christmas Zone: Cozy Snowman and festive wooden bench
@@ -495,6 +545,29 @@ export class IslandGenerator {
     board2.castShadow = true;
     cinemaGroup.add(board2);
 
+    // Project board screen lights (two light yellow glowing bulbs at the top corners)
+    const projBulbGeo = new THREE.SphereGeometry(0.08, 5, 5);
+    const projBulbMat = new THREE.MeshBasicMaterial({ color: 0xfff59d }); // light yellow
+
+    const projBulbL = new THREE.Mesh(projBulbGeo, projBulbMat);
+    projBulbL.position.set(-1.8, 3.3, 0.1);
+    cinemaGroup.add(projBulbL);
+
+    const projBulbR = new THREE.Mesh(projBulbGeo, projBulbMat);
+    projBulbR.position.set(1.8, 3.3, 0.1);
+    cinemaGroup.add(projBulbR);
+
+    // Warm PointLights at the project board (fades in/out at night)
+    const projLightL = new THREE.PointLight(0xfff59d, 0.0, 6, 1.2);
+    projLightL.position.set(projX - 1.8, projY + 3.3, projZ + 0.1);
+    this.scene.add(projLightL);
+    this.streetlights.push(projLightL);
+
+    const projLightR = new THREE.PointLight(0xfff59d, 0.0, 6, 1.2);
+    projLightR.position.set(projX + 1.8, projY + 3.3, projZ + 0.1);
+    this.scene.add(projLightR);
+    this.streetlights.push(projLightR);
+
     this.scene.add(cinemaGroup);
 
     this.interactables.push({
@@ -580,6 +653,29 @@ export class IslandGenerator {
     torchR.position.set(0.9, 0.75, 0.2);
     torchR.castShadow = true;
     arcadeGroup.add(torchR);
+
+    // Torch Flame meshes (glowing orange/red cones)
+    const torchFlameGeo = new THREE.ConeGeometry(0.08, 0.22, 5);
+    const torchFlameMat = new THREE.MeshBasicMaterial({ color: 0xff7043 });
+
+    const torchFlameL = new THREE.Mesh(torchFlameGeo, torchFlameMat);
+    torchFlameL.position.set(-0.9, 1.62, 0.2);
+    arcadeGroup.add(torchFlameL);
+
+    const torchFlameR = new THREE.Mesh(torchFlameGeo, torchFlameMat);
+    torchFlameR.position.set(0.9, 1.62, 0.2);
+    arcadeGroup.add(torchFlameR);
+
+    // Torch PointLights (fades in/out at night)
+    const torchLightL = new THREE.PointLight(0xff5722, 0.0, 5, 1.2);
+    torchLightL.position.set(arcX - 0.9, arcY + 1.62, arcZ + 0.2);
+    this.scene.add(torchLightL);
+    this.streetlights.push(torchLightL);
+
+    const torchLightR = new THREE.PointLight(0xff5722, 0.0, 5, 1.2);
+    torchLightR.position.set(arcX + 0.9, arcY + 1.62, arcZ + 0.2);
+    this.scene.add(torchLightR);
+    this.streetlights.push(torchLightR);
 
     this.scene.add(arcadeGroup);
 
@@ -875,8 +971,8 @@ export class IslandGenerator {
     const houseGroup = new THREE.Group();
     houseGroup.position.set(x, y, z);
 
-    // 1. Floor Deck (3x expanded: 12.0 x 0.12 x 12.0)
-    const floorGeo = new THREE.BoxGeometry(12.0, 0.12, 12.0);
+    // 1. Floor Deck (4.0 x 0.12 x 4.0)
+    const floorGeo = new THREE.BoxGeometry(4.0, 0.12, 4.0);
     const floorMesh = new THREE.Mesh(floorGeo, this.materials.wood);
     floorMesh.position.y = 0.06;
     floorMesh.receiveShadow = true;
@@ -886,359 +982,99 @@ export class IslandGenerator {
     // Register deck collider (stands at Y = y + 0.12 = 0.72)
     this.colliders.push({
       mesh: floorMesh,
-      radius: 6.5,
+      radius: 2.2,
       worldX: x,
       worldZ: z,
       worldY: y + 0.12,
       type: 'floor'
     });
 
-    // 2. Thick Corner Pillars (0.4 x 5.0 x 0.4) - Completely hides wall edge joints to prevent clipping
-    const pillarGeo = new THREE.BoxGeometry(0.4, 5.0, 0.4);
+    // 2. Corner Pillars (0.2 x 3.2 x 0.2)
+    const pillarGeo = new THREE.BoxGeometry(0.2, 3.2, 0.2);
     const pillarOffsets = [
-      { x: -5.8, z: -5.8 },
-      { x: 5.8, z: -5.8 },
-      { x: -5.8, z: 5.8 },
-      { x: 5.8, z: 5.8 }
+      { x: -1.9, z: -1.9 },
+      { x: 1.9, z: -1.9 },
+      { x: -1.9, z: 1.9 },
+      { x: 1.9, z: 1.9 }
     ];
     pillarOffsets.forEach(offset => {
       const pillar = new THREE.Mesh(pillarGeo, this.materials.wood);
-      pillar.position.set(offset.x, 2.5, offset.z);
+      pillar.position.set(offset.x, 1.6, offset.z);
       pillar.castShadow = true;
       houseGroup.add(pillar);
     });
 
-    // 3. Walls (Snaps inside pillars to prevent Z-fighting)
-    const wallMat = new THREE.MeshLambertMaterial({ color: isChristmas ? 0x607d8b : 0xe0f2f1, flatShading: true }); // Cool blue-grey or soft pastel mint
+    // 3. Walls (Soft pastel walls snaps inside pillars)
+    const wallMat = new THREE.MeshLambertMaterial({ color: isChristmas ? 0x607d8b : 0xe0f2f1, flatShading: true });
 
-    // Back wall (width 11.2, height 5.0)
-    const backWall = new THREE.Mesh(new THREE.BoxGeometry(11.2, 5.0, 0.1), wallMat);
-    backWall.position.set(0, 2.5, -5.8);
+    // Back wall
+    const backWall = new THREE.Mesh(new THREE.BoxGeometry(3.8, 3.2, 0.08), wallMat);
+    backWall.position.set(0, 1.6, -1.9);
     backWall.castShadow = true;
-    backWall.receiveShadow = true;
     houseGroup.add(backWall);
 
-    // Left wall (width 11.2, height 5.0, with a large open window in the center)
-    const leftWallBack = new THREE.Mesh(new THREE.BoxGeometry(0.1, 5.0, 4.0), wallMat);
-    leftWallBack.position.set(-5.8, 2.5, -3.6);
-    leftWallBack.castShadow = true;
-    houseGroup.add(leftWallBack);
+    // Left wall
+    const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.08, 3.2, 3.8), wallMat);
+    leftWall.position.set(-1.9, 1.6, 0);
+    leftWall.castShadow = true;
+    houseGroup.add(leftWall);
 
-    const leftWallFront = new THREE.Mesh(new THREE.BoxGeometry(0.1, 5.0, 4.0), wallMat);
-    leftWallFront.position.set(-5.8, 2.5, 3.6);
-    leftWallFront.castShadow = true;
-    houseGroup.add(leftWallFront);
-
-    const leftWallBottom = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.6, 3.2), wallMat);
-    leftWallBottom.position.set(-5.8, 0.8, 0);
-    leftWallBottom.castShadow = true;
-    houseGroup.add(leftWallBottom);
-
-    const leftWallTop = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.2, 3.2), wallMat);
-    leftWallTop.position.set(-5.8, 4.4, 0);
-    leftWallTop.castShadow = true;
-    houseGroup.add(leftWallTop);
-
-    // Cyan window glass pane (fits inside the cutout)
-    const glassMat = new THREE.MeshBasicMaterial({ color: 0x80deea, transparent: true, opacity: 0.45, side: THREE.DoubleSide });
-    const windowGlass = new THREE.Mesh(new THREE.BoxGeometry(0.04, 2.2, 3.2), glassMat);
-    windowGlass.position.set(-5.8, 2.9, 0);
-    houseGroup.add(windowGlass);
-
-    // Right wall (solid, width 11.2, height 5.0)
-    const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.1, 5.0, 11.2), wallMat);
-    rightWall.position.set(5.8, 2.5, 0);
+    // Right wall
+    const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.08, 3.2, 3.8), wallMat);
+    rightWall.position.set(1.9, 1.6, 0);
     rightWall.castShadow = true;
-    rightWall.receiveShadow = true;
     houseGroup.add(rightWall);
 
-    // Front wall (with doorway in middle, width 11.2, height 5.0)
-    const frontWallLeft = new THREE.Mesh(new THREE.BoxGeometry(4.6, 5.0, 0.1), wallMat);
-    frontWallLeft.position.set(-3.3, 2.5, 5.8);
+    // Front wall Left & Right
+    const frontWallLeft = new THREE.Mesh(new THREE.BoxGeometry(1.3, 3.2, 0.08), wallMat);
+    frontWallLeft.position.set(-1.25, 1.6, 1.9);
     frontWallLeft.castShadow = true;
     houseGroup.add(frontWallLeft);
 
-    const frontWallRight = new THREE.Mesh(new THREE.BoxGeometry(4.6, 5.0, 0.1), wallMat);
-    frontWallRight.position.set(3.3, 2.5, 5.8);
+    const frontWallRight = new THREE.Mesh(new THREE.BoxGeometry(1.3, 3.2, 0.08), wallMat);
+    frontWallRight.position.set(1.25, 1.6, 1.9);
     frontWallRight.castShadow = true;
     houseGroup.add(frontWallRight);
 
-    const frontWallTop = new THREE.Mesh(new THREE.BoxGeometry(2.0, 1.2, 0.1), wallMat);
-    frontWallTop.position.set(0, 4.4, 5.8);
+    const frontWallTop = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.0, 0.08), wallMat);
+    frontWallTop.position.set(0, 2.7, 1.9);
     frontWallTop.castShadow = true;
     houseGroup.add(frontWallTop);
 
-    // 4. Sloped Roof (A-frame, expanded to cover 12x12 deck)
+    // 4. Sloped Roof (A-frame)
     const roofColor = isChristmas ? 0xd50000 : 0xff7043;
     const roofMat = new THREE.MeshLambertMaterial({ color: roofColor, flatShading: true });
     
-    const roofL = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.12, 12.4), roofMat);
-    roofL.position.set(-3.1, 5.8, 0);
-    roofL.rotation.z = 0.55; 
+    const roofL = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.08, 4.2), roofMat);
+    roofL.position.set(-1.1, 3.6, 0);
+    roofL.rotation.z = 0.55;
     roofL.castShadow = true;
     houseGroup.add(roofL);
 
-    const roofR = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.12, 12.4), roofMat);
-    roofR.position.set(3.1, 5.8, 0);
-    roofR.rotation.z = -0.55; 
+    const roofR = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.08, 4.2), roofMat);
+    roofR.position.set(1.1, 3.6, 0);
+    roofR.rotation.z = -0.55;
     roofR.castShadow = true;
     houseGroup.add(roofR);
 
-    // 5. Cozy Bed (Interactive, scaled up by 1.8x to king-size)
-    const bedGroup = new THREE.Group();
-    bedGroup.position.set(-3.8, 0.12, -3.5); // Back-left corner
+    // 5. Entrance frame sign
+    const signBoard = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.22, 0.03), this.materials.wood);
+    signBoard.position.set(0, 2.4, 1.92);
+    houseGroup.add(signBoard);
 
-    const bedFrame = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.3, 2.6), this.materials.wood);
-    bedFrame.castShadow = true;
-    bedGroup.add(bedFrame);
+    const signText = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.04), new THREE.MeshLambertMaterial({ color: 0x4caf50 }));
+    signText.position.set(0, 2.4, 1.94);
+    houseGroup.add(signText);
 
-    const mattress = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.25, 2.4), this.materials.umbrellaWhite);
-    mattress.position.y = 0.22;
-    bedGroup.add(mattress);
-
-    const blanketColor = isChristmas ? 0x2e7d32 : 0xff8a80;
-    const blanket = new THREE.Mesh(new THREE.BoxGeometry(2.02, 0.26, 1.6), new THREE.MeshLambertMaterial({ color: blanketColor, flatShading: true }));
-    blanket.position.set(0, 0.24, 0.4);
-    blanket.castShadow = true;
-    bedGroup.add(blanket);
-
-    // Two pillows
-    const pillowL = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.14, 0.45), this.materials.umbrellaWhite);
-    pillowL.position.set(-0.45, 0.38, -0.85);
-    bedGroup.add(pillowL);
-
-    const pillowR = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.14, 0.45), this.materials.umbrellaWhite);
-    pillowR.position.set(0.45, 0.38, -0.85);
-    bedGroup.add(pillowR);
-
-    houseGroup.add(bedGroup);
-
-    // Register bed trigger zone (large cabin layout)
+    // Teleport zone portal register
     this.interactables.push({
-      id: 'house_bed',
-      name: '躺下',
-      x: x - 3.8,
+      id: 'enter_house',
+      name: '进入房子',
+      x: x,
       y: y + 0.12,
-      z: z - 3.5,
-      triggerRadius: 1.8
+      z: z + 1.9, // in front of cottage door
+      triggerRadius: 1.5
     });
-
-    // 6. Artist Easel (Interactive - link to Paint game, scaled up 1.5x)
-    const easelGroup = new THREE.Group();
-    easelGroup.position.set(4.0, 0.12, -3.8); // Back-right area
-    easelGroup.rotation.y = -0.5;
-
-    const leg1 = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.2, 4), this.materials.wood);
-    leg1.position.set(-0.45, 1.05, 0);
-    leg1.rotation.z = -0.15;
-    leg1.castShadow = true;
-    easelGroup.add(leg1);
-
-    const leg2 = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.2, 4), this.materials.wood);
-    leg2.position.set(0.45, 1.05, 0);
-    leg2.rotation.z = 0.15;
-    leg2.castShadow = true;
-    easelGroup.add(leg2);
-
-    const leg3 = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.2, 4), this.materials.wood);
-    leg3.position.set(0, 1.05, -0.45);
-    leg3.rotation.x = -0.22;
-    leg3.castShadow = true;
-    easelGroup.add(leg3);
-
-    const shelf = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.06, 0.12), this.materials.wood);
-    shelf.position.set(0, 0.95, 0.08);
-    shelf.castShadow = true;
-    easelGroup.add(shelf);
-
-    const canvasMesh = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.75, 0.04), this.materials.umbrellaWhite);
-    canvasMesh.position.set(0, 1.35, 0.08);
-    canvasMesh.rotation.x = -0.08;
-    canvasMesh.castShadow = true;
-    easelGroup.add(canvasMesh);
-
-    // Miniature painting art
-    const pSky = new THREE.Mesh(new THREE.PlaneGeometry(0.99, 0.69), new THREE.MeshBasicMaterial({ color: 0xbbdefb }));
-    pSky.position.set(0, 1.35, 0.11);
-    pSky.rotation.x = -0.08;
-    easelGroup.add(pSky);
-
-    const pSun = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 6), new THREE.MeshBasicMaterial({ color: 0xffeb3b }));
-    pSun.position.set(0.18, 1.47, 0.12);
-    easelGroup.add(pSun);
-
-    const pSea = new THREE.Mesh(new THREE.PlaneGeometry(0.99, 0.3), new THREE.MeshBasicMaterial({ color: 0x00acc1 }));
-    pSea.position.set(0, 1.17, 0.12);
-    pSea.rotation.x = -0.08;
-    easelGroup.add(pSea);
-
-    houseGroup.add(easelGroup);
-
-    this.interactables.push({
-      id: 'house_easel',
-      name: '写生',
-      x: x + 4.0,
-      y: y + 0.12,
-      z: z - 3.8,
-      triggerRadius: 1.6
-    });
-
-    // 7. Wardrobe (Interactive - Outfit change, scaled 1.6x)
-    const wardrobeGroup = new THREE.Group();
-    wardrobeGroup.position.set(5.2, 0.12, 1.0); // Placed against right wall
-
-    const wBody = new THREE.Mesh(new THREE.BoxGeometry(0.8, 2.5, 1.6), this.materials.wood);
-    wBody.position.y = 1.25;
-    wBody.castShadow = true;
-    wBody.receiveShadow = true;
-    wardrobeGroup.add(wBody);
-
-    const wDoorMat = new THREE.MeshLambertMaterial({ color: isChristmas ? 0x3e2723 : 0x8d6e63, flatShading: true });
-    const wDoorL = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.3, 0.74), wDoorMat);
-    wDoorL.position.set(-0.41, 1.25, -0.38);
-    wardrobeGroup.add(wDoorL);
-
-    const wDoorR = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.3, 0.74), wDoorMat);
-    wDoorR.position.set(-0.41, 1.25, 0.38);
-    wardrobeGroup.add(wDoorR);
-
-    const wHandleGeo = new THREE.SphereGeometry(0.05, 4, 4);
-    const wHandleMat = new THREE.MeshBasicMaterial({ color: 0xffca28 });
-    const wHandleL = new THREE.Mesh(wHandleGeo, wHandleMat);
-    wHandleL.position.set(-0.47, 1.25, -0.07);
-    wardrobeGroup.add(wHandleL);
-
-    const wHandleR = new THREE.Mesh(wHandleGeo, wHandleMat);
-    wHandleR.position.set(-0.47, 1.25, 0.07);
-    wardrobeGroup.add(wHandleR);
-
-    houseGroup.add(wardrobeGroup);
-
-    this.interactables.push({
-      id: 'house_wardrobe',
-      name: '衣柜换装',
-      x: x + 4.2, // Move inside trigger zone
-      y: y + 0.12,
-      z: z + 1.0,
-      triggerRadius: 1.8
-    });
-
-    // 8. Large Table and Plant (Under the Window)
-    const tableGroup = new THREE.Group();
-    tableGroup.position.set(-5.0, 0.12, 1.2); // Against left wall
-
-    const tabletop = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.08, 2.2), this.materials.wood);
-    tabletop.position.y = 1.0;
-    tabletop.castShadow = true;
-    tableGroup.add(tabletop);
-
-    const tLegGeo = new THREE.CylinderGeometry(0.03, 0.03, 1.0, 4);
-    const tLegOffsets = [
-      { x: -0.32, z: -1.0 },
-      { x: 0.32, z: -1.0 },
-      { x: -0.32, z: 1.0 },
-      { x: 0.32, z: 1.0 }
-    ];
-    tLegOffsets.forEach(offset => {
-      const leg = new THREE.Mesh(tLegGeo, this.materials.wood);
-      leg.position.set(offset.x, 0.5, offset.z);
-      leg.castShadow = true;
-      tableGroup.add(leg);
-    });
-
-    // Plant on table
-    const tablePot = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.09, 0.18, 5), this.materials.coconut);
-    tablePot.position.set(0, 1.13, 0.4);
-    tablePot.castShadow = true;
-    tableGroup.add(tablePot);
-
-    const tablePlantLeaves = new THREE.Mesh(new THREE.SphereGeometry(0.16, 5, 5), this.materials.leaves);
-    tablePlantLeaves.position.set(0, 1.26, 0.4);
-    tablePlantLeaves.castShadow = true;
-    tableGroup.add(tablePlantLeaves);
-
-    // Pile of low-poly books
-    const bookColors = [0xd50000, 0x29b6f6, 0xffa726];
-    for (let i = 0; i < 3; i++) {
-      const book = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.05, 0.28), new THREE.MeshLambertMaterial({ color: bookColors[i], flatShading: true }));
-      book.position.set(-0.05, 1.065 + i * 0.052, -0.4);
-      book.rotation.y = 0.15 * i - 0.15;
-      book.castShadow = true;
-      tableGroup.add(book);
-    }
-
-    houseGroup.add(tableGroup);
-
-    // 9. Potted Monstera Plant (Enlarged)
-    const monstera = new THREE.Group();
-    monstera.position.set(-4.5, 0.12, 4.5); // Front-left corner
-
-    const bigPot = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.24, 0.5, 6), this.materials.stone);
-    bigPot.position.y = 0.25;
-    bigPot.castShadow = true;
-    monstera.add(bigPot);
-
-    const mStemGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.7, 4);
-    for (let i = 0; i < 4; i++) {
-      const stem = new THREE.Mesh(mStemGeo, this.materials.wood);
-      const angle = (i / 4) * Math.PI * 2;
-      stem.position.set(Math.cos(angle) * 0.12, 0.5, Math.sin(angle) * 0.12);
-      stem.rotation.z = Math.cos(angle) * 0.45;
-      stem.rotation.x = Math.sin(angle) * 0.45;
-      monstera.add(stem);
-
-      const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.3, 5, 5), this.materials.leaves);
-      leaf.scale.set(1.2, 0.2, 1.7);
-      leaf.position.set(Math.cos(angle) * 0.42, 0.82, Math.sin(angle) * 0.42);
-      leaf.rotation.y = angle;
-      leaf.rotation.x = 0.45;
-      leaf.castShadow = true;
-      monstera.add(leaf);
-    }
-    houseGroup.add(monstera);
-
-    // 10. Large Center Carpet
-    const carpetGeo = new THREE.CylinderGeometry(3.0, 3.0, 0.01, 16);
-    const carpetColor = isChristmas ? 0xccff90 : 0xffcc80;
-    const carpet = new THREE.Mesh(carpetGeo, new THREE.MeshLambertMaterial({ color: carpetColor, flatShading: true }));
-    carpet.position.set(0, 0.125, 0);
-    carpet.receiveShadow = true;
-    houseGroup.add(carpet);
-
-    // 11. Large Hanging Sunset Painting (Centered above Bed)
-    const wallFrame = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.6, 0.04), this.materials.wood);
-    wallFrame.position.set(-2.0, 3.0, -5.73);
-    wallFrame.castShadow = true;
-    houseGroup.add(wallFrame);
-
-    const wallArt = new THREE.Mesh(new THREE.BoxGeometry(2.9, 1.35, 0.02), new THREE.MeshBasicMaterial({ color: 0xff8a65 }));
-    wallArt.position.set(-2.0, 3.0, -5.7);
-    houseGroup.add(wallArt);
-
-    const wallSun = new THREE.Mesh(new THREE.SphereGeometry(0.18, 6, 6), new THREE.MeshBasicMaterial({ color: 0xffeb3b }));
-    wallSun.position.set(-1.4, 3.15, -5.68);
-    houseGroup.add(wallSun);
-
-    // 12. Reserved Spot for Future Furniture (Expanded)
-    const reserveGroup = new THREE.Group();
-    reserveGroup.position.set(4.0, 0.12, 4.0); // Front-right corner
-
-    const borderGeo = new THREE.BoxGeometry(2.0, 0.02, 2.0);
-    const border = new THREE.Mesh(borderGeo, new THREE.MeshLambertMaterial({ color: 0x90a4ae, flatShading: true, transparent: true, opacity: 0.6 }));
-    border.position.y = 0.01;
-    reserveGroup.add(border);
-
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.4, 4), this.materials.wood);
-    post.position.set(0, 0.2, 0);
-    post.castShadow = true;
-    reserveGroup.add(post);
-
-    const signBoard = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.22, 0.03), this.materials.wood);
-    signBoard.position.set(0, 0.4, 0);
-    signBoard.castShadow = true;
-    reserveGroup.add(signBoard);
-
-    houseGroup.add(reserveGroup);
 
     this.scene.add(houseGroup);
   }
@@ -1321,7 +1157,7 @@ export class IslandGenerator {
     this.balloons = balGroup; 
   }
 
-  update(time) {
+  update(time, environment) {
     // 1. Sway swing seat
     if (this.swingSeat) {
       this.swingSeat.rotation.x = Math.sin(time * 0.002) * 0.18;
@@ -1340,5 +1176,62 @@ export class IslandGenerator {
       this.balloons.rotation.z = Math.sin(time * 0.0015) * 0.06;
       this.balloons.rotation.x = Math.cos(time * 0.001) * 0.04;
     }
+
+    // 4. Update streetlights intensity dynamically
+    if (this.streetlights) {
+      const targetIntensity = (environment && environment.isNight) ? 1.4 : 0.0;
+      this.streetlights.forEach(light => {
+        let currentTarget = targetIntensity;
+        // Campfire and torch lights (orange-red) flicker at night
+        if (light.color.getHex() === 0xff5722 && environment && environment.isNight) {
+          currentTarget = 1.4 + Math.sin(time * 0.02) * 0.25 + (Math.random() - 0.5) * 0.12;
+        }
+        light.intensity += (currentTarget - light.intensity) * 0.08;
+      });
+    }
+  }
+
+  createStreetlamps() {
+    this.streetlights = [];
+    this.createStreetlamp(-8.0, -4.0); // near cottage pathway
+    this.createStreetlamp(-4.0, -11.0); // near arcade
+    this.createStreetlamp(2.0, 4.0); // near swing
+  }
+
+  createStreetlamp(x, z) {
+    const lampGroup = new THREE.Group();
+    lampGroup.position.set(x, 0.6, z); // 0.6 is ground Y
+
+    // 1. Wooden Post
+    const postGeo = new THREE.CylinderGeometry(0.06, 0.08, 2.2, 4);
+    const post = new THREE.Mesh(postGeo, this.materials.wood);
+    post.position.y = 1.1;
+    post.castShadow = true;
+    lampGroup.add(post);
+
+    // 2. Golden frame hanger
+    const hanger = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.06, 0.06), this.materials.neonBlue || this.materials.neonRed);
+    hanger.position.set(0.18, 2.1, 0);
+    lampGroup.add(hanger);
+
+    // 3. Lantern shade
+    const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.16, 0.28, 5), this.materials.arcadeBody);
+    shade.position.set(0.36, 1.9, 0);
+    shade.castShadow = true;
+    lampGroup.add(shade);
+
+    // 4. Glowing bulb
+    const bulbMat = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.08, 5, 5), bulbMat);
+    bulb.position.set(0.36, 1.76, 0);
+    lampGroup.add(bulb);
+
+    this.scene.add(lampGroup);
+
+    // 5. Point Light (initially 0 intensity, faded in/out dynamically)
+    const light = new THREE.PointLight(0xffb74d, 0.0, 9, 1.3);
+    light.position.set(x + 0.36, 2.3, z); // world position slightly below bulb
+    this.scene.add(light);
+    this.streetlights.push(light);
   }
 }

@@ -3,6 +3,7 @@ import { siteConfig } from '../site-config.js';
 import { ModalManager } from './src/ui/Modal.js';
 import { Environment } from './src/world/Environment.js';
 import { IslandGenerator } from './src/world/Island.js';
+import { HouseGenerator } from './src/world/House.js';
 import { Player } from './src/world/Player.js';
 import { InteractsManager } from './src/world/Interacts.js';
 import { BeachBall } from './src/world/BeachBall.js';
@@ -70,13 +71,20 @@ class GameApp {
   }
 
   initWorld() {
+    this.currentMap = 'island';
+
     // Instantiate managers with theme config injection
     this.modalMgr = new ModalManager();
     this.environment = new Environment(this.scene, this.themeConfig);
     this.islandGen = new IslandGenerator(this.scene, this.themeConfig);
     
+    // Instantiate house generator
+    this.houseGen = new HouseGenerator(this.scene, this.themeConfig);
+    this.houseGen.group.visible = false; // Start with island map visible
+
     // Player controller (requires colliders list for physics and themeConfig for styling)
     this.player = new Player(this.scene, this.camera, this.islandGen.colliders, this.themeConfig);
+    this.player.app = this; // Share app reference
     
     // Interaction prompt sensor
     this.interactMgr = new InteractsManager(this.player, this.islandGen, this.modalMgr, this);
@@ -93,6 +101,7 @@ class GameApp {
       const color = colors[Math.floor(Math.random() * colors.length)];
 
       const ball = new BeachBall(this.scene, spawnX, 1.3, spawnZ, color);
+      ball.app = this;
       this.beachBallsList.push(ball);
 
       // Keep at most 5 balls on screen (FIFO, excluding carried ones)
@@ -460,6 +469,80 @@ class GameApp {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
+  switchMap(targetMap) {
+    if (this.currentMap === targetMap) return;
+
+    const fadeOverlay = document.getElementById('fade-overlay');
+    if (!fadeOverlay) return;
+
+    // Lock player controls during transition
+    this.player.controlsLocked = true;
+    this.player.resetInputs();
+
+    // 1. Fade to black
+    fadeOverlay.classList.add('fade-in');
+
+    setTimeout(() => {
+      // 2. Perform map visibility toggle & collider swapping
+      this.currentMap = targetMap;
+
+      // Clear any beach balls
+      this.beachBallsList.forEach(ball => ball.destroy());
+      this.beachBallsList = [];
+
+      if (targetMap === 'house') {
+        // Toggle visibility
+        this.islandGen.group.visible = false;
+        this.houseGen.group.visible = true;
+
+        // Swap colliders & interactables
+        this.player.colliders = this.houseGen.colliders;
+        this.interactMgr.generator = this.houseGen;
+
+        // Teleport player inside house (spawn position in front of exit door)
+        // exit door is at (0, 0.12, 11.2)
+        this.player.position.set(0, 0.12 + 0.1, 9.5);
+        this.player.velocity.set(0, 0, 0);
+        this.player.group.position.copy(this.player.position);
+
+        // Face north (away from the door)
+        this.player.group.rotation.y = Math.PI; // 180 degrees
+        this.player.cameraAngleH = Math.PI; // camera looks north
+
+        // Update environment lighting
+        this.environment.setIndoorMode(true);
+      } else {
+        // Toggle visibility
+        this.islandGen.group.visible = true;
+        this.houseGen.group.visible = false;
+
+        // Swap colliders & interactables
+        this.player.colliders = this.islandGen.colliders;
+        this.interactMgr.generator = this.islandGen;
+
+        // Teleport player in front of cottage door
+        // Cottage door is at (-10.0, 0.6, -9.0 + 1.9 = -7.1)
+        this.player.position.set(-10.0, 0.6 + 0.1, -5.2);
+        this.player.velocity.set(0, 0, 0);
+        this.player.group.position.copy(this.player.position);
+
+        // Face south/southeast (away from the cottage)
+        this.player.group.rotation.y = 0;
+        this.player.cameraAngleH = 0;
+
+        // Update environment lighting
+        this.environment.setIndoorMode(false);
+      }
+
+      // 3. Fade out
+      setTimeout(() => {
+        fadeOverlay.classList.remove('fade-in');
+        this.player.controlsLocked = false;
+      }, 300);
+
+    }, 450); // wait for fade to black (matches CSS opacity transition)
+  }
+
   animate() {
     requestAnimationFrame(() => this.animate());
 
@@ -469,7 +552,7 @@ class GameApp {
     // Update game components
     if (this.player) this.player.update(delta, time);
     if (this.environment) this.environment.update(time);
-    if (this.islandGen) this.islandGen.update(time);
+    if (this.islandGen) this.islandGen.update(time, this.environment);
     if (this.interactMgr) this.interactMgr.update();
 
     // Update beach/snow balls

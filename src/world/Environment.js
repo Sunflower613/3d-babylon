@@ -9,10 +9,18 @@ export class Environment {
     this.particleGeometry = null;
     this.particleMaterial = null;
     this.isNight = false; // Add state for day/night toggle
+    this.isIndoor = false; // Add state for indoor/outdoor map mode
 
     this.initLights();
     this.initFog();
     this.initParticles();
+  }
+
+  setIndoorMode(isIndoor) {
+    this.isIndoor = isIndoor;
+    if (this.particles) {
+      this.particles.visible = !isIndoor;
+    }
   }
 
   initLights() {
@@ -161,11 +169,23 @@ export class Environment {
     this.particleGeometry.attributes.position.needsUpdate = true;
 
     // Smoothly transition lighting between day and night (locking position, changing color & intensity)
-    const targetHemiIntensity = this.isNight ? 0.18 : (isChristmas ? 0.75 : 1.1);
-    const targetSunIntensity = this.isNight ? 0.22 : (isChristmas ? 0.95 : 1.75);
-    const targetSunColor = new THREE.Color(this.isNight ? 0x90a4ae : (isChristmas ? 0xd9e8f5 : 0xfffde7));
-    const targetSkyColor = new THREE.Color(this.isNight ? 0x070b12 : this.themeConfig.colors.sky);
-    const targetFogColor = new THREE.Color(this.isNight ? 0x070b12 : this.themeConfig.colors.fog);
+    let targetHemiIntensity, targetSunIntensity, targetSunColor, targetSkyColor, targetFogColor;
+
+    if (this.isIndoor) {
+      // Warm cozy indoor ambient, low sun/shadow influence, dark night sky window view
+      targetHemiIntensity = 0.75;
+      targetSunIntensity = 0.05;
+      targetSunColor = new THREE.Color(0xffd180); // warm ambient sun hint
+      targetSkyColor = new THREE.Color(0x0c0e14); // dark cozy night color
+      targetFogColor = new THREE.Color(0x0c0e14);
+    } else {
+      // Normal outdoor day/night transitions
+      targetHemiIntensity = this.isNight ? 0.18 : (isChristmas ? 0.75 : 1.1);
+      targetSunIntensity = this.isNight ? 0.22 : (isChristmas ? 0.95 : 1.75);
+      targetSunColor = new THREE.Color(this.isNight ? 0x90a4ae : (isChristmas ? 0xd9e8f5 : 0xfffde7));
+      targetSkyColor = new THREE.Color(this.isNight ? 0x070b12 : this.themeConfig.colors.sky);
+      targetFogColor = new THREE.Color(this.isNight ? 0x070b12 : this.themeConfig.colors.fog);
+    }
 
     // Lerp values
     if (this.hemiLight) {
