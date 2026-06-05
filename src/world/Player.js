@@ -525,7 +525,7 @@ export class Player {
   }
 
   resetInputs() {
-    this.keys = { w: false, a: false, s: false, d: false, space: false };
+    this.keys = { w: false, a: false, s: false, d: false, space: false, shift: false };
     this.velocity.set(0, this.velocity.y, 0);
   }
 
