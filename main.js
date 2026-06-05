@@ -371,10 +371,10 @@ class GameApp {
         joystickTouchId = null;
         joystickHandle.style.transform = 'translate(0, 0)';
         
-        joystickWrapper.style.left = '48px';
-        joystickWrapper.style.bottom = '48px';
-        joystickWrapper.style.top = 'auto';
-        joystickWrapper.style.opacity = '0.55';
+        joystickWrapper.style.left = '';
+        joystickWrapper.style.bottom = '';
+        joystickWrapper.style.top = '';
+        joystickWrapper.style.opacity = '';
         
         this.player.keys.w = false;
         this.player.keys.s = false;
