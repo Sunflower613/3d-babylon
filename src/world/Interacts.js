@@ -26,9 +26,14 @@ export class InteractsManager {
       }
     });
 
-    // Mobile screen button click
+    // Mobile screen button click and touch
     if (this.mobileInteractBtn) {
-      this.mobileInteractBtn.addEventListener('click', () => {
+      this.mobileInteractBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        this.triggerActiveInteraction();
+      }, { passive: false });
+      this.mobileInteractBtn.addEventListener('click', (e) => {
+        e.preventDefault();
         this.triggerActiveInteraction();
       });
     }
@@ -144,9 +149,15 @@ export class InteractsManager {
     ball.isCarried = false;
     this.player.carriedBall = null;
 
+    // Set collision cooldown so it doesn't immediately collide with the player on release
+    ball.throwNoCollideTimer = 0.4; // 0.4 seconds of immunity
+
     // Toss forward slightly based on player facing direction
     const playerForward = new THREE.Vector3(0, 0, 1).applyQuaternion(this.player.group.quaternion);
-    ball.velocity.copy(playerForward).multiplyScalar(5.5); // Toss force
+    
+    // Inherit player's current velocity so dropping while running doesn't lag behind
+    ball.velocity.copy(this.player.velocity);
+    ball.velocity.addScaledVector(playerForward, 5.5); // Add forward toss force
     ball.velocity.y = 2.8; // Hop up slightly on drop
     ball.isGrounded = false;
 

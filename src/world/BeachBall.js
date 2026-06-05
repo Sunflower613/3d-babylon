@@ -16,6 +16,7 @@ export class BeachBall {
     this.friction = 0.985;        // Rolling resistance
     this.bounceElasticity = 0.65; // Ground bounce dampener
     this.isGrounded = false;
+    this.throwNoCollideTimer = 0; // Cooldown timer for player collision on release
 
     this.initMesh(colorHex);
   }
@@ -51,6 +52,10 @@ export class BeachBall {
   }
 
   update(delta, player) {
+    if (this.throwNoCollideTimer > 0) {
+      this.throwNoCollideTimer -= delta;
+    }
+
     if (this.isCarried) {
       // Hold ball in front of player's chest
       const playerForward = new THREE.Vector3(0, 0, 1).applyQuaternion(player.group.quaternion);
@@ -114,35 +119,37 @@ export class BeachBall {
     }
 
     // 4. Collision/Kick interaction with the player
-    const dx = this.position.x - player.position.x;
-    const dz = this.position.z - player.position.z;
-    const dist2D = Math.sqrt(dx * dx + dz * dz);
-    const kickDistance = (player.radius || 0.6) + this.radius - 0.05;
+    if (this.throwNoCollideTimer <= 0) {
+      const dx = this.position.x - player.position.x;
+      const dz = this.position.z - player.position.z;
+      const dist2D = Math.sqrt(dx * dx + dz * dz);
+      const kickDistance = (player.radius || 0.6) + this.radius - 0.05;
 
-    // Check if player overlaps the ball in 2D and is vertically close
-    if (dist2D < kickDistance && Math.abs(this.position.y - player.position.y) < 1.3) {
-      const angle = Math.atan2(dx, dz);
-      const kickDir = new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
+      // Check if player overlaps the ball in 2D and is vertically close
+      if (dist2D < kickDistance && Math.abs(this.position.y - player.position.y) < 1.3) {
+        const angle = Math.atan2(dx, dz);
+        const kickDir = new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
 
-      // Push ball slightly out of intersection to prevent sticking
-      const overlap = kickDistance - dist2D;
-      this.position.x += kickDir.x * overlap;
-      this.position.z += kickDir.z * overlap;
+        // Push ball slightly out of intersection to prevent sticking
+        const overlap = kickDistance - dist2D;
+        this.position.x += kickDir.x * overlap;
+        this.position.z += kickDir.z * overlap;
 
-      // Get player speed
-      const playerSpeed = Math.sqrt(player.velocity.x * player.velocity.x + player.velocity.z * player.velocity.z);
-      const baseForce = 4.8;
-      const speedBonus = playerSpeed * 1.3;
-      const totalForce = baseForce + speedBonus;
+        // Get player speed
+        const playerSpeed = Math.sqrt(player.velocity.x * player.velocity.x + player.velocity.z * player.velocity.z);
+        const baseForce = 4.8;
+        const speedBonus = playerSpeed * 1.3;
+        const totalForce = baseForce + speedBonus;
 
-      // Set velocity: kick forward + pop up
-      this.velocity.x = kickDir.x * totalForce;
-      this.velocity.z = kickDir.z * totalForce;
-      this.velocity.y = 2.4 + speedBonus * 0.45;
-      this.isGrounded = false;
+        // Set velocity: kick forward + pop up
+        this.velocity.x = kickDir.x * totalForce;
+        this.velocity.z = kickDir.z * totalForce;
+        this.velocity.y = 2.4 + speedBonus * 0.45;
+        this.isGrounded = false;
 
-      // Trigger kick sound
-      this.playKickSound();
+        // Trigger kick sound
+        this.playKickSound();
+      }
     }
 
     // 5. Visual rolling rotation
