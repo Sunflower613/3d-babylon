@@ -298,7 +298,9 @@ class GameApp {
       // Find the touch that landed on the left side of the screen
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
-        const isLeftHalf = touch.clientX < window.innerWidth * 0.45;
+        
+        // Ignore touches within 55px of the left edge to prevent triggering browser swipe gestures
+        const isLeftHalf = touch.clientX >= 55 && touch.clientX < window.innerWidth * 0.45;
         
         const targetEl = touch.target && touch.target.closest ? touch.target : null;
         const isUI = targetEl ? (
@@ -309,13 +311,17 @@ class GameApp {
                      targetEl.id === 'audio-btn' ||
                      targetEl.id === 'btn-back-2d'
                     ) : false;
-                     
+                      
         if (isLeftHalf && !isUI && joystickTouchId === null) {
           isTouching = true;
           joystickTouchId = touch.identifier;
           
-          joystickWrapper.style.left = `${touch.clientX - 55}px`;
-          joystickWrapper.style.top = `${touch.clientY - 55}px`;
+          // Clamp joystick coordinates to keep it inside safe viewport bounds
+          const wrapperLeft = Math.max(48, touch.clientX - 55);
+          const wrapperTop = Math.max(20, Math.min(window.innerHeight - 130, touch.clientY - 55));
+          
+          joystickWrapper.style.left = `${wrapperLeft}px`;
+          joystickWrapper.style.top = `${wrapperTop}px`;
           joystickWrapper.style.bottom = 'auto'; 
           joystickWrapper.style.opacity = '0.9'; 
           
