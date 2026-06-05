@@ -451,12 +451,12 @@ body, html {
 }
 
 .modal-emoji {
-  font-size: 2rem;
+  font-size: 1.5rem;
   filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15));
 }
 
 .modal-header h2 {
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   font-weight: 800;
   letter-spacing: 0.5px;
   font-family: var(--font-display);
@@ -706,12 +706,13 @@ body, html {
     gap: 10px !important;
   }
 
-  .modal-header h2 {
-    font-size: 1.15rem !important;
+  .modal-header h2,
+  .sidebar-header h2 {
+    font-size: 1.05rem !important;
   }
 
   .modal-emoji {
-    font-size: 1.5rem !important;
+    font-size: 1.25rem !important;
   }
 
   .modal-close {
@@ -840,11 +841,12 @@ body.is-mobile .modal-header {
   padding: 26px 20px 8px !important;
   gap: 10px !important;
 }
-body.is-mobile .modal-header h2 {
-  font-size: 1.15rem !important;
+body.is-mobile .modal-header h2,
+body.is-mobile .sidebar-header h2 {
+  font-size: 1.05rem !important;
 }
 body.is-mobile .modal-emoji {
-  font-size: 1.5rem !important;
+  font-size: 1.25rem !important;
 }
 body.is-mobile .modal-close {
   top: 10px !important;
@@ -1090,7 +1092,7 @@ body.is-mobile .arcade-game-title {
 }
 
 .sidebar-header h2 {
-  font-size: 1.35rem;
+  font-size: 1.15rem;
   font-weight: 800;
   background: none;
   -webkit-background-clip: initial;
