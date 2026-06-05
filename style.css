@@ -692,28 +692,128 @@ body, html {
   }
   
   .modal-card {
-    width: 92%;
-    border-radius: 20px;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: none !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    border: none !important;
   }
   
   .modal-header {
-    padding: 20px 20px 10px;
+    padding: 14px 20px 8px !important;
+    gap: 10px !important;
+  }
+
+  .modal-header h2 {
+    font-size: 1.15rem !important;
+  }
+
+  .modal-emoji {
+    font-size: 1.5rem !important;
+  }
+
+  .modal-close {
+    top: 10px !important;
+    right: 20px !important;
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 1.2rem !important;
   }
   
   .modal-body {
-    padding: 10px 20px 20px;
+    padding: 8px 20px 20px !important;
   }
 
   .modal-body.scrollable {
-    max-height: calc(70vh - 90px);
+    max-height: calc(100vh - 75px) !important;
   }
 
+  /* Compact about me contents */
+  .profile-section {
+    margin-bottom: 12px !important;
+    padding-bottom: 12px !important;
+    gap: 12px !important;
+  }
+  .avatar-placeholder {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 14px !important;
+    font-size: 1.5rem !important;
+  }
+  .bio-text p {
+    margin-bottom: 8px !important;
+    font-size: 0.85rem !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Compact skills contents */
+  .skill-category {
+    margin-bottom: 14px !important;
+  }
+  .skill-category h3 {
+    font-size: 0.95rem !important;
+    margin-bottom: 8px !important;
+  }
+  .skill-item {
+    margin-bottom: 8px !important;
+  }
+  .skill-name {
+    font-size: 0.8rem !important;
+    margin-bottom: 4px !important;
+  }
+  .progress-bar {
+    height: 6px !important;
+  }
+
+  /* Compact project items */
   .projects-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
   }
   
   .project-item {
-    padding: 16px;
+    padding: 10px !important;
+    gap: 10px !important;
+    border-radius: 12px !important;
+  }
+  .project-img {
+    width: 38px !important;
+    height: 38px !important;
+    font-size: 1.2rem !important;
+    border-radius: 8px !important;
+  }
+  .project-detail h3 {
+    font-size: 0.9rem !important;
+    margin-bottom: 4px !important;
+  }
+  .project-detail p {
+    font-size: 0.78rem !important;
+    line-height: 1.4 !important;
+    margin-bottom: 6px !important;
+  }
+  .tag {
+    font-size: 0.7rem !important;
+    padding: 1px 6px !important;
+  }
+
+  /* Compact arcade lobby */
+  .arcade-games-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important;
+    gap: 10px !important;
+    padding: 4px !important;
+  }
+  .arcade-game-card {
+    padding: 12px 8px !important;
+    gap: 8px !important;
+    border-radius: 12px !important;
+  }
+  .arcade-game-icon {
+    font-size: 1.8rem !important;
+  }
+  .arcade-game-title {
+    font-size: 0.8rem !important;
   }
 }
 
@@ -728,23 +828,113 @@ body.is-mobile .interact-prompt {
   display: none !important;
 }
 body.is-mobile .modal-card {
-  width: 92%;
-  border-radius: 20px;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: 100vh !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  border: none !important;
 }
 body.is-mobile .modal-header {
-  padding: 20px 20px 10px;
+  padding: 14px 20px 8px !important;
+  gap: 10px !important;
+}
+body.is-mobile .modal-header h2 {
+  font-size: 1.15rem !important;
+}
+body.is-mobile .modal-emoji {
+  font-size: 1.5rem !important;
+}
+body.is-mobile .modal-close {
+  top: 10px !important;
+  right: 20px !important;
+  width: 32px !important;
+  height: 32px !important;
+  font-size: 1.2rem !important;
 }
 body.is-mobile .modal-body {
-  padding: 10px 20px 20px;
+  padding: 8px 20px 20px !important;
 }
 body.is-mobile .modal-body.scrollable {
-  max-height: calc(70vh - 90px);
+  max-height: calc(100vh - 75px) !important;
+}
+body.is-mobile .profile-section {
+  margin-bottom: 12px !important;
+  padding-bottom: 12px !important;
+  gap: 12px !important;
+}
+body.is-mobile .avatar-placeholder {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 14px !important;
+  font-size: 1.5rem !important;
+}
+body.is-mobile .bio-text p {
+  margin-bottom: 8px !important;
+  font-size: 0.85rem !important;
+  line-height: 1.5 !important;
+}
+body.is-mobile .skill-category {
+  margin-bottom: 14px !important;
+}
+body.is-mobile .skill-category h3 {
+  font-size: 0.95rem !important;
+  margin-bottom: 8px !important;
+}
+body.is-mobile .skill-item {
+  margin-bottom: 8px !important;
+}
+body.is-mobile .skill-name {
+  font-size: 0.8rem !important;
+  margin-bottom: 4px !important;
+}
+body.is-mobile .progress-bar {
+  height: 6px !important;
 }
 body.is-mobile .projects-grid {
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr !important;
+  gap: 10px !important;
 }
 body.is-mobile .project-item {
-  padding: 16px;
+  padding: 10px !important;
+  gap: 10px !important;
+  border-radius: 12px !important;
+}
+body.is-mobile .project-img {
+  width: 38px !important;
+  height: 38px !important;
+  font-size: 1.2rem !important;
+  border-radius: 8px !important;
+}
+body.is-mobile .project-detail h3 {
+  font-size: 0.9rem !important;
+  margin-bottom: 4px !important;
+}
+body.is-mobile .project-detail p {
+  font-size: 0.78rem !important;
+  line-height: 1.4 !important;
+  margin-bottom: 6px !important;
+}
+body.is-mobile .tag {
+  font-size: 0.7rem !important;
+  padding: 1px 6px !important;
+}
+body.is-mobile .arcade-games-grid {
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important;
+  gap: 10px !important;
+  padding: 4px !important;
+}
+body.is-mobile .arcade-game-card {
+  padding: 12px 8px !important;
+  gap: 8px !important;
+  border-radius: 12px !important;
+}
+body.is-mobile .arcade-game-icon {
+  font-size: 1.8rem !important;
+}
+body.is-mobile .arcade-game-title {
+  font-size: 0.8rem !important;
 }
 
 /* ==========================================================================
@@ -841,27 +1031,28 @@ body.is-mobile .project-item {
 .wardrobe-sidebar {
   width: 320px;
   height: 100%;
-  background: rgba(15, 17, 21, 0.76);
+  background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(25px) saturate(180%);
   -webkit-backdrop-filter: blur(25px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   pointer-events: auto;
   transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
   padding: 30px 24px;
-  box-shadow: 0 0 50px rgba(0,0,0,0.5);
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.1);
   box-sizing: border-box;
+  color: #1e293b;
 }
 
 .wardrobe-sidebar.left {
-  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
   border-left: none;
   transform: translateX(-100%);
 }
 
 .wardrobe-sidebar.right {
-  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 1px solid rgba(0, 0, 0, 0.1);
   border-right: none;
   transform: translateX(100%);
   position: relative;
@@ -885,9 +1076,10 @@ body.is-mobile .project-item {
 .sidebar-header h2 {
   font-size: 1.35rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #fff, #9ca3af);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  background: none;
+  -webkit-background-clip: initial;
+  -webkit-text-fill-color: initial;
+  color: #0f172a;
 }
 
 .sidebar-body {
@@ -905,8 +1097,30 @@ body.is-mobile .project-item {
   background: transparent;
 }
 .sidebar-body.scrollable::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.1);
   border-radius: 3px;
+}
+
+/* Force dark readable text and headings for wardrobe panels */
+.wardrobe-sidebar h3 {
+  color: #0f172a !important;
+}
+
+.wardrobe-sidebar .description,
+.wardrobe-sidebar .model-desc {
+  color: #475569 !important;
+}
+
+.wardrobe-sidebar .modal-close {
+  color: #1e293b !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+.wardrobe-sidebar .modal-close:hover {
+  background: rgba(255, 87, 87, 0.2) !important;
+  border-color: rgba(255, 87, 87, 0.3) !important;
+  color: #ff5757 !important;
 }
 
 .model-options {
@@ -916,8 +1130,8 @@ body.is-mobile .project-item {
 }
 
 .model-btn {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 16px;
   padding: 14px 16px;
   display: flex;
@@ -925,26 +1139,26 @@ body.is-mobile .project-item {
   gap: 14px;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  color: var(--text-main);
+  color: #1e293b;
   text-align: left;
   width: 100%;
 }
 
 .model-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
 }
 
 .model-btn.active {
-  background: linear-gradient(135deg, rgba(255, 140, 105, 0.15), rgba(100, 181, 246, 0.15));
+  background: linear-gradient(135deg, rgba(255, 140, 105, 0.12), rgba(100, 181, 246, 0.12));
   border-color: var(--primary);
-  box-shadow: 0 0 15px rgba(255, 140, 105, 0.25);
+  box-shadow: 0 0 15px rgba(255, 140, 105, 0.2);
 }
 
 .model-icon {
   font-size: 1.8rem;
-  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
 }
 
 .model-info {
@@ -955,16 +1169,16 @@ body.is-mobile .project-item {
 .model-name {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #fff;
+  color: #0f172a;
 }
 
 .color-btn {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(0, 0, 0, 0.1);
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.25s;
   padding: 0;
   outline: none;
@@ -972,13 +1186,13 @@ body.is-mobile .project-item {
 
 .color-btn:hover {
   transform: scale(1.15);
-  border-color: rgba(255, 255, 255, 0.6);
+  border-color: rgba(0, 0, 0, 0.4);
 }
 
 .color-btn.active {
   transform: scale(1.2);
-  border-color: #fff;
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.5), 0 4px 10px rgba(0, 0, 0, 0.25);
+  border-color: #0f172a;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 10px rgba(0, 0, 0, 0.3);
 }
 
 /* Responsive Wardrobe Modals for Mobile devices */
@@ -1119,21 +1333,24 @@ body.is-mobile .project-item {
   .wardrobe-sidebar {
     width: 250px !important;
     height: 100% !important;
+    max-height: none !important; /* Fix mobile landscape height cutoff */
     padding: 16px 14px !important;
-    background: rgba(15, 17, 21, 0.88) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    background: rgba(255, 255, 255, 0.75) !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
   }
   
   .wardrobe-sidebar.left {
     transform: translateX(-100%) !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-right: 1px solid rgba(0, 0, 0, 0.1) !important;
     border-left: none !important;
+    max-height: none !important;
   }
   
   .wardrobe-sidebar.right {
     transform: translateX(100%) !important;
-    border-left: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-left: 1px solid rgba(0, 0, 0, 0.1) !important;
     border-right: none !important;
+    max-height: none !important;
   }
   
   #modal-wardrobe.open .wardrobe-sidebar.left {
@@ -1159,3 +1376,5 @@ body.is-mobile .project-item {
     display: block !important;
   }
 }
+
+

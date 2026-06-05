@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>艺术画室 · 3D 调色盘写生</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -10,12 +10,19 @@
     <style>
         :root {
             --primary: #ff8c69;
-            --primary-glow: rgba(255, 140, 105, 0.4);
+            --primary-glow: rgba(255, 140, 105, 0.2);
             --secondary: #64b5f6;
-            --glass-bg: rgba(255, 255, 255, 0.08);
-            --glass-border: rgba(255, 255, 255, 0.12);
-            --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
+            --success: #4caf50;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+            --bg-page: #ffffff;
+            --bg-card: #f8fafc;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.05);
+            --shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.08);
+            --radius-md: 12px;
+            --radius-lg: 20px;
         }
 
         * {
@@ -27,7 +34,7 @@
         }
 
         body {
-            background: radial-gradient(circle at top, #1a1e29, #0f1115);
+            background-color: var(--bg-page);
             color: var(--text-main);
             font-family: 'Outfit', 'Noto Sans SC', system-ui, sans-serif;
             width: 100vw;
@@ -36,201 +43,328 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 16px;
+            touch-action: none;
         }
 
-        .paint-container {
+        .paint-layout {
+            display: grid;
+            grid-template-columns: 200px 1fr 200px;
+            gap: 24px;
             width: 100%;
-            max-width: 680px;
-            background: rgba(15, 17, 21, 0.75);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
-            padding: 20px;
+            height: 100%;
+            max-width: 1200px;
+            max-height: 700px;
+            padding: 24px;
+            box-sizing: border-box;
+            align-items: stretch;
+        }
+
+        .column-left, .column-right {
             display: flex;
             flex-direction: column;
             gap: 16px;
-            transition: all 0.3s ease;
-        }
-
-        /* Target Matching Header */
-        .target-header {
-            display: flex;
-            align-items: center;
             justify-content: space-between;
-            gap: 12px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid var(--glass-border);
-            padding: 12px 16px;
-            border-radius: 16px;
         }
 
-        .target-info {
+        .column-center {
             display: flex;
             align-items: center;
+            justify-content: center;
+        }
+
+        /* Card panels */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            flex-direction: column;
             gap: 12px;
         }
 
-        .target-color-box {
-            width: 70px;
-            height: 38px;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        .card-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+
+        /* Target Matching Color */
+        .target-card {
+            align-items: center;
+            text-align: center;
+        }
+
+        .target-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        .target-color-display {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: 3px solid #ffffff;
+            box-shadow: var(--shadow-md), 0 0 0 1px var(--border-color);
+            margin: 4px 0;
             transition: background-color 0.3s;
         }
 
-        .target-text {
+        .target-hex {
             font-size: 0.9rem;
-            color: var(--text-muted);
             font-weight: 600;
+            font-family: monospace;
+            color: var(--text-main);
         }
 
-        .btn-action {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            color: var(--text-main);
-            padding: 8px 16px;
+        /* Button Styling */
+        .btn {
+            font-family: inherit;
             font-size: 0.85rem;
             font-weight: 700;
+            padding: 8px 16px;
             border-radius: 100px;
+            border: 1px solid var(--border-color);
+            background: #ffffff;
+            color: var(--text-main);
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
         }
 
-        .btn-action:hover {
-            background: var(--primary);
-            border-color: var(--primary);
+        .btn:hover {
+            border-color: #94a3b8;
+            background: #f1f5f9;
             transform: translateY(-1px);
         }
 
-        .btn-action:active {
-            transform: scale(0.96);
+        .btn:active {
+            transform: translateY(0);
         }
 
-        /* Canvas Board */
-        .canvas-wrapper {
-            position: relative;
+        .btn-secondary {
             width: 100%;
-            display: flex;
-            justify-content: center;
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--glass-border);
-            border-radius: 16px;
-            overflow: hidden;
         }
 
-        canvas {
-            display: block;
-            background-color: #ffffff;
-            cursor: crosshair;
-            touch-action: none;
-            max-width: 100%;
-            height: auto;
+        .btn-secondary:hover {
+            border-color: var(--primary);
+            color: var(--primary);
         }
 
-        /* Color Palette and Paint Pots */
-        .control-panel {
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
+        /* Color Palette Pots */
+        .palette-card {
+            flex-grow: 1;
         }
 
-        .palette-section {
-            display: flex;
-            flex-wrap: wrap;
+        .palette-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
             gap: 8px;
-            justify-content: center;
         }
 
         .color-pot {
-            width: 44px;
-            height: 44px;
+            aspect-ratio: 1 / 1;
             border-radius: 50%;
-            border: 2px solid rgba(255, 255, 255, 0.15);
+            border: 2px solid #ffffff;
+            box-shadow: var(--shadow-sm), 0 0 0 1px var(--border-color);
             cursor: pointer;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.2s;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.7rem;
-            font-weight: bold;
-            color: #fff;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #ffffff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.6);
         }
 
         .color-pot:hover {
-            transform: scale(1.1);
-            border-color: rgba(255, 255, 255, 0.5);
+            transform: scale(1.15);
+            box-shadow: var(--shadow-md), 0 0 0 1.5px #64748b;
         }
 
         .color-pot.active {
-            transform: scale(1.15);
+            transform: scale(1.2);
             border-color: #ffffff;
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.4), 0 4px 8px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 0 0 2.5px var(--text-main), var(--shadow-md);
         }
 
-        /* Tool buttons */
-        .tools-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            padding-top: 14px;
-        }
-
-        .left-tools, .right-tools {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .brush-size-btn {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            color: var(--text-main);
-            font-size: 0.75rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .brush-size-btn.active {
-            background: var(--primary);
-            border-color: var(--primary);
-        }
-
-        .now-color-preview {
-            display: flex;
-            align-items: center;
+        .blend-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 8px;
-            font-size: 0.85rem;
-            color: var(--text-muted);
+            margin-top: auto;
+        }
+
+        .btn-blend {
+            border-radius: 8px;
+            padding: 8px 0;
+            font-size: 0.8rem;
+        }
+
+        /* Canvas Wrap (1:1 Ratio) */
+        .canvas-container {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            max-width: 460px;
+            max-height: 460px;
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
+            cursor: crosshair;
+            touch-action: none;
+            display: block;
+            background-color: #ffffff;
+        }
+
+        /* Tools Selection */
+        .tool-toggle-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .btn-tool {
+            border-radius: 8px;
+            padding: 8px 0;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 0.8rem;
+        }
+
+        .btn-tool.active {
+            background: var(--text-main);
+            color: #ffffff;
+            border-color: var(--text-main);
+        }
+
+        .btn-tool .tool-icon {
+            font-size: 1.15rem;
+        }
+
+        /* Sizes Control */
+        .size-group {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+
+        .btn-size {
+            border-radius: 6px;
+            padding: 6px 0;
+            font-size: 0.8rem;
+        }
+
+        .btn-size.active {
+            background: var(--primary);
+            color: #ffffff;
+            border-color: var(--primary);
+            box-shadow: 0 0 8px var(--primary-glow);
+        }
+
+        /* Current Color Preview */
+        .preview-card {
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
         }
 
         .color-circle {
-            width: 24px;
-            height: 24px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
-            border: 1.5px solid #fff;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            border: 2px solid #ffffff;
+            box-shadow: var(--shadow-md), 0 0 0 1px var(--border-color);
+            transition: background-color 0.2s;
         }
 
-        /* Alert Overlay */
+        /* Submission & Undo Actions */
+        .actions-card {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            padding: 0;
+            gap: 12px;
+        }
+
+        .actions-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .btn-action {
+            border-radius: 8px;
+            padding: 8px 0;
+            font-size: 0.8rem;
+        }
+
+        .btn-undo {
+            border-color: var(--border-color);
+        }
+
+        .btn-clear {
+            background: #fff5f5;
+            border-color: #fee2e2;
+            color: #ef4444;
+        }
+
+        .btn-clear:hover {
+            background: #fecaca;
+            border-color: #fca5a5;
+        }
+
+        .btn-submit {
+            width: 100%;
+            background: var(--success);
+            border-color: var(--success);
+            color: #ffffff;
+            padding: 12px 0;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .btn-submit:hover {
+            background: #2e7d32;
+            border-color: #2e7d32;
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+
+        /* Alert Dialogue */
         .alert-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(10, 11, 14, 0.6);
+            background: rgba(15, 23, 42, 0.35);
             backdrop-filter: blur(8px);
             display: none;
             align-items: center;
@@ -239,13 +373,14 @@
         }
 
         .alert-card {
-            background: rgba(20, 24, 33, 0.9);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
             padding: 24px 30px;
             text-align: center;
-            max-width: 320px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 90%;
+            max-width: 340px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             transform: scale(0.9);
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.27);
         }
@@ -258,11 +393,11 @@
             font-size: 1.2rem;
             font-weight: 800;
             margin-bottom: 12px;
-            color: #fff;
+            color: var(--text-main);
         }
 
         .alert-similarity {
-            font-size: 3rem;
+            font-size: 3.5rem;
             font-weight: 800;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             -webkit-background-clip: text;
@@ -271,206 +406,159 @@
         }
 
         .alert-message {
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             color: var(--text-muted);
             margin-bottom: 20px;
+            line-height: 1.5;
         }
 
-        /* Responsive Landscape Mobile layout (Side-by-Side layout via CSS Grid) */
+        /* Responsive Mobile Layout for Small Viewports (Landscape) */
         @media (max-height: 520px) {
-            body {
-                padding: 6px;
+            .paint-layout {
+                grid-template-columns: 160px 1fr 160px;
+                gap: 12px;
+                padding: 12px;
+                max-height: 100%;
             }
-            .paint-container {
-                display: grid;
-                grid-template-columns: 1.25fr 1fr;
-                grid-template-rows: auto 1fr;
-                grid-template-areas: 
-                    "canvas header"
-                    "canvas controls";
-                gap: 8px;
+
+            .card {
                 padding: 10px;
-                max-width: 100%;
-                width: 100%;
-                height: 100%;
-                border-radius: 16px;
-            }
-            .canvas-wrapper {
-                grid-area: canvas;
-                height: 100%;
-                width: 100%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 12px;
-            }
-            canvas {
-                width: 100% !important;
-                height: 100% !important;
-                max-height: 80vh;
-                object-fit: contain;
-                border-radius: 8px;
-            }
-            .target-header {
-                grid-area: header;
-                padding: 6px 12px;
-                border-radius: 10px;
                 gap: 8px;
             }
-            .control-panel {
-                grid-area: controls;
-                display: flex;
-                flex-direction: column;
-                justify-content: space-between;
-                height: 100%;
+
+            .column-left, .column-right {
                 gap: 8px;
             }
-            .palette-section {
+
+            .canvas-container {
+                max-width: 290px;
+                max-height: 290px;
+            }
+
+            .target-color-display {
+                width: 40px;
+                height: 40px;
+            }
+
+            .palette-grid {
                 gap: 4px;
-                justify-content: flex-start;
             }
+
             .color-pot {
-                width: 32px;
-                height: 32px;
-                font-size: 0.65rem;
                 border-width: 1.5px;
             }
-            .color-pot.active {
-                transform: scale(1.1);
+
+            .btn-tool {
+                padding: 6px 0;
             }
-            .target-color-box {
-                width: 44px;
-                height: 26px;
+
+            .btn-tool .tool-icon {
+                font-size: 1rem;
             }
-            .target-text {
-                font-size: 0.7rem;
-                line-height: 1.2;
-            }
-            .btn-action {
-                padding: 4px 10px;
-                font-size: 0.72rem;
-            }
-            .tools-section {
-                padding-top: 6px;
-                gap: 6px;
-            }
-            .brush-size-btn {
+
+            .color-circle {
                 width: 24px;
                 height: 24px;
-                font-size: 0.65rem;
             }
-            .color-circle {
-                width: 16px;
-                height: 16px;
-            }
-            .now-color-preview {
-                font-size: 0.72rem;
-            }
-            .left-tools, .right-tools {
-                gap: 6px;
-            }
-        }
 
-        /* Responsive Portrait / Mobile Screen Width layout */
-        @media (max-width: 768px) {
-            body {
-                padding: 8px;
-            }
-            .paint-container {
-                padding: 12px;
-                border-radius: 16px;
-                gap: 12px;
-            }
-            .target-header {
-                padding: 8px 12px;
-                border-radius: 12px;
-            }
-            .color-pot {
-                width: 38px;
-                height: 38px;
-            }
-            .tools-section {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 10px;
-            }
-            .right-tools {
-                justify-content: space-between;
+            .btn-submit {
+                padding: 8px 0;
             }
         }
     </style>
 </head>
 <body>
 
-    <div class="paint-container">
-        <!-- Target Color Header -->
-        <div class="target-header">
-            <div class="target-info">
-                <div class="target-color-box" id="target-color"></div>
-                <div class="target-text">写生目标色<br><span id="target-hex" style="font-size:0.75rem; color:rgba(255,255,255,0.4)">#ffffff</span></div>
+    <div class="paint-layout">
+        <!-- Left Column: Colors & Target -->
+        <div class="column-left">
+            <!-- Target Color Card -->
+            <div class="card target-card">
+                <div class="target-title">写生目标色</div>
+                <div class="target-color-display" id="target-color"></div>
+                <div class="target-hex" id="target-hex">#ffffff</div>
+                <button class="btn btn-secondary" onclick="generateNewTarget()">换目标色</button>
             </div>
-            <button class="btn-action" onclick="generateNewTarget()">换目标色</button>
+            <!-- Color Palette -->
+            <div class="card palette-card">
+                <div class="card-title">调色盘</div>
+                <div class="palette-grid">
+                    <div class="color-pot active" onclick="chooseColor('rgb(255, 64, 129)')" style="background-color: rgb(255, 64, 129);">红</div>
+                    <div class="color-pot" onclick="chooseColor('rgb(255, 235, 59)')" style="background-color: rgb(255, 235, 59); color:#000; text-shadow:none;">黄</div>
+                    <div class="color-pot" onclick="chooseColor('rgb(33, 150, 243)')" style="background-color: rgb(33, 150, 243);">蓝</div>
+                    <div class="color-pot" onclick="chooseColor('rgb(76, 175, 80)')" style="background-color: rgb(76, 175, 80);">绿</div>
+                    <div class="color-pot" onclick="chooseColor('rgb(255, 255, 255)')" style="background-color: rgb(255, 255, 255); color:#000; text-shadow:none;">白</div>
+                    <div class="color-pot" onclick="chooseColor('rgb(17, 17, 17)')" style="background-color: rgb(17, 17, 17);">黑</div>
+                    <div class="color-pot" onclick="chooseColor('rgb(156, 39, 176)')" style="background-color: rgb(156, 39, 176);">紫</div>
+                    <div class="color-pot" onclick="chooseColor('rgb(255, 152, 0)')" style="background-color: rgb(255, 152, 0);">橙</div>
+                    <div class="color-pot" onclick="chooseColor('rgb(0, 188, 212)')" style="background-color: rgb(0, 188, 212);">青</div>
+                    <div class="color-pot" onclick="chooseColor('rgb(121, 85, 72)')" style="background-color: rgb(121, 85, 72);">褐</div>
+                </div>
+                <div class="blend-actions">
+                    <button class="btn btn-blend" onclick="waterBlend()" style="background-color: rgb(224, 247, 250); color:#0097a7;">水</button>
+                    <button class="btn btn-blend" id="btn-mix" onclick="mixColors()" style="background: linear-gradient(135deg, #ff4081, #9c27b0); color:#fff;">融合</button>
+                </div>
+            </div>
         </div>
-
-        <!-- Canvas Area -->
-        <div class="canvas-wrapper">
-            <canvas id="canvas" width="640" height="340"></canvas>
+        
+        <!-- Center Column: Square Canvas -->
+        <div class="column-center">
+            <div class="canvas-container">
+                <canvas id="canvas" width="400" height="400"></canvas>
+            </div>
         </div>
-
-        <!-- Controls Section -->
-        <div class="control-panel">
-            <!-- Palette pots -->
-            <div class="palette-section">
-                <!-- Row 1: Base pigments -->
-                <div class="color-pot active" onclick="chooseColor('rgb(255, 64, 129)')" style="background-color: rgb(255, 64, 129);">红</div>
-                <div class="color-pot" onclick="chooseColor('rgb(255, 235, 59)')" style="background-color: rgb(255, 235, 59); color:#000; text-shadow:none;">黄</div>
-                <div class="color-pot" onclick="chooseColor('rgb(33, 150, 243)')" style="background-color: rgb(33, 150, 243);">蓝</div>
-                <div class="color-pot" onclick="chooseColor('rgb(76, 175, 80)')" style="background-color: rgb(76, 175, 80);">绿</div>
-                <div class="color-pot" onclick="chooseColor('rgb(255, 255, 255)')" style="background-color: rgb(255, 255, 255); color:#000; text-shadow:none;">白</div>
-                <div class="color-pot" onclick="chooseColor('rgb(17, 17, 17)')" style="background-color: rgb(17, 17, 17);">黑</div>
-                
-                <!-- Row 2: Secondary / blended pigments -->
-                <div class="color-pot" onclick="chooseColor('rgb(156, 39, 176)')" style="background-color: rgb(156, 39, 176);">紫</div>
-                <div class="color-pot" onclick="chooseColor('rgb(255, 152, 0)')" style="background-color: rgb(255, 152, 0);">橙</div>
-                <div class="color-pot" onclick="chooseColor('rgb(0, 188, 212)')" style="background-color: rgb(0, 188, 212);">青</div>
-                <div class="color-pot" onclick="chooseColor('rgb(121, 85, 72)')" style="background-color: rgb(121, 85, 72);">褐</div>
-                
-                <!-- Special blend actions -->
-                <div class="color-pot" onclick="waterBlend()" style="background-color: rgb(224, 247, 250); color:#0097a7; text-shadow:none;" title="加清水稀释调和">水</div>
-                <button class="color-pot" id="btn-mix" onclick="mixColors()" style="background: linear-gradient(135deg, #ff4081, #9c27b0); border:none;" title="将当前颜色与上一步 the color 混合">融合</button>
+        
+        <!-- Right Column: Tools & Actions -->
+        <div class="column-right">
+            <!-- Tool Selection -->
+            <div class="card tools-card">
+                <div class="card-title">绘画工具</div>
+                <div class="tool-toggle-group">
+                    <button class="btn btn-tool active" id="tool-brush" onclick="selectTool('brush')">
+                        <span class="tool-icon">🖌️</span>画笔
+                    </button>
+                    <button class="btn btn-tool" id="tool-eraser" onclick="selectTool('eraser')">
+                        <span class="tool-icon">🧼</span>橡皮
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Brush Sizes -->
+            <div class="card size-card">
+                <div class="card-title">尺寸</div>
+                <div class="size-group">
+                    <button class="btn btn-size" id="size-small" onclick="setBrushSize(8, 'small')">小</button>
+                    <button class="btn btn-size active" id="size-medium" onclick="setBrushSize(18, 'medium')">中</button>
+                    <button class="btn btn-size" id="size-large" onclick="setBrushSize(28, 'large')">大</button>
+                </div>
             </div>
 
-            <!-- Toolbar -->
-            <div class="tools-section">
-                <div class="left-tools">
-                    <button class="btn-action" onclick="undo()" style="padding: 8px 12px;">撤销</button>
-                    <button class="btn-action" onclick="clearCanvas()" style="background:rgba(255,82,82,0.15); border-color:rgba(255,82,82,0.3); color:#ff5252; padding: 8px 12px;">清空</button>
-                    
-                    <div style="display:flex; gap:6px; align-items:center; margin-left:8px;">
-                        <button class="brush-size-btn" onclick="setBrushSize(8, this)">小</button>
-                        <button class="brush-size-btn active" onclick="setBrushSize(18, this)">中</button>
-                        <button class="brush-size-btn" onclick="setBrushSize(28, this)">大</button>
-                    </div>
+            <!-- Color Preview -->
+            <div class="card preview-card">
+                <div class="card-title">当前色</div>
+                <div class="preview-container">
+                    <div class="color-circle" id="now-color-circle" style="background-color: rgb(255, 64, 129);"></div>
                 </div>
-
-                <div class="right-tools">
-                    <div class="now-color-preview">
-                        当前色:
-                        <div class="color-circle" id="now-color-circle" style="background-color: rgb(255, 64, 129);"></div>
-                    </div>
-                    <button class="btn-action" onclick="submitPaint()" style="background:#4caf50; border-color:#4caf50; padding: 8px 20px;">完成比对</button>
+            </div>
+            
+            <!-- Actions & Submission -->
+            <div class="card actions-card">
+                <div class="actions-group">
+                    <button class="btn btn-action btn-undo" onclick="undo()">撤销</button>
+                    <button class="btn btn-action btn-clear" onclick="clearCanvas()">清空</button>
                 </div>
+                <button class="btn btn-submit" onclick="submitPaint()">完成比对</button>
             </div>
         </div>
     </div>
 
-    <!-- Alert Modal Dialog -->
+    <!-- Alert Overlay Dialog -->
     <div class="alert-overlay" id="alert-overlay">
         <div class="alert-card" id="alert-card">
             <div class="alert-title">写生色彩比对</div>
             <div class="alert-similarity" id="alert-similarity">0%</div>
             <div class="alert-message" id="alert-message">你调制的色彩与目标色彩很接近！</div>
-            <button class="btn-action" onclick="closeAlert()" style="background:var(--secondary); border-color:var(--secondary); width:100%;">继续写生</button>
+            <button class="btn btn-action" onclick="closeAlert()" style="background:var(--secondary); border-color:var(--secondary); width:100%; color:#fff;">继续写生</button>
         </div>
     </div>
 
@@ -483,6 +571,7 @@
         let targetColor = 'rgb(255, 255, 255)';
         let isDrawing = false;
         let brushRadius = 18;
+        let currentTool = 'brush'; // 'brush' or 'eraser'
 
         // Undo History Stack
         const historyStack = [];
@@ -540,40 +629,44 @@
             const y = Math.round(((clientY - rect.top) / rect.height) * canvas.height);
 
             if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
-                // Get existing color under brush to mix
-                const imgData = ctx.getImageData(x, y, 1, 1);
-                const r = imgData.data[0];
-                const g = imgData.data[1];
-                const b = imgData.data[2];
-                const a = imgData.data[3];
-                
-                // If transparent, treat as white
-                const existingColor = a === 0 ? 'rgb(255, 255, 255)' : `rgb(${r}, ${g}, ${b})`;
-                
-                // Perform color mix
-                const mixed = mix(currentColor, existingColor);
-                
-                // Update currentColor to mixed for continuous wet blend feel
-                currentColor = mixed;
+                if (currentTool === 'eraser') {
+                    // Eraser draws solid white directly, no blending!
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(x, y, brushRadius, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // Brush blends color with wet paint look
+                    const imgData = ctx.getImageData(x, y, 1, 1);
+                    const r = imgData.data[0];
+                    const g = imgData.data[1];
+                    const b = imgData.data[2];
+                    const a = imgData.data[3];
+                    
+                    const existingColor = a === 0 ? 'rgb(255, 255, 255)' : `rgb(${r}, ${g}, ${b})`;
+                    const mixed = mix(currentColor, existingColor);
+                    currentColor = mixed;
 
-                // Draw brush circle
-                ctx.fillStyle = currentColor;
-                ctx.beginPath();
-                ctx.arc(x, y, brushRadius, 0, Math.PI * 2);
-                ctx.fill();
+                    ctx.fillStyle = currentColor;
+                    ctx.beginPath();
+                    ctx.arc(x, y, brushRadius, 0, Math.PI * 2);
+                    ctx.fill();
 
-                updateColorsHud();
+                    updateColorsHud();
+                }
             }
         }
 
         function chooseColor(color) {
             previousColor = currentColor;
             currentColor = color;
+            selectTool('brush'); // Auto switch back to brush when choosing a pigment
             updateColorsHud();
 
             // Set active class on color pots
             document.querySelectorAll('.color-pot').forEach(pot => {
-                if (pot.style.backgroundColor === color) {
+                const potColor = pot.style.backgroundColor;
+                if (potColor === color || potColor.replace(/\s+/g, '') === color.replace(/\s+/g, '')) {
                     pot.classList.add('active');
                 } else {
                     pot.classList.remove('active');
@@ -581,11 +674,23 @@
             });
         }
 
+        function selectTool(tool) {
+            currentTool = tool;
+            
+            // Update UI buttons active state
+            document.getElementById('tool-brush').classList.toggle('active', tool === 'brush');
+            document.getElementById('tool-eraser').classList.toggle('active', tool === 'eraser');
+            
+            if (tool === 'eraser') {
+                document.querySelectorAll('.color-pot').forEach(pot => pot.classList.remove('active'));
+            }
+        }
+
         function updateColorsHud() {
             document.getElementById('now-color-circle').style.backgroundColor = currentColor;
         }
 
-        // Wet blend: 75% brush color, 25% canvas color for painting feel
+        // Wet blend: 75% brush color, 25% canvas color
         function mix(color1, color2) {
             const rgb1 = parseRgb(color1);
             const rgb2 = parseRgb(color2);
@@ -599,6 +704,8 @@
 
         // Palette blend: 50% / 50% mix of current and previous colors
         function mixColors() {
+            if (currentTool === 'eraser') return; // Cannot mix in eraser mode
+            
             const rgb1 = parseRgb(currentColor);
             const rgb2 = parseRgb(previousColor);
 
@@ -612,12 +719,13 @@
 
             // Flash active mix button feedback
             const btn = document.getElementById('btn-mix');
-            btn.style.transform = 'scale(0.9)';
+            btn.style.transform = 'scale(0.95)';
             setTimeout(() => btn.style.transform = 'scale(1)', 150);
         }
 
         // Clear water dilutes the brush: blend currentColor with white (50% water dilution)
         function waterBlend() {
+            if (currentTool === 'eraser') return; // Cannot blend water in eraser mode
             chooseColor(mix(currentColor, 'rgb(255, 255, 255)'));
         }
 
@@ -639,7 +747,6 @@
             
             document.getElementById('target-color').style.backgroundColor = targetColor;
             
-            // Hex text
             const hex = '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
             document.getElementById('target-hex').textContent = hex;
         }
@@ -664,15 +771,15 @@
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-        function setBrushSize(radius, button) {
+        function setBrushSize(radius, sizeName) {
             brushRadius = radius;
-            document.querySelectorAll('.brush-size-btn').forEach(btn => {
+            document.querySelectorAll('.btn-size').forEach(btn => {
                 btn.classList.remove('active');
             });
-            button.classList.add('active');
+            document.getElementById(`size-${sizeName}`).classList.add('active');
         }
 
-        // Color comparison metric (average delta E distance)
+        // Color similarity comparison
         function submitPaint() {
             const userImg = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const targetRGB = parseRgb(targetColor);
@@ -686,7 +793,6 @@
                 const ug = userImg.data[i+1];
                 const ub = userImg.data[i+2];
 
-                // Euclidean distance in RGB color space
                 const dr = ur - targetRGB.r;
                 const dg = ug - targetRGB.g;
                 const db = ub - targetRGB.b;
@@ -700,7 +806,6 @@
             const maxDist = Math.sqrt(255*255 + 255*255 + 255*255);
             const similarity = Math.max(0, Math.round((1 - (avgDelta / maxDist)) * 100));
 
-            // Display customized feedback messages
             const simEl = document.getElementById('alert-similarity');
             const msgEl = document.getElementById('alert-message');
             

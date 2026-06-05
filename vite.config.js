@@ -11,6 +11,16 @@ export default defineConfig({
         server.middlewares.use((req, res, next) => {
           const relativeUrl = req.url.split('?')[0];
           
+          // Serve paint.html directly from public directory to bypass Vite's html fallback
+          if (relativeUrl === '/paint.html') {
+            const paintPath = path.resolve(__dirname, 'public', 'paint.html');
+            if (fs.existsSync(paintPath)) {
+              res.setHeader('Content-Type', 'text/html');
+              res.end(fs.readFileSync(paintPath));
+              return;
+            }
+          }
+          
           // Match /games/*, /images/* or root-level parent assets like class.html, album.html, etc.
           const isParentAsset = relativeUrl.match(/^\/(games|images)\//) || 
                                 relativeUrl.match(/^\/[^\/]+\.(html|js|css|png|jpg|ico)$/);
