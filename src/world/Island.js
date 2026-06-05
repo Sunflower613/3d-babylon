@@ -731,7 +731,7 @@ export class IslandGenerator {
       this.createShell(8.5, 0.61, 3.5, 0xfff9c4);
 
       // Extra Beach Umbrellas
-      this.createExtraUmbrella(-8, 0.6, -7, 0x40c4ff); 
+      this.createExtraUmbrella(-5.8, 0.6, -5.0, 0x40c4ff); 
       this.createExtraUmbrella(8, 0.6, -7, 0xffeb3b); 
     }
   }
@@ -1041,6 +1041,30 @@ export class IslandGenerator {
     frontWallTop.castShadow = true;
     houseGroup.add(frontWallTop);
 
+    // 3.5. Gable Walls (Triangles to fill the front & back gaps under the A-frame roof)
+    const gableShape = new THREE.Shape();
+    gableShape.moveTo(-1.9, 3.2);
+    gableShape.lineTo(1.9, 3.2);
+    gableShape.lineTo(0, 4.27);
+    gableShape.closePath();
+
+    const gableGeo = new THREE.ExtrudeGeometry(gableShape, {
+      depth: 0.08,
+      bevelEnabled: false
+    });
+
+    // Front Gable Wall (aligns with front wall at z = 1.9)
+    const frontGable = new THREE.Mesh(gableGeo, wallMat);
+    frontGable.position.set(0, 0, 1.9 - 0.08);
+    frontGable.castShadow = true;
+    houseGroup.add(frontGable);
+
+    // Back Gable Wall (aligns with back wall at z = -1.9)
+    const backGable = new THREE.Mesh(gableGeo, wallMat);
+    backGable.position.set(0, 0, -1.9);
+    backGable.castShadow = true;
+    houseGroup.add(backGable);
+
     // 4. Sloped Roof (A-frame)
     const roofColor = isChristmas ? 0xd50000 : 0xff7043;
     const roofMat = new THREE.MeshLambertMaterial({ color: roofColor, flatShading: true });
@@ -1295,12 +1319,12 @@ export class IslandGenerator {
       0.35 // sag
     );
 
-    // String 2: From cottage front-right corner to the cottage pathway streetlamp
+    // String 2: From cottage front-right corner to the cottage pathway streetlamp post top
     // Cottage corner: x = -8.1, y = 3.8, z = -7.1
-    // Streetlamp bulb: x = -8.0 + 0.36 = -7.64, y = 0.6 + 1.76 = 2.36, z = -4.0
+    // Streetlamp post top: x = -8.0, y = 0.6 + 2.2 = 2.8, z = -4.0 (avoiding bulb and shade clipping)
     this.createFairyLightString(
       new THREE.Vector3(-8.1, 3.8, -7.1),
-      new THREE.Vector3(-7.64, 2.36, -4.0),
+      new THREE.Vector3(-8.0, 2.8, -4.0),
       12, // bulbCount
       0.5 // sag
     );

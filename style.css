@@ -41,6 +41,9 @@ body, html {
   color: var(--text-main);
   user-select: none;
   overscroll-behavior: none;
+  touch-action: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* 3D Canvas Container */
@@ -270,8 +273,10 @@ body, html {
   border-radius: 50%;
   pointer-events: none; /* Touches will be captured by viewport window */
   position: fixed;      /* Fixed relative to viewport */
+  left: 48px;           /* Fallback */
   left: calc(48px + env(safe-area-inset-left));
-  bottom: calc(48px + env(safe-area-inset-bottom));
+  bottom: 60px;         /* Fallback & lifted higher */
+  bottom: calc(60px + env(safe-area-inset-bottom));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -305,8 +310,10 @@ body, html {
 
 .action-buttons {
   position: fixed;
+  right: 32px;          /* Fallback */
   right: calc(32px + env(safe-area-inset-right));
-  bottom: calc(32px + env(safe-area-inset-bottom));
+  bottom: 48px;         /* Fallback & lifted higher */
+  bottom: calc(48px + env(safe-area-inset-bottom));
   width: 170px;
   height: 170px;
   z-index: 15;
