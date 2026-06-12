@@ -74,6 +74,15 @@ export default defineConfig({
   },
   build: {
     outDir: './dist',
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        lobby: path.resolve(__dirname, 'lobby.html'),
+        house: path.resolve(__dirname, 'house.html'),
+        farm: path.resolve(__dirname, 'farm.html'),
+        pvp: path.resolve(__dirname, 'pvp.html')
+      }
+    }
   }
 });

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>虚空擂台PK | 3D 治愈群岛</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css">
+  <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+</head>
+<body id="page-pvp" style="background: #0f1115; overflow: hidden; margin: 0; height: 100%;">
+  <!-- 3D 渲染画布容器 -->
+  <div id="canvas-container"></div>
+
+  <!-- -------------------- 弹窗层 (Modal Overlays) -------------------- -->
+
+  <!-- 1. PK匹配大厅 (PK) 弹窗 -->
+  <div class="modal-overlay" id="modal-pk">
+    <div class="modal-card modal-large">
+      <button class="modal-close" data-close="modal-pk">&times;</button>
+      <div class="modal-header">
+        <span class="modal-emoji">⚔️</span>
+        <h2>1v1 虚空擂台 · PK匹配</h2>
+      </div>
+      <div class="modal-body scrollable" style="padding: 24px; display: flex; gap: 24px; flex-wrap: wrap;">
+        <div class="pk-profile" style="flex: 1; min-width: 250px; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 16px; border: 1px solid var(--glass-border); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+          <div class="pk-rank-card" style="margin-bottom: 16px;">
+            <div class="pk-badge" id="pk-rank-badge" style="font-size: 1.3rem; font-weight: bold; color: #ffca28; margin-bottom: 6px;">🏆 黄金战神</div>
+            <div class="pk-points" style="font-size: 1rem; color: var(--text-muted);">积分: <strong id="pk-points-val" style="color: #fff; font-size: 1.4rem;">1000</strong></div>
+          </div>
+          <div class="pk-stats-grid" style="display: flex; gap: 16px; width: 100%;">
+            <div class="stat-box" style="flex: 1; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 10px;">
+              <span class="label" style="display: block; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">胜率</span>
+              <span class="value" id="pk-win-rate" style="font-size: 1.1rem; font-weight: bold;">0%</span>
+            </div>
+            <div class="stat-box" style="flex: 1; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 10px;">
+              <span class="label" style="display: block; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">总场次</span>
+              <span class="value" id="pk-total-battles" style="font-size: 1.1rem; font-weight: bold;">0</span>
+            </div>
+          </div>
+        </div>
+        <div class="pk-actions" style="flex: 1.5; min-width: 280px; display: flex; flex-direction: column; gap: 16px;">
+          <button class="pk-btn-match" id="btn-pk-match" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); border: none; color: white; padding: 18px; border-radius: 16px; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 10px 20px rgba(231,76,60,0.3); transition: all 0.3s; width: 100%;">
+            <div class="match-icon" style="font-size: 1.4rem;">📡</div>
+            <span>自动寻找对手</span>
+          </button>
+          
+          <div class="room-lobby" style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 16px; border-radius: 16px; width: 100%;">
+            <div class="room-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <h4 style="font-size: 0.95rem; font-weight: bold;">当前在线房间</h4>
+              <button class="hud-btn" id="btn-create-room" style="padding: 6px 12px; font-size: 0.8rem; background: var(--glass-bg);">创建房间</button>
+            </div>
+            <div class="room-list scrollable" id="room-list" style="height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+              <!-- 动态载入房间 -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 匹配雷达遮罩层 -->
+  <div class="radar-overlay" id="radar-overlay" style="display: none; position: fixed; inset: 0; z-index: 250; background: rgba(15,17,21,0.9); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); align-items: center; justify-content: center; color: white; text-align: center;">
+    <div class="radar-card" style="display: flex; flex-direction: column; align-items: center;">
+      <div class="radar-circle" style="position: relative; width: 120px; height: 120px; border: 2px dashed rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 24px;">
+        <div class="radar-sweep" style="position: absolute; width: 100%; height: 100%; border-radius: 50%; background: conic-gradient(from 0deg, rgba(231,76,60,0.4) 0deg, transparent 90deg); animation: rotate 2s linear infinite;"></div>
+        <div class="radar-ping" style="font-size: 2.2rem;">📡</div>
+      </div>
+      <h3 style="font-size: 1.2rem; font-weight: bold; margin-bottom: 8px;">正在匹配对手中...</h3>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">已用时间: <span id="radar-timer">0</span> 秒</p>
+      <button class="hud-btn" id="btn-cancel-match" style="margin-top: 24px; padding: 10px 24px; background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.15);">取消匹配</button>
+    </div>
+  </div>
+
+  <!-- PK 对决血条 HUD -->
+  <div class="pk-hud" id="pk-hud" style="display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 95; background: rgba(15,17,21,0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--glass-border); border-radius: 100px; padding: 10px 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); align-items: center; gap: 20px; width: 90%; max-width: 500px;">
+    <div class="pk-hud-player" style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+      <div class="pk-hud-name" id="pk-hud-p1-name" style="font-size: 0.75rem; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px;">您自己</div>
+      <div class="pk-hud-hp-bar" style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
+        <div class="pk-hud-hp-fill" id="pk-hud-p1-hp" style="width: 100%; height: 100%; background: linear-gradient(90deg, #2ecc71, #27ae60); transition: width 0.2s ease;"></div>
+      </div>
+      <div class="pk-hud-hp-text" id="pk-hud-p1-hp-text" style="font-size: 0.65rem; color: var(--text-muted); text-align: right;">100 / 100</div>
+    </div>
+    <div class="pk-hud-vs" style="font-size: 1.1rem; font-weight: 800; color: #e74c3c; font-style: italic;">VS</div>
+    <div class="pk-hud-player" style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+      <div class="pk-hud-name" id="pk-hud-p2-name" style="font-size: 0.75rem; font-weight: bold; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px;">机器人挑战者</div>
+      <div class="pk-hud-hp-bar" style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
+        <div class="pk-hud-hp-fill" id="pk-hud-p2-hp" style="width: 100%; height: 100%; background: linear-gradient(90deg, #e74c3c, #c0392b); transition: width 0.2s ease; margin-left: auto;"></div>
+      </div>
+      <div class="pk-hud-hp-text" id="pk-hud-p2-hp-text" style="font-size: 0.65rem; color: var(--text-muted);">100 / 100</div>
+    </div>
+  </div>
+
+  <!-- PK 战斗调试面板 -->
+  <div id="pk-debug-info" style="display: none; position: fixed; top: 90px; left: 50%; transform: translateX(-50%); z-index: 95; background: rgba(15,17,21,0.85); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 6px 16px; font-size: 0.75rem; color: #fff; font-family: monospace; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); pointer-events: none;"></div>
+
+  <!-- 2. 排行榜 (Leaderboard) 弹窗 (公共) -->
+  <div class="modal-overlay" id="modal-leaderboard">
+    <div class="modal-card">
+      <button class="modal-close" data-close="modal-leaderboard">&times;</button>
+      <div class="modal-header">
+        <span class="modal-emoji">🏆</span>
+        <h2>个人大厅 · 排行榜</h2>
+      </div>
+      <div class="modal-body no-padding" style="display: flex; flex-direction: column; overflow: hidden; height: 100%;">
+        <div class="leaderboard-tabs">
+          <button class="tab-btn active" data-tab="pkPoints">⚔️ 战力榜</button>
+          <button class="tab-btn" data-tab="coins">💰 财富榜</button>
+          <button class="tab-btn" data-tab="level">✨ 等级榜</button>
+        </div>
+        <div class="leaderboard-container scrollable" style="flex-grow: 1; padding: 20px; overflow-y: auto;">
+          <div class="leaderboard-list-view" id="leaderboard-list-view">
+            <!-- 动态生成排行 -->
+          </div>
+        </div>
+        <div class="leaderboard-my-rank" id="leaderboard-my-rank">
+          <!-- 当前用户排行 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 每日任务 (Tasks) 弹窗 (公共) -->
+  <div class="modal-overlay" id="modal-tasks">
+    <div class="modal-card">
+      <button class="modal-close" data-close="modal-tasks">&times;</button>
+      <div class="modal-header">
+        <span class="modal-emoji">📋</span>
+        <h2>治愈旅途 · 每日任务</h2>
+      </div>
+      <div class="modal-body scrollable" style="padding: 20px;">
+        <div class="tasks-list" id="tasks-list">
+          <!-- 动态生成任务 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 我的背包 (Backpack) 弹窗 (公共) -->
+  <div class="modal-overlay" id="modal-bag">
+    <div class="modal-card modal-large">
+      <button class="modal-close" data-close="modal-bag">&times;</button>
+      <div class="modal-header">
+        <span class="modal-emoji">💼</span>
+        <h2>旅者囊匣 · 我的背包</h2>
+      </div>
+      <div class="modal-body no-padding" style="display: flex; height: 100%; overflow: hidden;">
+        <div class="bag-left" style="flex: 1.8; display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--glass-border);">
+          <div class="bag-tabs" style="display: flex; background: rgba(0,0,0,0.15); border-bottom: 1px solid var(--glass-border);">
+            <button class="bag-tabactive active" data-tab="seed" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s;">消耗品</button>
+            <button class="bag-tabactive" data-tab="decor" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s;">装饰品</button>
+            <button class="bag-tabactive" data-tab="collect" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s;">珍藏品</button>
+          </div>
+          <div class="bag-grid scrollable" id="bag-grid" style="flex-grow: 1; padding: 16px; overflow-y: auto; display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; max-height: 280px; width: 100%;">
+            <!-- 10x4 网格 -->
+          </div>
+        </div>
+        <div class="bag-right" id="bag-item-detail" style="flex: 1.2; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: rgba(255,255,255,0.01); width: 100%;">
+          <div class="item-detail-empty" style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+            <div style="font-size: 2.6rem; opacity: 0.2;">💼</div>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">点击左侧背包物品查看详情</p>
+          </div>
+          <div class="item-detail-content" style="display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: space-between; gap: 16px;">
+            <!-- 动态内容 -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Device rotation overlay (visible on mobile in portrait mode) -->
+  <div id="rotation-overlay">
+    <div class="rotation-message">
+      <div class="phone-icon-animate">🔄📱</div>
+      <p style="font-size: 1.1rem; font-weight: 700; margin-bottom: 8px;">为了获得最佳体验，请旋转手机至横屏模式</p>
+      <span style="font-size:0.75rem; color:var(--text-muted);">Please rotate your device to landscape</span>
+    </div>
+  </div>
+
+  <!-- Screen fade transition overlay -->
+  <div id="fade-overlay"></div>
+
+  <!-- 引入主逻辑 -->
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

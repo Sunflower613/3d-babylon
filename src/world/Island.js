@@ -81,6 +81,84 @@ export class IslandGenerator {
 
     // 10. Create streetlamps (for night lighting)
     this.createStreetlamps();
+
+    // 11. Create Paimon guide NPC
+    this.createPaimon(2.5, 2.5);
+
+    // 12. Create the farm field (South-East)
+    // this.createFarmField(12.0, 0.6, -10.0);
+  }
+
+  createFarmField(startX, y, startZ) {
+    this.farmGroup = new THREE.Group();
+    this.farmGroup.position.set(startX, y, startZ);
+
+    const spacingX = 1.8;
+    const spacingZ = 1.8;
+
+    this.farmPlots3D = [];
+
+    for (let r = 0; r < 2; r++) {
+      for (let c = 0; c < 3; c++) {
+        const plotX = (c - 1) * spacingX;
+        const plotZ = (r - 0.5) * spacingZ;
+
+        // 泥土地基 (Low-poly 棕色盒子)
+        const plotGeo = new THREE.BoxGeometry(1.4, 0.12, 1.4);
+        const plotMesh = new THREE.Mesh(plotGeo, this.materials.dirt);
+        plotMesh.position.set(plotX, 0.06, plotZ);
+        plotMesh.receiveShadow = true;
+        plotMesh.castShadow = true;
+        this.farmGroup.add(plotMesh);
+
+        // 边缘石框
+        const borderGeo = new THREE.BoxGeometry(1.5, 0.08, 0.08);
+        const borderMat = this.materials.stone;
+        
+        const b1 = new THREE.Mesh(borderGeo, borderMat);
+        b1.position.set(plotX, 0.12, plotZ - 0.7);
+        this.farmGroup.add(b1);
+
+        const b2 = new THREE.Mesh(borderGeo, borderMat);
+        b2.position.set(plotX, 0.12, plotZ + 0.7);
+        this.farmGroup.add(b2);
+
+        const b3 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.4), borderMat);
+        b3.position.set(plotX - 0.7, 0.12, plotZ);
+        this.farmGroup.add(b3);
+
+        const b4 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.4), borderMat);
+        b4.position.set(plotX + 0.7, 0.12, plotZ);
+        this.farmGroup.add(b4);
+
+        // 植物模型挂载点
+        const plantGroup = new THREE.Group();
+        plantGroup.position.set(plotX, 0.12, plotZ);
+        this.farmGroup.add(plantGroup);
+
+        this.farmPlots3D.push({
+          row: r,
+          col: c,
+          index: r * 3 + c,
+          mesh: plotMesh,
+          plantGroup: plantGroup,
+          x: startX + plotX,
+          z: startZ + plotZ
+        });
+
+        // 注册独立格子的感应触发区
+        this.interactables.push({
+          id: `farm_plot_${r * 3 + c}`,
+          name: '农田格子',
+          x: startX + plotX,
+          y: y,
+          z: startZ + plotZ,
+          triggerRadius: 1.2
+        });
+      }
+    }
+
+    this.scene.add(this.farmGroup);
   }
 
   createMainGround(x, y, z, radius) {
@@ -1215,6 +1293,12 @@ export class IslandGenerator {
         light.intensity += (currentTarget - light.intensity) * 0.08;
       });
     }
+
+    // 5. Sway Paimon (Floating bobbing & slow rotate)
+    if (this.paimon) {
+      this.paimon.position.y = 1.25 + Math.sin(time * 0.0025) * 0.08;
+      this.paimon.rotation.y = time * 0.0006;
+    }
   }
 
   createStreetlamps() {
@@ -1339,5 +1423,80 @@ export class IslandGenerator {
       8, // bulbCount
       0.25 // sag
     );
+  }
+
+  createPaimon(x, z) {
+    const isChristmas = this.themeConfig.colors.sky === 0x050c18;
+    const paimonGroup = new THREE.Group();
+    paimonGroup.position.set(x, 1.25, z); // Floating at Y = 1.25
+
+    // 1. Head (Flesh color sphere)
+    const headMat = new THREE.MeshLambertMaterial({ color: 0xffe0b2, flatShading: true });
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), headMat);
+    head.position.y = 0.18;
+    head.castShadow = true;
+    paimonGroup.add(head);
+
+    // 2. Hair (Cream-white low-poly hair)
+    const hairMat = new THREE.MeshLambertMaterial({ color: 0xfffcf0, flatShading: true });
+    const hairTop = new THREE.Mesh(new THREE.SphereGeometry(0.2, 6, 6), hairMat);
+    hairTop.position.set(0, 0.22, -0.02);
+    paimonGroup.add(hairTop);
+
+    // Paimon's classic twin pigtails
+    const pigtailGeo = new THREE.ConeGeometry(0.06, 0.25, 4);
+    pigtailGeo.rotateX(Math.PI / 6);
+    
+    const pigtailL = new THREE.Mesh(pigtailGeo, hairMat);
+    pigtailL.position.set(-0.16, 0.08, -0.04);
+    pigtailL.rotation.z = 0.3;
+    pigtailL.castShadow = true;
+    paimonGroup.add(pigtailL);
+
+    const pigtailR = new THREE.Mesh(pigtailGeo, hairMat);
+    pigtailR.position.set(0.16, 0.08, -0.04);
+    pigtailR.rotation.z = -0.3;
+    pigtailR.castShadow = true;
+    paimonGroup.add(pigtailR);
+
+    // 3. Crown / Hairpin (Black cylinder crown)
+    const crownMat = new THREE.MeshBasicMaterial({ color: 0x1a1a1a });
+    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.05, 5), crownMat);
+    crown.position.y = 0.36;
+    paimonGroup.add(crown);
+
+    // 4. Body (White-gold dress/cape)
+    const bodyMat = new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true });
+    const body = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.32, 5), bodyMat);
+    body.position.y = -0.08;
+    body.rotation.x = Math.PI; // Inverted cone
+    body.castShadow = true;
+    paimonGroup.add(body);
+
+    // Collar blue bow-tie
+    const ribbonMat = new THREE.MeshBasicMaterial({ color: 0x0d47a1 });
+    const ribbon = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.04, 0.04), ribbonMat);
+    ribbon.position.set(0, 0.06, 0.1);
+    paimonGroup.add(ribbon);
+
+    // Back dark cape
+    const capeMat = new THREE.MeshLambertMaterial({ color: 0x263238, flatShading: true });
+    const cape = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.35, 0.04), capeMat);
+    cape.position.set(0, -0.1, -0.1);
+    cape.rotation.x = 0.1;
+    paimonGroup.add(cape);
+
+    this.scene.add(paimonGroup);
+    this.paimon = paimonGroup;
+
+    // Register Paimon Interact Zone
+    this.interactables.push({
+      id: 'paimon',
+      name: '派蒙 (打开菜单)',
+      x: x,
+      y: 0.6,
+      z: z,
+      triggerRadius: 2.2
+    });
   }
 }

@@ -86,6 +86,24 @@ export class InteractsManager {
         if (distance < minDistance) {
           minDistance = distance;
           closestZone = zone;
+
+          // 动态更新格子提示
+          if (zone.id.startsWith('farm_plot_') && this.app && this.app.gameData) {
+            const idx = parseInt(zone.id.replace('farm_plot_', ''));
+            const plot = this.app.gameData.farmPlots[idx];
+            if (plot) {
+              if (plot.status === 'empty') {
+                zone.name = '种植农作物';
+              } else if (plot.status === 'ready') {
+                zone.name = '收割作物';
+              } else {
+                const matureTime = plot.seedId === 'sunflower_seed' ? 30 : 60;
+                const elapsed = Math.floor((Date.now() - plot.plantTime) / 1000);
+                const remaining = Math.max(0, matureTime - elapsed);
+                zone.name = `作物生长中 (${remaining}s)`;
+              }
+            }
+          }
         }
       }
     }
@@ -189,6 +207,14 @@ export class InteractsManager {
       return;
     }
 
+    if (zone.id === 'paimon') {
+      if (typeof window.openSSOSidebar === 'function') {
+        window.openSSOSidebar();
+      }
+      this.hidePrompt();
+      return;
+    }
+
     if (zone.id === 'enter_house') {
       if (this.player.carriedBall) {
         this.dropCarriedBall();
@@ -240,6 +266,21 @@ export class InteractsManager {
         const bedHud = document.getElementById('bed-hud');
         if (bedHud) bedHud.style.display = 'flex';
       }
+      return;
+    }
+
+    if (zone.id.startsWith('farm_plot_')) {
+      const idx = parseInt(zone.id.replace('farm_plot_', ''));
+      if (this.app && typeof this.app.triggerPlotInteraction === 'function') {
+        this.app.triggerPlotInteraction(idx);
+      }
+      this.hidePrompt();
+      return;
+    }
+
+    if (zone.id === 'pk_crystal') {
+      this.modalManager.openModal('pk');
+      this.hidePrompt();
       return;
     }
 

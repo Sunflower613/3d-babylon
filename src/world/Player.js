@@ -709,6 +709,8 @@ export class Player {
                      targetEl.closest('.hud-header') || 
                      targetEl.closest('.modal-overlay') || 
                      targetEl.closest('.modal-card') ||
+                     targetEl.closest('.sso-sidebar') || 
+                     targetEl.closest('.sidebar-overlay') || 
                      targetEl.id === 'audio-btn'
                     ) : false;
                      
@@ -814,6 +816,24 @@ export class Player {
   }
 
   update(delta, time) {
+    // 1. 同步外层 Iframe 的输入状态
+    if (window.self !== window.top && window.parent && window.parent.keys) {
+      this.keys.space = window.parent.keys.space;
+      this.keys.shift = window.parent.keys.shift;
+      this.keys.j = window.parent.keys.j;
+    }
+
+    // 2. 躺着或坐着时，若按了跳跃键，触发站立
+    if (this.isSitting || this.isLyingDown) {
+      if (this.keys.space) {
+        this.standUp();
+        if (window.parent && window.parent.keys) {
+          window.parent.keys.space = false;
+        }
+        this.keys.space = false;
+      }
+    }
+
     if (this.isLyingDown) {
       this.velocity.set(0, 0, 0);
       this.isGrounded = true;
@@ -906,6 +926,15 @@ export class Player {
       if (this.keys.s) moveZ += 1;
       if (this.keys.a) moveX -= 1;
       if (this.keys.d) moveX += 1;
+
+      // 融合外壳的虚拟摇杆方向
+      if (window.self !== window.top && window.parent && window.parent.joystickDir) {
+        const joy = window.parent.joystickDir;
+        if (joy.x !== 0 || joy.y !== 0) {
+          moveX += joy.x;
+          moveZ += joy.y;
+        }
+      }
     }
 
     const direction = new THREE.Vector3(moveX, 0, moveZ).normalize();
@@ -979,6 +1008,9 @@ export class Player {
       this.velocity.y = this.jumpForce;
       this.isGrounded = false;
       this.keys.space = false;
+      if (window.parent && window.parent.keys) {
+        window.parent.keys.space = false;
+      }
     }
 
     // 5. Update character rotations & animations

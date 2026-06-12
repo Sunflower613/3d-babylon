@@ -10,7 +10,13 @@ export class ModalManager {
       projects: document.getElementById('modal-projects'),
       arcade: document.getElementById('modal-arcade'),
       easel: document.getElementById('modal-easel'),
-      wardrobe: document.getElementById('modal-wardrobe')
+      wardrobe: document.getElementById('modal-wardrobe'),
+      leaderboard: document.getElementById('modal-leaderboard'),
+      tasks: document.getElementById('modal-tasks'),
+      farm: document.getElementById('modal-farm'),
+      pk: document.getElementById('modal-pk'),
+      bag: document.getElementById('modal-bag'),
+      home: document.getElementById('modal-home')
     };
     
     this.iframe = document.getElementById('arcade-iframe');
@@ -102,9 +108,16 @@ export class ModalManager {
             <div class="project-detail">
               <h3>${game.name}</h3>
               <p>运行于网页主页“韭菜盒子”工具箱板块下的经典互动小游戏，适配桌面端与移动端。</p>
-              <a href="../../${game.path.replace(/^\.\//, '')}" class="tag" style="margin-top: 6px; display: inline-block; text-decoration: none; cursor: pointer;">直接游玩</a>
+              <button class="tag play-btn" style="margin-top: 6px; display: inline-block; text-decoration: none; cursor: pointer; border: none; background: none; color: inherit; padding: 0; font-family: inherit; text-align: left;">直接游玩</button>
             </div>
           `;
+          const playBtn = projCard.querySelector('.play-btn');
+          if (playBtn) {
+            playBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              this.launchGame(game);
+            });
+          }
           projectsGrid.appendChild(projCard);
         });
       }
@@ -140,9 +153,40 @@ export class ModalManager {
   }
 
   launchGame(game) {
-    // Go up two levels to find the games directory relative to the 3D page
-    const gameRelativePath = '../../' + game.path.replace(/^\.\//, '');
-    window.open(gameRelativePath, '_blank');
+    let targetPath = game.path;
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    
+    if (game.id === '21dian') {
+      targetPath = isLocal ? `http://${window.location.hostname}:8080/games/21dian/index.html` : game.path;
+    }
+
+    let gameUrl;
+    if (targetPath.startsWith('http://') || targetPath.startsWith('https://')) {
+      gameUrl = targetPath;
+    } else {
+      // 相对路径，往上走两级
+      gameUrl = '../../' + targetPath.replace(/^\.\//, '');
+    }
+
+    // 携带 SSO 统一登录态跳转
+    const token = localStorage.getItem('sso_access_token');
+    const user = localStorage.getItem('sso_user');
+    if (token && user) {
+      try {
+        const urlObj = new URL(gameUrl, window.location.href);
+        urlObj.searchParams.set('sso_access_token', token);
+        urlObj.searchParams.set('sso_user', user);
+        gameUrl = urlObj.toString();
+      } catch (e) {
+        if (gameUrl.includes('?')) {
+          gameUrl += `&sso_access_token=${token}&sso_user=${encodeURIComponent(user)}`;
+        } else {
+          gameUrl += `?sso_access_token=${token}&sso_user=${encodeURIComponent(user)}`;
+        }
+      }
+    }
+
+    window.open(gameUrl, '_blank');
   }
 
   showLobby() {
