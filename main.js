@@ -1096,9 +1096,12 @@ class GameApp {
       this.updateTaskProgress('kick', 1);
     });
 
-    // 9. 小屋场景已放置家具加载绘制 (确保存档数据就绪后执行)
-    if (this.currentMap === 'house' && typeof this.renderHomeFurnitures === 'function') {
-      this.renderHomeFurnitures();
+    // 9. 小屋场景已放置家具加载绘制与出门传送选择绑定
+    if (this.currentMap === 'house') {
+      if (typeof this.renderHomeFurnitures === 'function') {
+        this.renderHomeFurnitures();
+      }
+      this.initExitChoicesUI();
     }
   }
 
@@ -2228,6 +2231,25 @@ class GameApp {
       if (e.key.toLowerCase() === 'r') {
         this.rotateEditFurniture();
       }
+    });
+  }
+
+  // 出门选择目的地 UI 绑定
+  initExitChoicesUI() {
+    const exitChoiceBtns = document.querySelectorAll('.exit-choice-btn');
+    exitChoiceBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const target = btn.getAttribute('data-target');
+        this.modalMgr.closeModal('exit');
+        if (target === 'island') {
+          this.switchMap('island');
+        } else if (target === 'farm') {
+          this.switchMap('farm');
+        } else if (target === 'pk') {
+          this.switchMap('pk_arena');
+        }
+      });
     });
   }
 

@@ -227,7 +227,11 @@ export class InteractsManager {
       if (this.player.carriedBall) {
         this.dropCarriedBall();
       }
-      this.app.switchMap('island');
+      if (this.app.modalMgr) {
+        this.app.modalMgr.openModal('exit');
+      } else {
+        this.app.switchMap('island');
+      }
       return;
     }
 

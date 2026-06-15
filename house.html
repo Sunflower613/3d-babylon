@@ -232,6 +232,28 @@
     <button id="btn-stand-up" class="hud-btn">起身 🏃</button>
   </div>
 
+  <!-- 出门传送点目的地选择弹窗 -->
+  <div class="modal-overlay" id="modal-exit">
+    <div class="modal-card" style="max-width: 380px;">
+      <button class="modal-close" data-close="modal-exit">&times;</button>
+      <div class="modal-header" style="justify-content: center; margin-bottom: 16px;">
+        <span class="modal-emoji">🚪</span>
+        <h2>请选择出门目的地</h2>
+      </div>
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px; padding: 10px 0;">
+        <button class="hud-btn exit-choice-btn" data-target="island" style="padding: 14px; font-size: 0.95rem; font-weight: bold; background: linear-gradient(135deg, rgba(79, 195, 247, 0.2) 0%, rgba(2, 136, 209, 0.4) 100%); border-color: rgba(2, 136, 209, 0.5); color: #fff; cursor: pointer;">
+          🏝️ 治愈海岛
+        </button>
+        <button class="hud-btn exit-choice-btn" data-target="farm" style="padding: 14px; font-size: 0.95rem; font-weight: bold; background: linear-gradient(135deg, rgba(129, 199, 132, 0.2) 0%, rgba(56, 142, 60, 0.4) 100%); border-color: rgba(56, 142, 60, 0.5); color: #fff; cursor: pointer;">
+          🌾 我的农田
+        </button>
+        <button class="hud-btn exit-choice-btn" data-target="pk" style="padding: 14px; font-size: 0.95rem; font-weight: bold; background: linear-gradient(135deg, rgba(229, 115, 115, 0.2) 0%, rgba(211, 47, 47, 0.4) 100%); border-color: rgba(211, 47, 47, 0.5); color: #fff; cursor: pointer;">
+          ⚔️ 虚空擂台
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Device rotation overlay (visible on mobile in portrait mode) -->
   <div id="rotation-overlay">
     <div class="rotation-message">
