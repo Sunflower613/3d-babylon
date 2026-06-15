@@ -59,6 +59,7 @@ class AppShell {
     this.initSidebar();
     this.initControls();
     this.initAudio();
+    this.initFullscreen();
   }
 
   // 1. SSO 统一登录/用户状态初始化
@@ -479,6 +480,34 @@ class AppShell {
     const subApp = this.getSubApp();
     if (subApp && typeof subApp.switchMap === 'function') {
       subApp.switchMap(targetMap);
+    }
+  }
+
+  // 8. 移动端全屏模式管理 (由外壳接管，保证UI层不丢失)
+  initFullscreen() {
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+    if (isTouchDevice) {
+      const enableAutoFullscreen = () => {
+        if (!document.fullscreenElement && 
+            !document.webkitFullscreenElement && 
+            !document.mozFullScreenElement && 
+            !document.msFullscreenElement) {
+          
+          const docEl = document.documentElement;
+          if (docEl.requestFullscreen) {
+            docEl.requestFullscreen().catch(() => {});
+          } else if (docEl.webkitRequestFullscreen) {
+            docEl.webkitRequestFullscreen();
+          } else if (docEl.mozRequestFullScreen) {
+            docEl.mozRequestFullScreen();
+          } else if (docEl.msRequestFullscreen) {
+            docEl.msRequestFullscreen();
+          }
+        }
+      };
+      
+      document.addEventListener('touchstart', enableAutoFullscreen, { once: true });
+      document.addEventListener('click', enableAutoFullscreen, { once: true });
     }
   }
 }
