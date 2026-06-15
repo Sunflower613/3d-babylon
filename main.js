@@ -1387,6 +1387,36 @@ class GameApp {
     this.refreshTasks();
   }
 
+  showCoinFloatText(val, clickX, clickY) {
+    const el = document.createElement('div');
+    el.className = 'coin-float-text';
+    
+    const x = clickX !== undefined ? clickX : window.innerWidth / 2;
+    const y = clickY !== undefined ? clickY : window.innerHeight / 2;
+    
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+    
+    const isPositive = val > 0;
+    el.innerHTML = `${isPositive ? '+' : ''}${val} <span style="font-size: 1.1em; margin-left: 2px;">🪙</span>`;
+    el.style.color = isPositive ? '#ffd700' : '#ff8a80';
+    el.style.textShadow = isPositive ? '0 0 10px rgba(255,215,0,0.6)' : '0 0 10px rgba(255,138,128,0.6)';
+    
+    document.body.appendChild(el);
+    
+    // 播放 8-bit 金币音效
+    if (isPositive) {
+      this.playCustomSound(987.77, 0.08, 'square', 0.03);
+      setTimeout(() => this.playCustomSound(1318.51, 0.25, 'square', 0.03), 80);
+    } else {
+      this.playCustomSound(329.63, 0.15, 'sawtooth', 0.04);
+    }
+    
+    setTimeout(() => {
+      el.remove();
+    }, 1000);
+  }
+
   showToast(message) {
     let existing = document.querySelector('.mock-toast');
     if (existing) existing.remove();
