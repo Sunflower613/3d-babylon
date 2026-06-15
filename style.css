@@ -2711,6 +2711,45 @@ body.is-mobile .scrollable {
   transition: opacity 0.1s ease;
 }
 
+/* ==================== 移动端背包目的地与内容排版溢出截断修复 ==================== */
+body.is-mobile .modal-card .modal-body.no-padding {
+  height: 0 !important;
+  flex: 1 !important;
+}
+
+body.is-mobile .bag-right {
+  padding: 10px 14px !important;
+}
+
+body.is-mobile .item-detail-content {
+  gap: 8px !important;
+  justify-content: flex-start !important;
+}
+
+body.is-mobile .item-detail-content > div:first-child {
+  font-size: 2.2rem !important;
+  margin-top: 5px !important;
+}
+
+body.is-mobile .item-detail-content h3 {
+  font-size: 0.9rem !important;
+  margin-top: 4px !important;
+}
+
+body.is-mobile .item-detail-content p {
+  font-size: 0.7rem !important;
+  margin-top: 4px !important;
+  flex-grow: 0 !important;
+  max-height: 48px !important;
+  overflow-y: auto !important;
+}
+
+body.is-mobile .item-detail-content .hud-btn {
+  padding: 6px 0 !important;
+  font-size: 0.75rem !important;
+}
+
+
 
 
 
