@@ -2075,6 +2075,13 @@ class GameApp {
     if (!this.isPKActive) return;
     this.isPKActive = false;
 
+    // 立即重置玩家位置和速度，防止结算时在物理上无限下坠
+    if (this.player) {
+      this.player.position.set(0, 0.6 + 0.1, -6.0);
+      this.player.velocity.set(0, 0, 0);
+      this.player.group.position.copy(this.player.position);
+    }
+
     // 恢复决斗水晶可见
     if (this.pkCrystalMesh) this.pkCrystalMesh.visible = true;
 
@@ -2108,13 +2115,13 @@ class GameApp {
     settlement.style.color = 'white';
 
     settlement.innerHTML = `
-      <div class="modal-card" style="text-align: center; max-width: 380px; padding: 30px;">
-        <h2 style="font-size: 1.8rem; font-weight: bold; margin-bottom: 12px; color: ${isPlayerWinner ? '#d97706' : '#e74c3c'};">${title}</h2>
-        <p style="font-size: 0.95rem; color: #475569; margin-bottom: 24px;">${sub}</p>
-        <div style="background: rgba(0,0,0,0.03); padding: 14px 20px; border-radius: 12px; margin-bottom: 24px; color: #1e293b;">
-          <span>当前天梯积分: <strong style="font-size: 1.3rem; color: #1e293b;">${this.gameData.pkPoints}</strong></span>
+      <div class="modal-card settle-card">
+        <h2 class="settle-title" style="color: ${isPlayerWinner ? '#d97706' : '#e74c3c'};">${title}</h2>
+        <p class="settle-desc">${sub}</p>
+        <div class="settle-score-box">
+          <span>当前天梯积分: <strong class="settle-score-val">${this.gameData.pkPoints}</strong></span>
         </div>
-        <button class="hud-btn" id="btn-settle-close" style="width: 100%; padding: 12px; background: linear-gradient(135deg, var(--primary) 0%, #ff8a80 100%); border: none; font-weight: bold; color: #fff !important;">返回群岛 🏝️</button>
+        <button class="hud-btn" id="btn-settle-close">返回群岛 🏝️</button>
       </div>
     `;
 
