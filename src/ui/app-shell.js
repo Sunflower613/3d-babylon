@@ -564,6 +564,16 @@ class AppShell {
             subApp.modalMgr.openModal('map');
           }
         }
+      } else if (key === 'g') {
+        e.preventDefault();
+        if (subApp && subApp.modalMgr) {
+          if (subApp.modalMgr.modals.shop.classList.contains('open')) {
+            subApp.modalMgr.closeModal('shop');
+          } else {
+            subApp.modalMgr.closeAllModals();
+            subApp.modalMgr.openModal('shop');
+          }
+        }
       }
     });
   }

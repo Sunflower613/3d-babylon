@@ -1170,6 +1170,16 @@ class GameApp {
             this.modalMgr.openModal('map');
           }
         }
+      } else if (key === 'g') {
+        e.preventDefault();
+        if (this.modalMgr) {
+          if (this.modalMgr.modals.shop.classList.contains('open')) {
+            this.modalMgr.closeModal('shop');
+          } else {
+            this.modalMgr.closeAllModals();
+            this.modalMgr.openModal('shop');
+          }
+        }
       }
     });
   }
@@ -4047,6 +4057,55 @@ class GameApp {
 
     // 默认展示农业 Tab
     this.switchShopTab('agriculture');
+
+    // 绑定右侧购买调节器事件
+    const minusBtn = document.getElementById('btn-shop-count-minus');
+    const plusBtn = document.getElementById('btn-shop-count-plus');
+    const plus10Btn = document.getElementById('btn-shop-count-plus10');
+    const slider = document.getElementById('shop-buy-count-slider');
+    const executeBtn = document.getElementById('btn-shop-execute-buy');
+
+    if (minusBtn && slider) {
+      minusBtn.addEventListener('click', () => {
+        let val = parseInt(slider.value) || 1;
+        if (val > 1) {
+          slider.value = val - 1;
+          this.updateShopBuyCountUI();
+        }
+      });
+    }
+
+    if (plusBtn && slider) {
+      plusBtn.addEventListener('click', () => {
+        let val = parseInt(slider.value) || 1;
+        if (val < 99) {
+          slider.value = val + 1;
+          this.updateShopBuyCountUI();
+        }
+      });
+    }
+
+    if (plus10Btn && slider) {
+      plus10Btn.addEventListener('click', () => {
+        let val = parseInt(slider.value) || 1;
+        slider.value = Math.min(99, val + 10);
+        this.updateShopBuyCountUI();
+      });
+    }
+
+    if (slider) {
+      slider.addEventListener('input', () => {
+        this.updateShopBuyCountUI();
+      });
+    }
+
+    if (executeBtn) {
+      executeBtn.addEventListener('click', (e) => {
+        if (!this.selectedShopItem) return;
+        const count = parseInt(slider ? slider.value : 1) || 1;
+        this.executeShopBuy(this.selectedShopItem, count, e.clientX, e.clientY);
+      });
+    }
   }
 
   switchShopTab(tabName) {
@@ -4083,14 +4142,100 @@ class GameApp {
     }
   }
 
+  updateShopBuyCountUI() {
+    const slider = document.getElementById('shop-buy-count-slider');
+    const countText = document.getElementById('shop-buy-count-text');
+    const totalText = document.querySelector('#shop-item-detail .shop-detail-total-price');
+
+    if (!slider || !this.selectedShopItem) return;
+
+    const count = parseInt(slider.value) || 1;
+    if (countText) {
+      countText.textContent = count;
+    }
+
+    if (totalText) {
+      if (this.selectedShopItem.id.startsWith('coin_')) {
+        totalText.textContent = '免费';
+      } else {
+        const total = this.selectedShopItem.price * count;
+        totalText.textContent = `🪙 ${total}`;
+      }
+    }
+  }
+
+  showShopItemDetail(item) {
+    this.selectedShopItem = item;
+    const detail = document.getElementById('shop-item-detail');
+    if (!detail) return;
+
+    const empty = detail.querySelector('.shop-detail-empty');
+    const content = detail.querySelector('.shop-detail-content');
+
+    if (empty) empty.style.display = 'none';
+    if (content) content.style.display = 'flex';
+
+    // 1. 设置 Icon
+    const iconEl = detail.querySelector('.shop-detail-icon');
+    if (iconEl) {
+      const emoji = item.name.split(' ').pop() || '📦';
+      iconEl.textContent = emoji;
+    }
+
+    // 2. 设置 Title
+    const titleEl = detail.querySelector('.shop-detail-title');
+    if (titleEl) {
+      titleEl.textContent = item.name.replace(/ 🌻| 🍓| 🖼️| 🎄| 🛋️| 🎪| 🪙| 🎁| 💎/, '');
+    }
+
+    // 3. 设置已持有数
+    const ownedEl = detail.querySelector('.shop-detail-owned');
+    if (ownedEl) {
+      if (item.type === 'seed') {
+        const bItem = this.gameData.backpack.find(b => b.id === item.id && b.type === 'seed');
+        ownedEl.textContent = `已持有: ${bItem ? bItem.count : 0}`;
+      } else if (item.type === 'decor') {
+        const isOwned = this.gameData.ownedFurnitures.includes(item.id);
+        ownedEl.textContent = isOwned ? '✅ 已解锁' : '🔒 未拥有';
+      } else {
+        ownedEl.textContent = '★ 免费福利';
+      }
+    }
+
+    // 4. 设置描述
+    const descEl = detail.querySelector('.shop-detail-desc');
+    if (descEl) {
+      descEl.textContent = item.desc;
+    }
+
+    // 5. 设置单价
+    const unitPriceEl = detail.querySelector('.shop-detail-unit-price');
+    if (unitPriceEl) {
+      if (item.id.startsWith('coin_')) {
+        unitPriceEl.textContent = '￥0.00';
+      } else {
+        unitPriceEl.textContent = `🪙 ${item.price}`;
+      }
+    }
+
+    // 6. 重置数量调节器
+    const slider = document.getElementById('shop-buy-count-slider');
+    if (slider) {
+      slider.value = 1;
+    }
+
+    this.updateShopBuyCountUI();
+  }
+
   renderShopItems(tabName) {
-    const container = document.getElementById('shop-items-container');
-    if (!container) return;
+    const grid = document.getElementById('shop-grid');
+    if (!grid) return;
 
-    container.innerHTML = '';
+    grid.innerHTML = '';
 
+    let items = [];
     if (tabName === 'agriculture') {
-      const items = [
+      items = [
         {
           id: 'sunflower_seed',
           name: '向日葵种子 🌻',
@@ -4108,145 +4253,140 @@ class GameApp {
           type: 'seed'
         }
       ];
-
-      items.forEach(item => {
-        const backpackItem = this.gameData.backpack.find(b => b.id === item.id && b.type === 'seed');
-        const count = backpackItem ? backpackItem.count : 0;
-
-        const card = document.createElement('div');
-        card.className = 'shop-item-card';
-        card.innerHTML = `
-          <div class="shop-item-header">
-            <span class="shop-item-name">${item.name}</span>
-            <span class="shop-item-owned">已持有: ${count}</span>
-          </div>
-          <p class="shop-item-desc">${item.desc}</p>
-          <div class="shop-item-action">
-            <span class="shop-item-price">🪙 ${item.price}</span>
-            <button class="hud-btn buy-btn" style="padding: 6px 12px; font-size: 0.8rem;">购买</button>
-          </div>
-        `;
-
-        card.querySelector('.buy-btn').addEventListener('click', (e) => {
-          this.buyShopSeed(item, e.clientX, e.clientY);
-        });
-
-        container.appendChild(card);
-      });
-
     } else if (tabName === 'decorations') {
-      const items = [
-        { id: 'painting_1', name: '浮空岛日落挂画 🖼️', price: 50, desc: '悬挂在墙壁上的精美装饰，带来悠闲的落日余晖。', type: 'decor' },
-        { id: 'tree_1', name: '闪烁圣诞树 🎄', price: 100, desc: '闪耀着七彩微光的圣诞树，散发节日温馨氛围。', type: 'decor' },
-        { id: 'sofa_1', name: '粉嫩兔子沙发 🛋️', price: 150, desc: '兔耳设计的粉色单人沙发，触感松软，极度舒适。', type: 'decor' },
-        { id: 'swing_1', name: '室内网兜秋千 🎪', price: 200, desc: '挂在天花板上的编织网秋千，轻轻摇曳，治愈满满。', type: 'decor' }
+      items = [
+        { id: 'painting_1', name: '浮空岛日落挂画 🖼️', price: 50, desc: '悬挂在墙壁上的精美装饰，带来悠闲的落日余晖。', type: 'decor', quality: 'purple' },
+        { id: 'tree_1', name: '闪烁圣诞树 🎄', price: 100, desc: '闪耀着七彩微光的圣诞树，散发节日温馨氛围。', type: 'decor', quality: 'purple' },
+        { id: 'sofa_1', name: '粉嫩兔子沙发 🛋️', price: 150, desc: '兔耳设计的粉色单人沙发，触感松软，极度舒适。', type: 'decor', quality: 'purple' },
+        { id: 'swing_1', name: '室内网兜秋千 🎪', price: 200, desc: '挂在天花板上的编织网秋千，轻轻摇曳，治愈满满。', type: 'decor', quality: 'purple' }
       ];
+    } else if (tabName === 'topup') {
+      items = [
+        { id: 'coin_100', name: '免费金币充值包 🪙', amount: 100, desc: '白嫖小包。免费充值 100 金币，附赠吃到金币声效！', type: 'topup', quality: 'gold', price: 0 },
+        { id: 'coin_500', name: '金币充值礼包 🎁', amount: 500, desc: '免费大包。点击即刻免费充值 500 金币！', type: 'topup', quality: 'gold', price: 0 },
+        { id: 'coin_1000', name: '超级金币充值包 💎', amount: 1000, desc: '免费巨包！狂揽 1000 金币，金币爆屏！', type: 'topup', quality: 'gold', price: 0 }
+      ];
+    }
 
-      items.forEach(item => {
-        const isOwned = this.gameData.ownedFurnitures.includes(item.id);
-
-        const card = document.createElement('div');
-        card.className = 'shop-item-card';
-        card.innerHTML = `
-          <div class="shop-item-header">
-            <span class="shop-item-name">${item.name}</span>
-            <span class="shop-item-owned">${isOwned ? '✅ 已解锁' : '🔒 未拥有'}</span>
-          </div>
-          <p class="shop-item-desc">${item.desc}</p>
-          <div class="shop-item-action">
-            <span class="shop-item-price">🪙 ${item.price}</span>
-            <button class="hud-btn buy-btn" style="padding: 6px 12px; font-size: 0.8rem;" ${isOwned ? 'disabled' : ''}>${isOwned ? '已拥有' : '购买'}</button>
-          </div>
-        `;
-
-        if (!isOwned) {
-          card.querySelector('.buy-btn').addEventListener('click', (e) => {
-            const furnitureItem = {
-              id: item.id,
-              name: item.name.replace(/ 🖼️| 🎄| 🛋️| 🎪/, ''),
-              price: item.price,
-              emoji: item.name.split(' ').pop()
-            };
-            this.buyFurniture(furnitureItem, e.clientX, e.clientY);
-            setTimeout(() => {
-              this.updateShopCoins();
-              this.renderShopItems('decorations');
-              this.refreshBag('decor');
-            }, 100);
-          });
+    // 渲染网格
+    for (let i = 0; i < 12; i++) {
+      const el = document.createElement('div');
+      el.className = 'shop-item-box';
+      
+      const item = items[i];
+      if (item) {
+        const qualityClass = `q-${item.quality || 'white'}`;
+        el.classList.add(qualityClass);
+        if (this.selectedShopItem && this.selectedShopItem.id === item.id) {
+          el.classList.add('active');
         }
 
-        container.appendChild(card);
-      });
+        const emoji = item.name.split(' ').pop() || '📦';
 
-    } else if (tabName === 'topup') {
-      const items = [
-        { id: 'coin_100', name: '免费金币充值包 🪙', amount: 100, desc: '白嫖小包。免费充值 100 金币，附赠吃到金币声效！' },
-        { id: 'coin_500', name: '金币充值礼包 🎁', amount: 500, desc: '免费大包。点击即刻免费充值 500 金币！' },
-        { id: 'coin_1000', name: '超级金币充值包 💎', amount: 1000, desc: '免费巨包！狂揽 1000 金币，金币爆屏！' }
-      ];
-
-      items.forEach(item => {
-        const card = document.createElement('div');
-        card.className = 'shop-item-card';
-        card.innerHTML = `
-          <div class="shop-item-header">
-            <span class="shop-item-name">${item.name}</span>
-            <span class="shop-item-owned" style="color: #4caf50;">★ 免费充值</span>
-          </div>
-          <p class="shop-item-desc">${item.desc}</p>
-          <div class="shop-item-action">
-            <span class="shop-item-price" style="color: #4caf50;">￥0.00</span>
-            <button class="hud-btn buy-btn" style="padding: 6px 12px; font-size: 0.8rem; background: linear-gradient(135deg, #ffd700 0%, #ffb300 100%); border-color: #ffd700; color: #000; font-weight: bold;">充值</button>
-          </div>
+        el.innerHTML = `
+          <span style="font-size: 1.8rem;">${emoji}</span>
+          <span class="shop-item-box-price">${item.id.startsWith('coin_') ? '免费' : '🪙' + item.price}</span>
         `;
 
-        card.querySelector('.buy-btn').addEventListener('click', (e) => {
-          this.gameData.coins += item.amount;
-          this.saveGameData();
-          this.updateShopCoins();
-          this.updateBaseUI();
-          this.showCoinFloatText(item.amount, e.clientX, e.clientY);
-          setTimeout(() => {
-            this.refreshBag(this.getActiveBagTab());
-          }, 50);
+        el.addEventListener('click', () => {
+          document.querySelectorAll('.shop-item-box.active').forEach(b => b.classList.remove('active'));
+          el.classList.add('active');
+          this.showShopItemDetail(item);
         });
+      } else {
+        el.innerHTML = '';
+      }
+      grid.appendChild(el);
+    }
 
-        container.appendChild(card);
-      });
+    const currentHasSelected = items.some(item => this.selectedShopItem && item.id === this.selectedShopItem.id);
+    if (!currentHasSelected) {
+      this.selectedShopItem = null;
+      const detail = document.getElementById('shop-item-detail');
+      if (detail) {
+        const empty = detail.querySelector('.shop-detail-empty');
+        const content = detail.querySelector('.shop-detail-content');
+        if (empty) empty.style.display = 'flex';
+        if (content) content.style.display = 'none';
+      }
+    } else {
+      this.showShopItemDetail(this.selectedShopItem);
     }
   }
 
-  buyShopSeed(item, clickX, clickY) {
-    if (this.gameData.coins < item.price) {
-      alert('金币不足，无法购买种子！');
+  executeShopBuy(item, count, clickX, clickY) {
+    if (item.id.startsWith('coin_')) {
+      const totalAmount = item.amount * count;
+      this.gameData.coins += totalAmount;
+      this.saveGameData();
+      this.updateShopCoins();
+      this.updateBaseUI();
+      this.showCoinFloatText(totalAmount, clickX, clickY);
+
+      this.showShopItemDetail(item);
+      setTimeout(() => {
+        this.refreshBag(this.getActiveBagTab());
+      }, 50);
       return;
     }
 
-    this.gameData.coins -= item.price;
-    
-    const backpackItem = this.gameData.backpack.find(b => b.id === item.id && b.type === 'seed');
-    if (backpackItem) {
-      backpackItem.count++;
-    } else {
-      this.gameData.backpack.push({
-        id: item.id,
-        name: item.name.replace(/ 🌻| 🍓/, ''),
-        type: 'seed',
-        count: 1,
-        quality: item.quality,
-        desc: item.desc
-      });
+    const totalPrice = item.price * count;
+    if (this.gameData.coins < totalPrice) {
+      alert('金币不足，无法购买！');
+      return;
     }
 
-    this.saveGameData();
-    this.updateShopCoins();
-    this.updateBaseUI();
-    this.showCoinFloatText(-item.price, clickX, clickY);
+    this.gameData.coins -= totalPrice;
 
-    this.renderShopItems('agriculture');
-    this.refreshFarm();
-    this.refreshBag('seed');
+    if (item.type === 'seed') {
+      const backpackItem = this.gameData.backpack.find(b => b.id === item.id && b.type === 'seed');
+      if (backpackItem) {
+        backpackItem.count += count;
+      } else {
+        this.gameData.backpack.push({
+          id: item.id,
+          name: item.name.replace(/ 🌻| 🍓/, ''),
+          type: 'seed',
+          count: count,
+          quality: item.quality,
+          desc: item.desc
+        });
+      }
+      this.saveGameData();
+      this.updateShopCoins();
+      this.updateBaseUI();
+      this.showCoinFloatText(-totalPrice, clickX, clickY);
+
+      this.showShopItemDetail(item);
+      this.refreshFarm();
+      this.refreshBag('seed');
+
+    } else if (item.type === 'decor') {
+      if (!this.gameData.ownedFurnitures.includes(item.id)) {
+        this.gameData.ownedFurnitures.push(item.id);
+      }
+      const backpackItem = this.gameData.backpack.find(b => b.id === item.id && b.type === 'decor');
+      if (backpackItem) {
+        backpackItem.count += count;
+      } else {
+        this.gameData.backpack.push({
+          id: item.id,
+          name: item.name.replace(/ 🖼️| 🎄| 🛋️| 🎪/, ''),
+          type: 'decor',
+          count: count,
+          quality: 'purple',
+          desc: `购买于家园工坊的精美家具模型。进入家园编辑模式即可随意定位摆放它！`
+        });
+      }
+      this.saveGameData();
+      this.updateShopCoins();
+      this.updateBaseUI();
+      this.showCoinFloatText(-totalPrice, clickX, clickY);
+
+      this.showShopItemDetail(item);
+      this.refreshHome();
+      this.refreshBag('decor');
+    }
   }
 
   initRadialSeedMenu() {

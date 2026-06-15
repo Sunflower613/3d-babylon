@@ -195,15 +195,53 @@
         </div>
       </div>
       <div class="modal-body no-padding" style="display: flex; height: 100%; overflow: hidden;">
-        <!-- 左侧纵向磨砂玻璃 Tab -->
-        <div class="shop-left" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--glass-border); background: rgba(0,0,0,0.15);">
-          <button class="shop-tabactive active" data-tab="agriculture" style="padding: 16px; background: none; border: none; border-left: 4px solid #27ae60; color: #fff; text-align: left; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px;">🌱 农业物资</button>
-          <button class="shop-tabactive" data-tab="decorations" style="padding: 16px; background: none; border: none; border-left: 4px solid transparent; color: var(--text-muted); text-align: left; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px;">🛋️ 装饰家具</button>
-          <button class="shop-tabactive" data-tab="topup" style="padding: 16px; background: none; border: none; border-left: 4px solid transparent; color: var(--text-muted); text-align: left; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px;">💎 金币充值</button>
+        <!-- 左侧区：包含 Tab 和商品网格 -->
+        <div class="shop-left" style="flex: 1.8; display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--glass-border);">
+          <div class="shop-tabs" style="display: flex; background: rgba(0,0,0,0.15); border-bottom: 1px solid var(--glass-border);">
+            <button class="shop-tabactive active" data-tab="agriculture" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px;">🌱 农业物资</button>
+            <button class="shop-tabactive" data-tab="decorations" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px;">🛋️ 装饰家具</button>
+            <button class="shop-tabactive" data-tab="topup" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px;">💎 金币充值</button>
+          </div>
+          <!-- 商品网格 -->
+          <div class="shop-grid scrollable" id="shop-grid" style="flex-grow: 1; padding: 16px; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-height: 280px; width: 100%;">
+            <!-- 动态渲染商品项 -->
+          </div>
         </div>
-        <!-- 右侧商品展示区 -->
-        <div class="shop-right scrollable" id="shop-items-container" style="flex: 3; padding: 20px; overflow-y: auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-height: 340px; width: 100%;">
-          <!-- 动态渲染商品 -->
+        <!-- 右侧区：商品详情和购买控制 -->
+        <div class="shop-right" id="shop-item-detail" style="flex: 1.2; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: rgba(255,255,255,0.01); width: 100%;">
+          <div class="shop-detail-empty" style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+            <div style="font-size: 2.6rem; opacity: 0.2;">🛒</div>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">点击左侧商品查看详情并购买</p>
+          </div>
+          <div class="shop-detail-content" style="display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: space-between; gap: 14px;">
+            <!-- 详情头部 -->
+            <div class="shop-detail-header" style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+              <span class="shop-detail-icon" style="font-size: 3rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));">🌻</span>
+              <h3 class="shop-detail-title" style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #fff;">向日葵种子</h3>
+              <span class="shop-detail-owned" style="font-size: 0.75rem; color: var(--text-muted);">已持有: 0</span>
+            </div>
+            <!-- 描述 -->
+            <p class="shop-detail-desc" style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; margin: 0; text-align: center; max-height: 55px; overflow-y: auto; width: 100%; padding: 0 10px;">成熟需要 30 秒。收割可获得 20 金币 + 15 经验。</p>
+            <!-- 购买控制面板 -->
+            <div class="shop-buy-panel" style="width: 100%; display: flex; flex-direction: column; gap: 10px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 14px; border: 1px solid var(--glass-border);">
+              <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted);">
+                <span>单价: <strong class="shop-detail-unit-price" style="color: #ffd700;">🪙 10</strong></span>
+                <span>总价: <strong class="shop-detail-total-price" style="color: #ffd700;">🪙 10</strong></span>
+              </div>
+              <!-- 数量调节器 -->
+              <div class="shop-buy-count-control" style="display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%;">
+                <button class="bag-range-btn" id="btn-shop-count-minus" style="width: 24px; height: 24px;">-</button>
+                <input type="range" id="shop-buy-count-slider" min="1" max="99" value="1" style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.1); cursor: pointer; accent-color: var(--primary);">
+                <button class="bag-range-btn" id="btn-shop-count-plus" style="width: 24px; height: 24px;">+</button>
+                <button class="bag-range-btn" id="btn-shop-count-plus10" style="padding: 0 6px; height: 24px; font-size: 0.72rem; border-radius: 6px;">+10</button>
+              </div>
+              <div style="font-size: 0.8rem; color: #fff; font-weight: bold;">
+                购买数量: <span id="shop-buy-count-text">1</span>
+              </div>
+            </div>
+            <!-- 最终购买按钮 -->
+            <button class="hud-btn" id="btn-shop-execute-buy" style="width: 100%; padding: 12px; font-weight: bold; font-size: 0.9rem; background: linear-gradient(135deg, var(--primary) 0%, #27ae60 100%); border-color: var(--primary); text-shadow: 0 1px 3px rgba(0,0,0,0.3);">确认购买</button>
+          </div>
         </div>
       </div>
     </div>
