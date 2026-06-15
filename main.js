@@ -1142,12 +1142,20 @@ class GameApp {
         }
       } else if (key === 'j') {
         e.preventDefault();
-        if (this.modalMgr) {
-          if (this.modalMgr.modals.tasks.classList.contains('open')) {
-            this.modalMgr.closeModal('tasks');
+        if (this.currentMap === 'farm') {
+          if (this.isRadialMenuOpen) {
+            this.closeRadialSeedMenu();
           } else {
-            this.modalMgr.closeAllModals();
-            this.modalMgr.openModal('tasks');
+            this.openRadialSeedMenu();
+          }
+        } else {
+          if (this.modalMgr) {
+            if (this.modalMgr.modals.tasks.classList.contains('open')) {
+              this.modalMgr.closeModal('tasks');
+            } else {
+              this.modalMgr.closeAllModals();
+              this.modalMgr.openModal('tasks');
+            }
           }
         }
       } else if (key === 'p') {

@@ -77,6 +77,13 @@ export class InteractsManager {
 
     // Search for closest trigger zone
     for (const zone of this.generator.interactables) {
+      if (zone.id.startsWith('farm_plot_') && this.app && this.app.gameData) {
+        const idx = parseInt(zone.id.replace('farm_plot_', ''));
+        const plot = this.app.gameData.farmPlots[idx];
+        if (plot && plot.status !== 'ready') {
+          continue;
+        }
+      }
       const dx = playerPos.x - zone.x;
       const dy = playerPos.y - zone.y;
       const dz = playerPos.z - zone.z;

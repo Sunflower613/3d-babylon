@@ -336,12 +336,44 @@ class AppShell {
           btn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (cfg.key === 'space' && window.isRadialMenuOpen) return;
+            
+            if (cfg.key === 'j') {
+              const subApp = this.getSubApp();
+              if (subApp && subApp.currentMap === 'farm') {
+                if (subApp.isRadialMenuOpen) {
+                  subApp.closeRadialSeedMenu();
+                } else {
+                  subApp.openRadialSeedMenu();
+                }
+                return;
+              }
+            }
+            
             window.keys[cfg.key] = true;
           }, { passive: false });
           btn.addEventListener('touchend', (e) => {
             e.preventDefault();
+            if (cfg.key === 'j') {
+              const subApp = this.getSubApp();
+              if (subApp && subApp.currentMap === 'farm') {
+                return;
+              }
+            }
             window.keys[cfg.key] = false;
           }, { passive: false });
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (cfg.key === 'j') {
+              const subApp = this.getSubApp();
+              if (subApp && subApp.currentMap === 'farm') {
+                if (subApp.isRadialMenuOpen) {
+                  subApp.closeRadialSeedMenu();
+                } else {
+                  subApp.openRadialSeedMenu();
+                }
+              }
+            }
+          });
         } else if (cfg.action) {
           btn.addEventListener('touchstart', (e) => {
             e.preventDefault();
@@ -468,9 +500,37 @@ class AppShell {
     const interactBtn = document.getElementById('btn-interact');
     const attackBtn = document.getElementById('btn-pk-attack');
     
-    // 大厅/岛屿/农场不显示攻击键，只有在 PVP 擂台时显式呈现攻击按键
+    // 大厅/岛屿不显示，在农场显示“种植”，在 PVP 擂台时显式呈现攻击按键
     if (attackBtn) {
-      attackBtn.style.display = mapName === 'pk_arena' ? 'flex' : 'none';
+      if (mapName === 'pk_arena') {
+        attackBtn.style.display = 'flex';
+        attackBtn.setAttribute('title', '攻击');
+        attackBtn.setAttribute('aria-label', '攻击');
+        attackBtn.innerHTML = `
+<svg style="display: flex;" class="lucide lucide-swords" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5" />
+  <line x1="13" x2="19" y1="19" y2="13" />
+  <line x1="16" x2="20" y1="16" y2="20" />
+  <line x1="19" x2="21" y1="21" y2="19" />
+  <polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5" />
+  <line x1="5" x2="9" y1="14" y2="18" />
+  <line x1="7" x2="4" y1="17" y2="20" />
+  <line x1="3" x2="5" y1="19" y2="21" />
+</svg>`;
+      } else if (mapName === 'farm') {
+        attackBtn.style.display = 'flex';
+        attackBtn.setAttribute('title', '种植');
+        attackBtn.setAttribute('aria-label', '种植');
+        attackBtn.innerHTML = `
+<svg style="display: flex;" class="lucide lucide-sprout" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M7 20h10" />
+  <path d="M10 20V12h4v8" />
+  <path d="M12 12a5 5 0 0 0-5-5H4v2h3a3 3 0 0 1 3 3v0" />
+  <path d="M12 8a5 5 0 0 1 5-5h3v2h-3a3 3 0 0 0-3 3v0" />
+</svg>`;
+      } else {
+        attackBtn.style.display = 'none';
+      }
     }
 
     // 同步把声音状态告知子页面 (如有必要)

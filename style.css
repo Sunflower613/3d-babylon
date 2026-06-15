@@ -3376,8 +3376,8 @@ body.is-mobile .item-detail-content .hud-btn {
 
 #radial-seed-menu {
   position: fixed;
-  right: calc(32px + env(safe-area-inset-right) + 96px);
-  bottom: calc(48px + env(safe-area-inset-bottom) + 20px);
+  right: calc(32px + env(safe-area-inset-right) + 88px);
+  bottom: calc(48px + env(safe-area-inset-bottom) + 96px);
   width: 52px;
   height: 52px;
   z-index: 150;
