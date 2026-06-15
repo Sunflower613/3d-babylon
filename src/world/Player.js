@@ -1111,6 +1111,15 @@ export class Player {
     this.controlsLocked = true;
     this.position.copy(bedPos);
     this.position.y = bedPos.y + 0.58; // relative bed elevation (lies on top of mattress)
+
+    // 隐藏移动端 HUD 摇杆和按钮，解决触碰事件遮挡的问题
+    if (window.parent && window.parent.appShell && typeof window.parent.appShell.hideMobileControls === 'function') {
+      window.parent.appShell.hideMobileControls();
+    }
+    // 更新每日小憩任务进度
+    if (window.gameApp && typeof window.gameApp.updateTaskProgress === 'function') {
+      window.gameApp.updateTaskProgress('rest', 1);
+    }
   }
 
   updateOutfit(type, colorHex) {
@@ -1135,6 +1144,11 @@ export class Player {
       
       const bedHud = document.getElementById('bed-hud');
       if (bedHud) bedHud.style.display = 'none';
+
+      // 恢复移动端 HUD 摇杆和按钮
+      if (window.parent && window.parent.appShell && typeof window.parent.appShell.showMobileControls === 'function') {
+        window.parent.appShell.showMobileControls();
+      }
       return;
     }
 

@@ -578,22 +578,34 @@ class GameApp {
     // 绑定本地的天空时间切换
     const btnToggleTime = document.getElementById('btn-toggle-time');
     if (btnToggleTime) {
-      btnToggleTime.addEventListener('click', () => {
+      const handleToggleTime = (e) => {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
         if (this.environment) {
           this.environment.isNight = !this.environment.isNight;
           this.playCustomSound(this.environment.isNight ? 220 : 440, 0.4, 'sine', 0.08);
         }
-      });
+      };
+      btnToggleTime.addEventListener('touchstart', handleToggleTime, { passive: false });
+      btnToggleTime.addEventListener('click', handleToggleTime);
     }
 
     // 绑定起立按钮
     const btnStandUp = document.getElementById('btn-stand-up');
     if (btnStandUp) {
-      btnStandUp.addEventListener('click', () => {
+      const handleStandUp = (e) => {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
         if (this.player && this.player.isLyingDown) {
           this.player.standUp();
         }
-      });
+      };
+      btnStandUp.addEventListener('touchstart', handleStandUp, { passive: false });
+      btnStandUp.addEventListener('click', handleStandUp);
     }
 
     // 页面加载完成后通知父页面外壳

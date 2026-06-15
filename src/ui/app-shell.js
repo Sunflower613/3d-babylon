@@ -641,6 +641,32 @@ class AppShell {
     });
   }
 
+  hideMobileControls() {
+    const ctrl = document.getElementById('mobile-controls');
+    if (ctrl) {
+      ctrl.style.opacity = '0';
+      ctrl.style.pointerEvents = 'none';
+    }
+    const ssoProfile = document.getElementById('sso-profile-container');
+    if (ssoProfile) {
+      ssoProfile.style.opacity = '0';
+      ssoProfile.style.pointerEvents = 'none';
+    }
+  }
+
+  showMobileControls() {
+    const ctrl = document.getElementById('mobile-controls');
+    if (ctrl) {
+      ctrl.style.opacity = '1';
+      ctrl.style.pointerEvents = 'auto';
+    }
+    const ssoProfile = document.getElementById('sso-profile-container');
+    if (ssoProfile) {
+      ssoProfile.style.opacity = '1';
+      ssoProfile.style.pointerEvents = 'auto';
+    }
+  }
+
   // 10. 弹窗打开/关闭时隐藏/显示常驻 HUD，解决 UI 挡住面板的问题
   onModalOpened(modalId) {
     const ssoProfile = document.getElementById('sso-profile-container');
