@@ -351,7 +351,7 @@ body, html {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid var(--glass-border);
   border-radius: 50%;
-  pointer-events: none; /* Touches will be captured by viewport window */
+  pointer-events: auto; /* Enable touch events specifically on the joystick */
   position: fixed;      /* Fixed relative to viewport */
   left: 48px;           /* Fallback */
   left: calc(48px + env(safe-area-inset-left));
