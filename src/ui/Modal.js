@@ -229,6 +229,11 @@ export class ModalManager {
 
     // Dispatch custom event to lock player controls
     window.dispatchEvent(new CustomEvent('modal-opened', { detail: { modalId: id } }));
+
+    // Notify parent window appShell to hide HUD UI
+    if (window.parent && window.parent.appShell && typeof window.parent.appShell.onModalOpened === 'function') {
+      window.parent.appShell.onModalOpened(id);
+    }
   }
 
   closeModal(id) {
@@ -255,6 +260,11 @@ export class ModalManager {
 
     if (!this.isAnyModalOpen) {
       window.dispatchEvent(new CustomEvent('modal-closed', { detail: { modalId: id } }));
+      
+      // Notify parent window appShell to restore HUD UI
+      if (window.parent && window.parent.appShell && typeof window.parent.appShell.onModalClosed === 'function') {
+        window.parent.appShell.onModalClosed(id);
+      }
     }
   }
 

@@ -562,6 +562,33 @@ class AppShell {
       }
     });
   }
+
+  // 10. 弹窗打开/关闭时隐藏/显示常驻 HUD，解决 UI 挡住面板的问题
+  onModalOpened(modalId) {
+    const ssoProfile = document.getElementById('sso-profile-container');
+    const mobileControls = document.getElementById('mobile-controls');
+    if (ssoProfile) {
+      ssoProfile.style.opacity = '0';
+      ssoProfile.style.pointerEvents = 'none';
+    }
+    if (mobileControls) {
+      mobileControls.style.opacity = '0';
+      mobileControls.style.pointerEvents = 'none';
+    }
+  }
+
+  onModalClosed(modalId) {
+    const ssoProfile = document.getElementById('sso-profile-container');
+    const mobileControls = document.getElementById('mobile-controls');
+    if (ssoProfile) {
+      ssoProfile.style.opacity = '1';
+      ssoProfile.style.pointerEvents = 'auto';
+    }
+    if (mobileControls) {
+      mobileControls.style.opacity = '1';
+      mobileControls.style.pointerEvents = 'auto';
+    }
+  }
 }
 
 // 绑定外层 AppShell 实例到全局以供子页面引用

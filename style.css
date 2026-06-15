@@ -342,6 +342,7 @@ body, html {
   display: none; /* Switched via media queries */
   z-index: 15;
   pointer-events: none;
+  transition: opacity 0.25s ease-in-out;
 }
 
 .joystick-wrapper {
