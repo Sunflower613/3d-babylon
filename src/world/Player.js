@@ -818,9 +818,9 @@ export class Player {
   update(delta, time) {
     // 1. 同步外层 Iframe 的输入状态
     if (window.self !== window.top && window.parent && window.parent.keys) {
-      this.keys.space = window.parent.keys.space;
-      this.keys.shift = window.parent.keys.shift;
-      this.keys.j = window.parent.keys.j;
+      this.keys.space = this.keys.space || window.parent.keys.space;
+      this.keys.shift = this.keys.shift || window.parent.keys.shift;
+      this.keys.j = this.keys.j || window.parent.keys.j;
     }
 
     // 2. 躺着或坐着时，若按了跳跃键，触发站立

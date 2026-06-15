@@ -47,6 +47,9 @@ class GameApp {
     this.modalMgr = null;
     this.interactMgr = null;
     this.beachBallsList = [];
+    this.activeBombs = [];
+    this.activeExplosions = [];
+    this.bombCooldownActive = false;
 
     // Load active theme configuration
     const activeThemeKey = siteConfig.activeTheme || 'beach';
@@ -1872,6 +1875,9 @@ class GameApp {
       this.player.group.remove(this.playerWeapon3D);
       this.playerWeapon3D = null;
     }
+    this.activeBombs = [];
+    this.activeExplosions = [];
+    this.bombCooldownActive = false;
     if (document.getElementById('btn-pk-attack')) document.getElementById('btn-pk-attack').style.display = 'none';
 
     // 开启调试面板
@@ -1987,16 +1993,43 @@ class GameApp {
   playerPerformAttack() {
     if (!this.isPKActive || this.playerHP <= 0 || !this.playerEquippedWeapon) return;
 
-    // 播放物理攻击动画动作（让持有的武器网格做挥舞动作）
-    if (this.playerWeapon3D) {
-      this.playerWeapon3D.rotation.z = -Math.PI / 2;
-      setTimeout(() => {
-        if (this.playerWeapon3D) this.playerWeapon3D.rotation.z = 0;
-      }, 150);
+    if (this.playerEquippedWeapon === 'bomb') {
+      if (this.bombCooldownActive) {
+        this.playCustomSound(150, 0.1, 'sine', 0.1);
+        if (window.showMockToast) {
+          let existing = document.querySelector('.mock-toast');
+          if (existing) existing.remove();
+
+          const toast = document.createElement('div');
+          toast.className = 'mock-toast';
+          toast.textContent = `炸弹正在冷却中！💣`;
+          document.body.appendChild(toast);
+
+          setTimeout(() => toast.classList.add('show'), 50);
+          setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+          }, 1200);
+        }
+        return;
+      }
+      
+      this.triggerBombCooldown();
+      this.throwBomb();
+    } else {
+      // 物理攻击动画动作（近战武器）
+      if (this.playerWeapon3D) {
+        this.playerWeapon3D.rotation.z = -Math.PI / 2;
+        setTimeout(() => {
+          if (this.playerWeapon3D) this.playerWeapon3D.rotation.z = 0;
+        }, 150);
+      }
+      this.playCustomSound(260, 0.1, 'triangle', 0.15);
+      this.performMeleeAttack();
     }
+  }
 
-    this.playCustomSound(260, 0.1, 'triangle', 0.15);
-
+  performMeleeAttack() {
     // 伤害与碰撞判定
     const playerPos = this.player.position;
     const oppPos = this.opponent3D.position;
@@ -2016,9 +2049,6 @@ class GameApp {
       if (this.playerEquippedWeapon === 'sword') {
         dmg = 20;
         knockbackForce = 2.0;
-      } else if (this.playerEquippedWeapon === 'bomb') {
-        dmg = 50;
-        knockbackForce = 1.0;
       } else if (this.playerEquippedWeapon === 'hammer') {
         dmg = 10;
         knockbackForce = 7.5; // 大锤击飞！
@@ -2048,7 +2078,7 @@ class GameApp {
               }
             });
           }
-        }, 200);
+        }, 150);
       }
 
       // 受击击退冲量
@@ -2073,6 +2103,292 @@ class GameApp {
         missSpan.textContent = '[MISS - 距离过远]';
         debugEl.appendChild(missSpan);
         setTimeout(() => missSpan.remove(), 1200);
+      }
+    }
+  }
+
+  triggerBombCooldown() {
+    this.bombCooldownActive = true;
+    let cdLeft = 5;
+    
+    const parentAttackBtn = document.getElementById('btn-pk-attack') || (window.parent && window.parent.document.getElementById('btn-pk-attack'));
+    
+    const updateCDUI = () => {
+      if (parentAttackBtn) {
+        parentAttackBtn.disabled = true;
+        parentAttackBtn.style.opacity = '0.5';
+        parentAttackBtn.innerHTML = `<span style="font-size: 1.1rem; font-weight: bold; color: #ffeb3b; font-family: system-ui; display: flex; align-items: center; justify-content: center;">💣 ${cdLeft}s</span>`;
+      }
+    };
+
+    updateCDUI();
+
+    const cdInterval = setInterval(() => {
+      cdLeft--;
+      if (cdLeft <= 0) {
+        clearInterval(cdInterval);
+        this.bombCooldownActive = false;
+        
+        // 恢复武器可见
+        if (this.playerEquippedWeapon === 'bomb' && this.playerWeapon3D) {
+          this.playerWeapon3D.visible = true;
+        }
+
+        if (parentAttackBtn) {
+          parentAttackBtn.disabled = false;
+          parentAttackBtn.style.opacity = '1';
+          parentAttackBtn.innerHTML = `
+<svg style="display: flex;" class="lucide lucide-bomb" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="11" cy="13" r="9" />
+  <path d="m19.5 4.5-3.5 3.5" />
+  <path d="m21 3-2.5 2.5" />
+  <path d="M19 8.5c.5-.5 1-1.5.5-2.5-.5-.5-1.5 0-2 .5" />
+</svg>`;
+        }
+      } else {
+        updateCDUI();
+      }
+    }, 1000);
+  }
+
+  throwBomb() {
+    if (!this.player) return;
+
+    this.playCustomSound(350, 0.1, 'sine', 0.1);
+
+    if (this.playerWeapon3D) {
+      this.playerWeapon3D.visible = false;
+    }
+
+    const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(this.player.group.quaternion).normalize();
+    const bombMesh = this.createBomb3D();
+    
+    const spawnPos = this.player.position.clone().add(forward.clone().multiplyScalar(0.5));
+    spawnPos.y += 1.0;
+    bombMesh.position.copy(spawnPos);
+    
+    this.scene.add(bombMesh);
+
+    const throwSpeed = 9.0;
+    const velocity = forward.clone().multiplyScalar(throwSpeed);
+    velocity.y = 4.0; // 向上抛出初速度
+
+    const bombObj = {
+      mesh: bombMesh,
+      velocity: velocity,
+      position: spawnPos,
+      timeElapsed: 0,
+      maxLifetime: 1.5
+    };
+
+    if (!this.activeBombs) this.activeBombs = [];
+    this.activeBombs.push(bombObj);
+  }
+
+  updateActiveBombs(delta) {
+    if (!this.activeBombs || this.activeBombs.length === 0) return;
+
+    const gravity = 9.8;
+    const platformY = 0.6;
+
+    for (let i = this.activeBombs.length - 1; i >= 0; i--) {
+      const bomb = this.activeBombs[i];
+      bomb.timeElapsed += delta;
+
+      bomb.velocity.y -= gravity * delta;
+      bomb.position.addScaledVector(bomb.velocity, delta);
+      bomb.mesh.position.copy(bomb.position);
+
+      bomb.mesh.rotation.x += 0.05;
+      bomb.mesh.rotation.y += 0.05;
+
+      let triggerExplode = false;
+
+      if (bomb.position.y <= platformY) {
+        const distToCenter = Math.sqrt(bomb.position.x * bomb.position.x + bomb.position.z * bomb.position.z);
+        if (distToCenter < 8.0) {
+          bomb.position.y = platformY;
+          triggerExplode = true;
+        }
+      }
+
+      if (this.opponent3D && !triggerExplode) {
+        const oppPos = this.opponent3D.position;
+        const distToOpp = bomb.position.distanceTo(oppPos);
+        if (distToOpp < 0.8) {
+          triggerExplode = true;
+        }
+      }
+
+      if (bomb.timeElapsed >= bomb.maxLifetime) {
+        triggerExplode = true;
+      }
+
+      if (triggerExplode) {
+        this.explodeBomb(bomb.position);
+        this.scene.remove(bomb.mesh);
+        this.activeBombs.splice(i, 1);
+      }
+    }
+  }
+
+  explodeBomb(position) {
+    this.playCustomSound(180, 0.35, 'sawtooth', 0.25);
+    setTimeout(() => {
+      this.playCustomSound(60, 0.2, 'sine', 0.3);
+    }, 50);
+
+    this.createExplosionEffects(position);
+
+    if (this.opponent3D && this.isPKActive) {
+      const oppPos = this.opponent3D.position;
+      const distance = position.distanceTo(oppPos);
+      const explosionRadius = 3.5;
+
+      if (distance <= explosionRadius) {
+        const dmg = 50;
+        
+        const knockbackDir = oppPos.clone().sub(position);
+        knockbackDir.y = 0;
+        knockbackDir.normalize();
+        
+        const knockbackForce = 6.0;
+        this.opponentVelocity.addScaledVector(knockbackDir, knockbackForce);
+        this.opponentVelocity.y = 3.5;
+        this.opponentIsGrounded = false;
+
+        this.opponentHP = Math.max(0, this.opponentHP - dmg);
+        this.updatePKHPUI();
+
+        this.playDamageBubble(oppPos, dmg, false);
+
+        this.opponent3D.traverse(child => {
+          if (child.isMesh && child.material) {
+            if (child.userData.origColor === undefined) {
+              child.userData.origColor = child.material.color.getHex();
+            }
+            child.material.color.setHex(0xff3333);
+          }
+        });
+        setTimeout(() => {
+          if (this.opponent3D) {
+            this.opponent3D.traverse(child => {
+              if (child.isMesh && child.material && child.userData.origColor !== undefined) {
+                child.material.color.setHex(child.userData.origColor);
+              }
+            });
+          }
+        }, 150);
+
+        if (this.opponentHP <= 0) {
+          this.endPKBattle(true);
+        }
+      }
+    }
+  }
+
+  createExplosionEffects(position) {
+    const sphereGeo = new THREE.SphereGeometry(0.2, 8, 8);
+    const sphereMat = new THREE.MeshBasicMaterial({
+      color: 0xffa726,
+      transparent: true,
+      opacity: 0.9,
+      depthWrite: false
+    });
+    const fireBall = new THREE.Mesh(sphereGeo, sphereMat);
+    fireBall.position.copy(position);
+    this.scene.add(fireBall);
+
+    const ballObj = {
+      mesh: fireBall,
+      type: 'ball',
+      scaleSpeed: 9.0,
+      opacitySpeed: 2.2,
+      scale: 1.0,
+      opacity: 0.9
+    };
+
+    if (!this.activeExplosions) this.activeExplosions = [];
+    this.activeExplosions.push(ballObj);
+
+    const particleCount = 12;
+    const particleGeo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
+    const particleColors = [0xff3d00, 0xffc107, 0x757575];
+    
+    for (let i = 0; i < particleCount; i++) {
+      const color = particleColors[Math.floor(Math.random() * particleColors.length)];
+      const partMat = new THREE.MeshLambertMaterial({ 
+        color: color, 
+        transparent: true,
+        opacity: 0.9,
+        flatShading: true
+      });
+      const particle = new THREE.Mesh(particleGeo, partMat);
+      particle.position.copy(position);
+      
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 1.5 + Math.random() * 3.5;
+      const velocity = new THREE.Vector3(
+        Math.cos(angle) * speed,
+        2.5 + Math.random() * 3.0,
+        Math.sin(angle) * speed
+      );
+
+      this.scene.add(particle);
+
+      const partObj = {
+        mesh: particle,
+        type: 'particle',
+        velocity: velocity,
+        opacity: 0.9,
+        rotationSpeed: new THREE.Vector3(
+          Math.random() * 10,
+          Math.random() * 10,
+          Math.random() * 10
+        )
+      };
+      this.activeExplosions.push(partObj);
+    }
+  }
+
+  updateExplosionEffects(delta) {
+    if (!this.activeExplosions || this.activeExplosions.length === 0) return;
+
+    const gravity = 9.8;
+
+    for (let i = this.activeExplosions.length - 1; i >= 0; i--) {
+      const exp = this.activeExplosions[i];
+
+      if (exp.type === 'ball') {
+        exp.scale += exp.scaleSpeed * delta;
+        exp.opacity -= exp.opacitySpeed * delta;
+        
+        exp.mesh.scale.set(exp.scale, exp.scale, exp.scale);
+        exp.mesh.material.opacity = Math.max(0, exp.opacity);
+
+        if (exp.opacity <= 0) {
+          this.scene.remove(exp.mesh);
+          exp.mesh.geometry.dispose();
+          exp.mesh.material.dispose();
+          this.activeExplosions.splice(i, 1);
+        }
+      } else if (exp.type === 'particle') {
+        exp.velocity.y -= gravity * delta;
+        exp.mesh.position.addScaledVector(exp.velocity, delta);
+        
+        exp.mesh.rotation.x += exp.rotationSpeed.x * delta;
+        exp.mesh.rotation.y += exp.rotationSpeed.y * delta;
+        exp.mesh.rotation.z += exp.rotationSpeed.z * delta;
+
+        exp.opacity -= 1.8 * delta;
+        exp.mesh.material.opacity = Math.max(0, exp.opacity);
+
+        if (exp.opacity <= 0) {
+          this.scene.remove(exp.mesh);
+          exp.mesh.geometry.dispose();
+          exp.mesh.material.dispose();
+          this.activeExplosions.splice(i, 1);
+        }
       }
     }
   }
@@ -2843,6 +3159,10 @@ class GameApp {
   }
 
   updatePKBattleFrame(delta) {
+    // 更新物理炸弹和爆炸特效运动
+    this.updateActiveBombs(delta);
+    this.updateExplosionEffects(delta);
+
     if (!this.isPKActive || !this.opponent3D) return;
 
     // 1. 虚空跌落判定
@@ -2934,16 +3254,36 @@ class GameApp {
         this.playerEquippedWeapon = chosen;
 
         // 显示并更新移动端攻击按钮
-        const atkBtn = document.getElementById('btn-pk-attack');
+        const atkBtn = document.getElementById('btn-pk-attack') || (window.parent && window.parent.document.getElementById('btn-pk-attack'));
         if (atkBtn) {
           atkBtn.style.display = 'flex';
-          const iconEl = atkBtn.querySelector('iconify-icon');
-          const weaponIconMap = { 
-            'sword': 'lucide:swords', 
-            'hammer': 'lucide:hammer', 
-            'bomb': 'lucide:bomb' 
+          const weaponSVGMap = {
+            'sword': `
+<svg style="display: flex;" class="lucide lucide-swords" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5" />
+  <line x1="13" x2="19" y1="19" y2="13" />
+  <line x1="16" x2="20" y1="16" y2="20" />
+  <line x1="19" x2="21" y1="21" y2="19" />
+  <polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5" />
+  <line x1="5" x2="9" y1="14" y2="18" />
+  <line x1="7" x2="4" y1="17" y2="20" />
+  <line x1="3" x2="5" y1="19" y2="21" />
+</svg>`,
+            'hammer': `
+<svg style="display: flex;" class="lucide lucide-hammer" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="m15 5 4 4" />
+  <path d="M21.5 12H16c-.5 0-1-.5-1-1V4.5L9 9.5c-.5.5-.5 1.5 0 2l11 11c.5.5 1.5.5 2 0z" />
+  <path d="m2.1 21.9 10.3-10.3" />
+</svg>`,
+            'bomb': `
+<svg style="display: flex;" class="lucide lucide-bomb" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="11" cy="13" r="9" />
+  <path d="m19.5 4.5-3.5 3.5" />
+  <path d="m21 3-2.5 2.5" />
+  <path d="M19 8.5c.5-.5 1-1.5.5-2.5-.5-.5-1.5 0-2 .5" />
+</svg>`
           };
-          if (iconEl) iconEl.setAttribute('icon', weaponIconMap[chosen] || 'lucide:swords');
+          atkBtn.innerHTML = weaponSVGMap[chosen] || weaponSVGMap['sword'];
         }
 
         // 绑定一把 3D 武器到玩家身上
