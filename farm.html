@@ -36,31 +36,20 @@
     </div>
   </div>
 
-  <!-- 种子商店子弹窗 (白底磨砂玻璃) -->
-  <div class="sub-modal-overlay" id="sub-modal-seed-shop" style="display: none; position: fixed; inset: 0; z-index: 200; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);">
-    <div class="sub-modal-card" style="background: rgba(255, 255, 255, 0.9); color: #2c3e50; padding: 24px; border-radius: 20px; width: 90%; max-width: 380px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); position: relative;">
-      <button class="sub-modal-close" id="btn-close-seed-shop" style="position: absolute; top: 16px; right: 16px; font-size: 1.5rem; background: none; border: none; cursor: pointer; color: #7f8c8d;">&times;</button>
-      <div class="sub-modal-header" style="margin-bottom: 16px;">
-        <h3 style="font-size: 1.2rem; color: #27ae60; font-weight: bold;">🌱 种子商店</h3>
-      </div>
-      <div class="sub-modal-body" style="display: flex; flex-direction: column; gap: 14px;">
-        <div class="seed-item" style="display: flex; align-items: center; gap: 12px; background: #f9f9f9; padding: 12px; border-radius: 12px; border: 1px solid #eef2f3;">
-          <span class="seed-icon" style="font-size: 2.2rem;">🌻</span>
-          <div class="seed-info" style="flex: 1;">
-            <h4 style="font-size: 0.95rem; font-weight: bold; margin-bottom: 2px;">向日葵种子</h4>
-            <p style="font-size: 0.72rem; color: #7f8c8d; line-height: 1.2;">成熟需要 30 秒。收割可获得 20 金币 + 15 经验。</p>
-          </div>
-          <button class="buy-btn" data-seed="sunflower_seed" style="padding: 6px 10px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 0.8rem; font-weight: bold; cursor: pointer;">购买 (10金币)</button>
-        </div>
-        <div class="seed-item" style="display: flex; align-items: center; gap: 12px; background: #f9f9f9; padding: 12px; border-radius: 12px; border: 1px solid #eef2f3;">
-          <span class="seed-icon" style="font-size: 2.2rem;">🍓</span>
-          <div class="seed-info" style="flex: 1;">
-            <h4 style="font-size: 0.95rem; font-weight: bold; margin-bottom: 2px;">草莓种子</h4>
-            <p style="font-size: 0.72rem; color: #7f8c8d; line-height: 1.2;">成熟需要 60 秒。收割可获得 45 金币 + 35 经验。</p>
-          </div>
-          <button class="buy-btn" data-seed="strawberry_seed" style="padding: 6px 10px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 0.8rem; font-weight: bold; cursor: pointer;">购买 (20金币)</button>
-        </div>
-      </div>
+  <!-- 农田专用种植扇形菜单 (#radial-seed-menu) -->
+  <div id="radial-seed-menu">
+    <button class="radial-close-btn" id="btn-close-radial">&times;</button>
+    <div class="radial-items">
+      <button class="radial-item-btn" data-seed="sunflower_seed" id="radial-seed-sunflower">
+        <span class="radial-icon">🌻</span>
+        <span class="radial-count">0</span>
+        <span class="radial-key-hint">1</span>
+      </button>
+      <button class="radial-item-btn" data-seed="strawberry_seed" id="radial-seed-strawberry">
+        <span class="radial-icon">🍓</span>
+        <span class="radial-count">0</span>
+        <span class="radial-key-hint">2</span>
+      </button>
     </div>
   </div>
 
@@ -186,6 +175,35 @@
           <div class="item-detail-content" style="display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: space-between; gap: 16px;">
             <!-- 动态内容 -->
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. 市集商店 (Shop) 弹窗 (公共) -->
+  <div class="modal-overlay" id="modal-shop">
+    <div class="modal-card modal-large">
+      <button class="modal-close" data-close="modal-shop">&times;</button>
+      <div class="modal-header" style="justify-content: space-between; align-items: center; width: 100%;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <span class="modal-emoji">🛒</span>
+          <h2>云端集市 · 市集商店</h2>
+        </div>
+        <div class="modal-shop-coins" style="display: flex; align-items: center; gap: 6px; margin-right: 45px; font-weight: bold; color: #ffd700; font-size: 0.95rem;">
+          <span>🪙 当前金币: </span>
+          <span class="shop-coins-val">0</span>
+        </div>
+      </div>
+      <div class="modal-body no-padding" style="display: flex; height: 100%; overflow: hidden;">
+        <!-- 左侧纵向磨砂玻璃 Tab -->
+        <div class="shop-left" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--glass-border); background: rgba(0,0,0,0.15);">
+          <button class="shop-tabactive active" data-tab="agriculture" style="padding: 16px; background: none; border: none; border-left: 4px solid #27ae60; color: #fff; text-align: left; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px;">🌱 农业物资</button>
+          <button class="shop-tabactive" data-tab="decorations" style="padding: 16px; background: none; border: none; border-left: 4px solid transparent; color: var(--text-muted); text-align: left; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px;">🛋️ 装饰家具</button>
+          <button class="shop-tabactive" data-tab="topup" style="padding: 16px; background: none; border: none; border-left: 4px solid transparent; color: var(--text-muted); text-align: left; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px;">💎 金币充值</button>
+        </div>
+        <!-- 右侧商品展示区 -->
+        <div class="shop-right scrollable" id="shop-items-container" style="flex: 3; padding: 20px; overflow-y: auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-height: 340px; width: 100%;">
+          <!-- 动态渲染商品 -->
         </div>
       </div>
     </div>

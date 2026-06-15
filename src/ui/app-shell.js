@@ -2,6 +2,7 @@ import nipplejs from 'nipplejs';
 
 // 初始化全局输入状态，供 iframe 内部的 3D Player 实时同步
 window.keys = { space: false, shift: false, j: false };
+window.isRadialMenuOpen = false;
 window.joystickDir = { x: 0, y: 0 };
 window.isPlayingMusic = false;
 window.audioCtx = null;
@@ -256,7 +257,8 @@ class AppShell {
       { id: 'btn-sidebar-farm', name: 'farm' },
       { id: 'btn-sidebar-pk', name: 'pk' },
       { id: 'btn-sidebar-bag', name: 'bag' },
-      { id: 'btn-sidebar-home', name: 'home' }
+      { id: 'btn-sidebar-home', name: 'home' },
+      { id: 'btn-sidebar-shop', name: 'shop' }
     ];
 
     sidebarButtons.forEach(btn => {
@@ -333,6 +335,7 @@ class AppShell {
         if (cfg.key) {
           btn.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            if (cfg.key === 'space' && window.isRadialMenuOpen) return;
             window.keys[cfg.key] = true;
           }, { passive: false });
           btn.addEventListener('touchend', (e) => {

@@ -3372,6 +3372,219 @@ body.is-mobile .item-detail-content .hud-btn {
 }
 
 
+/* ==================== 农场种植菜单与全局大集市商店样式 ==================== */
+
+#radial-seed-menu {
+  position: fixed;
+  right: 15px;
+  bottom: 15px;
+  width: 170px;
+  height: 170px;
+  z-index: 150;
+  pointer-events: none;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: scale(0.6);
+  opacity: 0;
+}
+#radial-seed-menu.open {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* 红色退出键 */
+#radial-seed-menu .radial-close-btn {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 82, 82, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  font-size: 1.2rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 4px 10px rgba(255, 82, 82, 0.3);
+  transition: all 0.25s ease;
+  transform: scale(0);
+}
+#radial-seed-menu.open .radial-close-btn {
+  transform: scale(1);
+}
+#radial-seed-menu .radial-close-btn:hover {
+  background: #ff5252;
+  transform: scale(1.15) rotate(90deg);
+}
+
+/* 种子圆圈按钮 */
+#radial-seed-menu .radial-item-btn {
+  position: absolute;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: rgba(15, 17, 21, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1.5px solid var(--glass-border);
+  cursor: pointer;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--card-shadow);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform: translate(30px, 30px) scale(0);
+}
+
+/* 扇形分布定位及微调 */
+#radial-seed-menu.open #radial-seed-strawberry {
+  transform: translate(0px, 100px) scale(1);
+}
+#radial-seed-menu.open #radial-seed-sunflower {
+  transform: translate(100px, 0px) scale(1);
+}
+
+#radial-seed-menu .radial-item-btn:hover {
+  transform: translate(var(--hover-tx), var(--hover-ty)) scale(1.1) !important;
+  border-color: var(--primary);
+  box-shadow: 0 0 15px rgba(100, 255, 100, 0.4);
+}
+#radial-seed-strawberry {
+  --hover-tx: 0px;
+  --hover-ty: 100px;
+}
+#radial-seed-sunflower {
+  --hover-tx: 100px;
+  --hover-ty: 0px;
+}
+
+#radial-seed-menu .radial-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+#radial-seed-menu .radial-count {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  background: var(--primary);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.3);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+#radial-seed-menu .radial-key-hint {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: bold;
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+
+/* 大市集商店 modal-shop 样式 */
+.shop-left .shop-tabactive {
+  border-left: 4px solid transparent;
+  text-shadow: none;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+.shop-left .shop-tabactive:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff !important;
+}
+.shop-left .shop-tabactive.active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.shop-right {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+.shop-right::-webkit-scrollbar {
+  width: 6px;
+}
+.shop-right::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+}
+
+/* 商品卡片磨砂效果 */
+.shop-item-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  transition: all 0.3s var(--transition-smooth);
+}
+.shop-item-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.shop-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.shop-item-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+}
+.shop-item-owned {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.shop-item-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin: 0;
+  flex-grow: 1;
+}
+.shop-item-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+.shop-item-price {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #ffd700;
+}
+
+#modal-shop .buy-btn {
+  position: relative;
+  overflow: hidden;
+}
+#modal-shop button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+
+
 
 
 

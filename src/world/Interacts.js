@@ -9,7 +9,7 @@ export class InteractsManager {
     
     this.promptEl = document.getElementById('interact-prompt');
     this.promptTextEl = this.promptEl ? this.promptEl.querySelector('.prompt-text') : null;
-    this.mobileInteractBtn = document.getElementById('btn-interact');
+    this.mobileInteractBtn = document.getElementById('btn-interact') || (window.parent && window.parent.document.getElementById('btn-interact'));
 
     this.activeInteractZone = null;
     this.isTransitioningCamera = false;
@@ -146,6 +146,33 @@ export class InteractsManager {
     }
     if (this.mobileInteractBtn) {
       this.mobileInteractBtn.style.display = 'flex';
+      
+      // 动态切换交互按钮的图标
+      let isSprout = false;
+      if (this.activeInteractZone && this.activeInteractZone.id.startsWith('farm_plot_') && this.app && this.app.gameData) {
+        const idx = parseInt(this.activeInteractZone.id.replace('farm_plot_', ''));
+        const plot = this.app.gameData.farmPlots[idx];
+        if (plot && plot.status === 'empty') {
+          isSprout = true;
+        }
+      }
+      
+      const defaultSVG = `
+<svg style="display: flex;" class="lucide lucide-sparkles" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275z"/>
+  <path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5.5z"/>
+  <path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z"/>
+</svg>`;
+
+      const sproutSVG = `
+<svg style="display: flex;" class="lucide lucide-sprout" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M7 20h10" />
+  <path d="M10 20V12h4v8" />
+  <path d="M12 12a5 5 0 0 0-5-5H4v2h3a3 3 0 0 1 3 3v0" />
+  <path d="M12 8a5 5 0 0 1 5-5h3v2h-3a3 3 0 0 0-3 3v0" />
+</svg>`;
+
+      this.mobileInteractBtn.innerHTML = isSprout ? sproutSVG : defaultSVG;
     }
   }
 

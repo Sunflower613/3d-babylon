@@ -223,6 +223,35 @@
     </div>
   </div>
 
+  <!-- 5. 市集商店 (Shop) 弹窗 (公共) -->
+  <div class="modal-overlay" id="modal-shop">
+    <div class="modal-card modal-large">
+      <button class="modal-close" data-close="modal-shop">&times;</button>
+      <div class="modal-header" style="justify-content: space-between; align-items: center; width: 100%;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <span class="modal-emoji">🛒</span>
+          <h2>云端集市 · 市集商店</h2>
+        </div>
+        <div class="modal-shop-coins" style="display: flex; align-items: center; gap: 6px; margin-right: 45px; font-weight: bold; color: #ffd700; font-size: 0.95rem;">
+          <span>🪙 当前金币: </span>
+          <span class="shop-coins-val">0</span>
+        </div>
+      </div>
+      <div class="modal-body no-padding" style="display: flex; height: 100%; overflow: hidden;">
+        <!-- 左侧纵向磨砂玻璃 Tab -->
+        <div class="shop-left" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--glass-border); background: rgba(0,0,0,0.15);">
+          <button class="shop-tabactive active" data-tab="agriculture" style="padding: 16px; background: none; border: none; border-left: 4px solid #27ae60; color: #fff; text-align: left; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px;">🌱 农业物资</button>
+          <button class="shop-tabactive" data-tab="decorations" style="padding: 16px; background: none; border: none; border-left: 4px solid transparent; color: var(--text-muted); text-align: left; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px;">🛋️ 装饰家具</button>
+          <button class="shop-tabactive" data-tab="topup" style="padding: 16px; background: none; border: none; border-left: 4px solid transparent; color: var(--text-muted); text-align: left; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px;">💎 金币充值</button>
+        </div>
+        <!-- 右侧商品展示区 -->
+        <div class="shop-right scrollable" id="shop-items-container" style="flex: 3; padding: 20px; overflow-y: auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-height: 340px; width: 100%;">
+          <!-- 动态渲染商品 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Device rotation overlay (visible on mobile in portrait mode) -->
   <div id="rotation-overlay">
     <div class="rotation-message">

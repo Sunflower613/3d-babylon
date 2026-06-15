@@ -1056,6 +1056,10 @@ class GameApp {
       if (id === 'pk') this.refreshPK();
       if (id === 'bag') this.refreshBag();
       if (id === 'home') this.refreshHome();
+      if (id === 'shop') {
+        this.updateShopCoins();
+        this.renderShopItems(this.getActiveShopTab());
+      }
     });
 
     // 5. 初始化子模块事件绑定
@@ -1066,6 +1070,8 @@ class GameApp {
     this.initBagUI();
     this.initHomeUI();
     this.initMapUI();
+    this.initShopUI();
+    this.initRadialSeedMenu();
 
     // 6. 自动状态恢复 (URL modal/action 继承) 与 PK 自动开启
     const urlParams = new URLSearchParams(window.location.search);
@@ -1458,14 +1464,7 @@ class GameApp {
 
     if (plot.status === 'empty') {
       this.activePlotIndex = plotIndex;
-      const seedShop = document.getElementById('sub-modal-seed-shop');
-      if (seedShop) {
-        seedShop.style.display = 'flex';
-        if (this.player) {
-          this.player.controlsLocked = true;
-          this.player.resetInputs();
-        }
-      }
+      this.openRadialSeedMenu();
     } else if (plot.status === 'ready') {
       this.harvestCrop(plotIndex);
     } else {
@@ -1479,23 +1478,7 @@ class GameApp {
 
   // ==================== 我的农田 (Farm) 逻辑 ====================
   initFarmUI() {
-    const closeShop = document.getElementById('btn-close-seed-shop');
-    if (closeShop) {
-      closeShop.addEventListener('click', () => {
-        document.getElementById('sub-modal-seed-shop').style.display = 'none';
-        if (this.player) {
-          this.player.controlsLocked = false;
-        }
-      });
-    }
-
-    const buyBtns = document.querySelectorAll('#sub-modal-seed-shop .buy-btn');
-    buyBtns.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const seedId = btn.getAttribute('data-seed');
-        this.buyAndPlant(seedId);
-      });
-    });
+    this.refreshFarm();
   }
 
   refreshFarm() {
@@ -1520,7 +1503,7 @@ class GameApp {
         `;
         el.addEventListener('click', () => {
           this.activePlotIndex = index;
-          document.getElementById('sub-modal-seed-shop').style.display = 'flex';
+          this.openRadialSeedMenu();
         });
       } else {
         const isReady = plot.status === 'ready';
@@ -3008,6 +2991,9 @@ class GameApp {
 
   // ==================== 每帧高频运动与气泡定位更新 (animate) ====================
   updateGameSystemsFrame(delta, time) {
+    // 0. 更新种植菜单地块的同步锁定状态
+    this.updateActivePlotForRadialMenu();
+
     // 1. 农田气泡每帧 3D 投射定位与生长缩放
     this.updateFarmPlotsFrame();
 
@@ -4045,6 +4031,378 @@ class GameApp {
     }
 
     return modelGroup;
+  }
+
+  // ==================== 全局大市集商店及快捷种植菜单系统 ====================
+
+  initShopUI() {
+    // 监听 Tab 切换
+    const tabs = document.querySelectorAll('#modal-shop .shop-tabactive');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        const tabName = tab.getAttribute('data-tab');
+        this.switchShopTab(tabName);
+      });
+    });
+
+    // 默认展示农业 Tab
+    this.switchShopTab('agriculture');
+  }
+
+  switchShopTab(tabName) {
+    const tabs = document.querySelectorAll('#modal-shop .shop-tabactive');
+    tabs.forEach(tab => {
+      if (tab.getAttribute('data-tab') === tabName) {
+        tabs.forEach(t => {
+          t.classList.remove('active');
+          t.style.borderLeftColor = 'transparent';
+          t.style.color = 'var(--text-muted)';
+        });
+        tab.classList.add('active');
+        tab.style.borderLeftColor = '#27ae60';
+        tab.style.color = '#fff';
+        this.renderShopItems(tabName);
+      }
+    });
+  }
+
+  getActiveShopTab() {
+    const activeTab = document.querySelector('#modal-shop .shop-tabactive.active');
+    return activeTab ? activeTab.getAttribute('data-tab') : 'agriculture';
+  }
+
+  getActiveBagTab() {
+    const activeTab = document.querySelector('#modal-bag .bag-tabactive.active');
+    return activeTab ? activeTab.getAttribute('data-tab') : 'seed';
+  }
+
+  updateShopCoins() {
+    const coinEl = document.querySelector('#modal-shop .shop-coins-val');
+    if (coinEl) {
+      coinEl.textContent = this.gameData.coins;
+    }
+  }
+
+  renderShopItems(tabName) {
+    const container = document.getElementById('shop-items-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (tabName === 'agriculture') {
+      const items = [
+        {
+          id: 'sunflower_seed',
+          name: '向日葵种子 🌻',
+          price: 10,
+          desc: '成熟需要 30 秒。收割可获得 20 金币 + 15 经验。',
+          quality: 'green',
+          type: 'seed'
+        },
+        {
+          id: 'strawberry_seed',
+          name: '草莓种子 🍓',
+          price: 20,
+          desc: '成熟需要 60 秒。收割可获得 45 金币 + 35 经验。',
+          quality: 'blue',
+          type: 'seed'
+        }
+      ];
+
+      items.forEach(item => {
+        const backpackItem = this.gameData.backpack.find(b => b.id === item.id && b.type === 'seed');
+        const count = backpackItem ? backpackItem.count : 0;
+
+        const card = document.createElement('div');
+        card.className = 'shop-item-card';
+        card.innerHTML = `
+          <div class="shop-item-header">
+            <span class="shop-item-name">${item.name}</span>
+            <span class="shop-item-owned">已持有: ${count}</span>
+          </div>
+          <p class="shop-item-desc">${item.desc}</p>
+          <div class="shop-item-action">
+            <span class="shop-item-price">🪙 ${item.price}</span>
+            <button class="hud-btn buy-btn" style="padding: 6px 12px; font-size: 0.8rem;">购买</button>
+          </div>
+        `;
+
+        card.querySelector('.buy-btn').addEventListener('click', (e) => {
+          this.buyShopSeed(item, e.clientX, e.clientY);
+        });
+
+        container.appendChild(card);
+      });
+
+    } else if (tabName === 'decorations') {
+      const items = [
+        { id: 'painting_1', name: '浮空岛日落挂画 🖼️', price: 50, desc: '悬挂在墙壁上的精美装饰，带来悠闲的落日余晖。', type: 'decor' },
+        { id: 'tree_1', name: '闪烁圣诞树 🎄', price: 100, desc: '闪耀着七彩微光的圣诞树，散发节日温馨氛围。', type: 'decor' },
+        { id: 'sofa_1', name: '粉嫩兔子沙发 🛋️', price: 150, desc: '兔耳设计的粉色单人沙发，触感松软，极度舒适。', type: 'decor' },
+        { id: 'swing_1', name: '室内网兜秋千 🎪', price: 200, desc: '挂在天花板上的编织网秋千，轻轻摇曳，治愈满满。', type: 'decor' }
+      ];
+
+      items.forEach(item => {
+        const isOwned = this.gameData.ownedFurnitures.includes(item.id);
+
+        const card = document.createElement('div');
+        card.className = 'shop-item-card';
+        card.innerHTML = `
+          <div class="shop-item-header">
+            <span class="shop-item-name">${item.name}</span>
+            <span class="shop-item-owned">${isOwned ? '✅ 已解锁' : '🔒 未拥有'}</span>
+          </div>
+          <p class="shop-item-desc">${item.desc}</p>
+          <div class="shop-item-action">
+            <span class="shop-item-price">🪙 ${item.price}</span>
+            <button class="hud-btn buy-btn" style="padding: 6px 12px; font-size: 0.8rem;" ${isOwned ? 'disabled' : ''}>${isOwned ? '已拥有' : '购买'}</button>
+          </div>
+        `;
+
+        if (!isOwned) {
+          card.querySelector('.buy-btn').addEventListener('click', (e) => {
+            const furnitureItem = {
+              id: item.id,
+              name: item.name.replace(/ 🖼️| 🎄| 🛋️| 🎪/, ''),
+              price: item.price,
+              emoji: item.name.split(' ').pop()
+            };
+            this.buyFurniture(furnitureItem, e.clientX, e.clientY);
+            setTimeout(() => {
+              this.updateShopCoins();
+              this.renderShopItems('decorations');
+              this.refreshBag('decor');
+            }, 100);
+          });
+        }
+
+        container.appendChild(card);
+      });
+
+    } else if (tabName === 'topup') {
+      const items = [
+        { id: 'coin_100', name: '免费金币充值包 🪙', amount: 100, desc: '白嫖小包。免费充值 100 金币，附赠吃到金币声效！' },
+        { id: 'coin_500', name: '金币充值礼包 🎁', amount: 500, desc: '免费大包。点击即刻免费充值 500 金币！' },
+        { id: 'coin_1000', name: '超级金币充值包 💎', amount: 1000, desc: '免费巨包！狂揽 1000 金币，金币爆屏！' }
+      ];
+
+      items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'shop-item-card';
+        card.innerHTML = `
+          <div class="shop-item-header">
+            <span class="shop-item-name">${item.name}</span>
+            <span class="shop-item-owned" style="color: #4caf50;">★ 免费充值</span>
+          </div>
+          <p class="shop-item-desc">${item.desc}</p>
+          <div class="shop-item-action">
+            <span class="shop-item-price" style="color: #4caf50;">￥0.00</span>
+            <button class="hud-btn buy-btn" style="padding: 6px 12px; font-size: 0.8rem; background: linear-gradient(135deg, #ffd700 0%, #ffb300 100%); border-color: #ffd700; color: #000; font-weight: bold;">充值</button>
+          </div>
+        `;
+
+        card.querySelector('.buy-btn').addEventListener('click', (e) => {
+          this.gameData.coins += item.amount;
+          this.saveGameData();
+          this.updateShopCoins();
+          this.updateBaseUI();
+          this.showCoinFloatText(item.amount, e.clientX, e.clientY);
+          setTimeout(() => {
+            this.refreshBag(this.getActiveBagTab());
+          }, 50);
+        });
+
+        container.appendChild(card);
+      });
+    }
+  }
+
+  buyShopSeed(item, clickX, clickY) {
+    if (this.gameData.coins < item.price) {
+      alert('金币不足，无法购买种子！');
+      return;
+    }
+
+    this.gameData.coins -= item.price;
+    
+    const backpackItem = this.gameData.backpack.find(b => b.id === item.id && b.type === 'seed');
+    if (backpackItem) {
+      backpackItem.count++;
+    } else {
+      this.gameData.backpack.push({
+        id: item.id,
+        name: item.name.replace(/ 🌻| 🍓/, ''),
+        type: 'seed',
+        count: 1,
+        quality: item.quality,
+        desc: item.desc
+      });
+    }
+
+    this.saveGameData();
+    this.updateShopCoins();
+    this.updateBaseUI();
+    this.showCoinFloatText(-item.price, clickX, clickY);
+
+    this.renderShopItems('agriculture');
+    this.refreshFarm();
+    this.refreshBag('seed');
+  }
+
+  initRadialSeedMenu() {
+    const closeBtn = document.getElementById('btn-close-radial');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        this.closeRadialSeedMenu();
+      });
+    }
+
+    const seedBtns = document.querySelectorAll('#radial-seed-menu .radial-item-btn');
+    seedBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (btn.classList.contains('disabled') || btn.style.opacity === '0.5') {
+          this.showToast('请走近空农地后再种植！');
+          return;
+        }
+        const seedId = btn.getAttribute('data-seed');
+        this.plantCropFromRadialMenu(seedId);
+      });
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (!this.isRadialMenuOpen) return;
+
+      if (e.key === '1') {
+        const btn = document.getElementById('radial-seed-sunflower');
+        if (btn) btn.click();
+      } else if (e.key === '2') {
+        const btn = document.getElementById('radial-seed-strawberry');
+        if (btn) btn.click();
+      } else if (e.key === 'Escape') {
+        this.closeRadialSeedMenu();
+      }
+    });
+  }
+
+  openRadialSeedMenu() {
+    const menuEl = document.getElementById('radial-seed-menu');
+    if (!menuEl) return;
+
+    this.isRadialMenuOpen = true;
+    if (window.parent) {
+      window.parent.isRadialMenuOpen = true;
+    }
+
+    menuEl.classList.add('open');
+    menuEl.style.display = 'block';
+
+    this.updateRadialCounts();
+    this.updateActivePlotForRadialMenu();
+  }
+
+  closeRadialSeedMenu() {
+    const menuEl = document.getElementById('radial-seed-menu');
+    if (!menuEl) return;
+
+    this.isRadialMenuOpen = false;
+    if (window.parent) {
+      window.parent.isRadialMenuOpen = false;
+    }
+
+    menuEl.classList.remove('open');
+    setTimeout(() => {
+      if (!this.isRadialMenuOpen) {
+        menuEl.style.display = 'none';
+      }
+    }, 300);
+  }
+
+  updateRadialCounts() {
+    const sunflowerCountEl = document.querySelector('#radial-seed-sunflower .radial-count');
+    const strawberryCountEl = document.querySelector('#radial-seed-strawberry .radial-count');
+
+    const sunflowerItem = this.gameData.backpack.find(item => item.id === 'sunflower_seed' && item.type === 'seed');
+    const strawberryItem = this.gameData.backpack.find(item => item.id === 'strawberry_seed' && item.type === 'seed');
+
+    if (sunflowerCountEl) {
+      sunflowerCountEl.textContent = sunflowerItem ? sunflowerItem.count : 0;
+    }
+    if (strawberryCountEl) {
+      strawberryCountEl.textContent = strawberryItem ? strawberryItem.count : 0;
+    }
+  }
+
+  updateActivePlotForRadialMenu() {
+    if (!this.isRadialMenuOpen || this.currentMap !== 'farm' || !this.player || !this.farmPlots3D) return;
+
+    let nearestPlotIndex = null;
+    let minDistance = Infinity;
+
+    this.gameData.farmPlots.forEach((plot, index) => {
+      if (plot.unlocked && plot.status === 'empty') {
+        const plot3D = this.farmPlots3D[index];
+        if (plot3D) {
+          const dx = this.player.position.x - plot3D.x;
+          const dz = this.player.position.z - plot3D.z;
+          const dist = Math.sqrt(dx * dx + dz * dz);
+          if (dist < minDistance) {
+            minDistance = dist;
+            nearestPlotIndex = index;
+          }
+        }
+      }
+    });
+
+    const menuEl = document.getElementById('radial-seed-menu');
+    if (!menuEl) return;
+
+    if (nearestPlotIndex !== null && minDistance < 2.2) {
+      this.activePlotIndex = nearestPlotIndex;
+      menuEl.querySelectorAll('.radial-item-btn').forEach(btn => {
+        btn.classList.remove('disabled');
+        btn.style.opacity = '1';
+      });
+    } else {
+      this.activePlotIndex = null;
+      menuEl.querySelectorAll('.radial-item-btn').forEach(btn => {
+        btn.classList.add('disabled');
+        btn.style.opacity = '0.5';
+      });
+    }
+  }
+
+  plantCropFromRadialMenu(seedId) {
+    if (this.activePlotIndex === null) {
+      this.showToast('请靠近空农地后再种植！');
+      return;
+    }
+
+    const backpackItem = this.gameData.backpack.find(item => item.id === seedId && item.type === 'seed');
+    if (!backpackItem || backpackItem.count <= 0) {
+      this.showToast(`${seedId === 'sunflower_seed' ? '向日葵' : '草莓'}种子数量不足！正为您打开市集商店...`);
+      this.closeRadialSeedMenu();
+      this.modalMgr.openModal('shop');
+      this.switchShopTab('agriculture');
+      return;
+    }
+
+    backpackItem.count--;
+    
+    const plot = this.gameData.farmPlots[this.activePlotIndex];
+    plot.status = 'growing';
+    plot.seedId = seedId;
+    plot.plantTime = Date.now();
+
+    this.saveGameData();
+    this.refreshFarm();
+    this.updateRadialCounts();
+
+    this.playCustomSound(330, 0.25, 'sine', 0.1);
+    this.recreateCrop3D(this.activePlotIndex);
+
+    const cropName = seedId === 'sunflower_seed' ? '向日葵' : '草莓';
+    this.showToast(`成功播种了 1 颗 ${cropName} 种子 🌱`);
   }
 }
 

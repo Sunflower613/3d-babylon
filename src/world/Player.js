@@ -664,7 +664,10 @@ export class Player {
       if (key === 's' || e.key === 'ArrowDown') this.keys.s = isDown;
       if (key === 'a' || e.key === 'ArrowLeft') this.keys.a = isDown;
       if (key === 'd' || e.key === 'ArrowRight') this.keys.d = isDown;
-      if (e.key === ' ' || e.key === 'Spacebar') this.keys.space = isDown;
+      if (e.key === ' ' || e.key === 'Spacebar') {
+        const isRadialOpen = window.parent && window.parent.isRadialMenuOpen;
+        this.keys.space = isRadialOpen ? false : isDown;
+      }
       if (e.key === 'Shift') this.keys.shift = isDown;
     };
 
@@ -817,10 +820,17 @@ export class Player {
 
   update(delta, time) {
     // 1. 同步外层 Iframe 的输入状态
-    if (window.self !== window.top && window.parent && window.parent.keys) {
-      this.keys.space = this.keys.space || window.parent.keys.space;
-      this.keys.shift = this.keys.shift || window.parent.keys.shift;
-      this.keys.j = this.keys.j || window.parent.keys.j;
+    if (window.self !== window.top && window.parent) {
+      if (window.parent.isRadialMenuOpen) {
+        this.keys.space = false;
+        if (window.parent.keys) window.parent.keys.space = false;
+      } else if (window.parent.keys) {
+        this.keys.space = this.keys.space || window.parent.keys.space;
+      }
+      if (window.parent.keys) {
+        this.keys.shift = this.keys.shift || window.parent.keys.shift;
+        this.keys.j = this.keys.j || window.parent.keys.j;
+      }
     }
 
     // 2. 躺着或坐着时，若按了跳跃键，触发站立
@@ -1003,8 +1013,9 @@ export class Player {
       this.isGrounded = false;
     }
 
+    const isRadialOpen = window.parent && window.parent.isRadialMenuOpen;
     // 4. Jump
-    if (this.keys.space && this.isGrounded && !this.controlsLocked) {
+    if (this.keys.space && this.isGrounded && !this.controlsLocked && !isRadialOpen) {
       this.velocity.y = this.jumpForce;
       this.isGrounded = false;
       this.keys.space = false;
