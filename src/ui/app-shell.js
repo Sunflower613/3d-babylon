@@ -60,6 +60,7 @@ class AppShell {
     this.initControls();
     this.initAudio();
     this.initFullscreen();
+    this.initHotkeys();
   }
 
   // 1. SSO 统一登录/用户状态初始化
@@ -509,6 +510,57 @@ class AppShell {
       document.addEventListener('touchstart', enableAutoFullscreen, { once: true });
       document.addEventListener('click', enableAutoFullscreen, { once: true });
     }
+  }
+
+  // 9. 注册键盘快捷键监听：B-背包，J-任务，P-排行榜，M-地图/侧边栏
+  initHotkeys() {
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return;
+      }
+      const key = e.key.toLowerCase();
+      const subApp = this.getSubApp();
+      
+      if (key === 'b') {
+        e.preventDefault();
+        if (subApp && subApp.modalMgr) {
+          if (subApp.modalMgr.modals.bag.classList.contains('open')) {
+            subApp.modalMgr.closeModal('bag');
+          } else {
+            subApp.modalMgr.closeAllModals();
+            subApp.modalMgr.openModal('bag');
+          }
+        }
+      } else if (key === 'j') {
+        e.preventDefault();
+        if (subApp && subApp.modalMgr) {
+          if (subApp.modalMgr.modals.tasks.classList.contains('open')) {
+            subApp.modalMgr.closeModal('tasks');
+          } else {
+            subApp.modalMgr.closeAllModals();
+            subApp.modalMgr.openModal('tasks');
+          }
+        }
+      } else if (key === 'p') {
+        e.preventDefault();
+        if (subApp && subApp.modalMgr) {
+          if (subApp.modalMgr.modals.leaderboard.classList.contains('open')) {
+            subApp.modalMgr.closeModal('leaderboard');
+          } else {
+            subApp.modalMgr.closeAllModals();
+            subApp.modalMgr.openModal('leaderboard');
+          }
+        }
+      } else if (key === 'm') {
+        e.preventDefault();
+        if (subApp && subApp.modalMgr) {
+          subApp.modalMgr.closeAllModals();
+        }
+        if (typeof this.toggleSidebar === 'function') {
+          this.toggleSidebar();
+        }
+      }
+    });
   }
 }
 

@@ -1103,6 +1103,53 @@ class GameApp {
       }
       this.initExitChoicesUI();
     }
+
+    // 10. 注册键盘快捷键监听：B-背包，J-任务，P-排行榜，M-地图/侧边栏
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return;
+      }
+      const key = e.key.toLowerCase();
+      if (key === 'b') {
+        e.preventDefault();
+        if (this.modalMgr) {
+          if (this.modalMgr.modals.bag.classList.contains('open')) {
+            this.modalMgr.closeModal('bag');
+          } else {
+            this.modalMgr.closeAllModals();
+            this.modalMgr.openModal('bag');
+          }
+        }
+      } else if (key === 'j') {
+        e.preventDefault();
+        if (this.modalMgr) {
+          if (this.modalMgr.modals.tasks.classList.contains('open')) {
+            this.modalMgr.closeModal('tasks');
+          } else {
+            this.modalMgr.closeAllModals();
+            this.modalMgr.openModal('tasks');
+          }
+        }
+      } else if (key === 'p') {
+        e.preventDefault();
+        if (this.modalMgr) {
+          if (this.modalMgr.modals.leaderboard.classList.contains('open')) {
+            this.modalMgr.closeModal('leaderboard');
+          } else {
+            this.modalMgr.closeAllModals();
+            this.modalMgr.openModal('leaderboard');
+          }
+        }
+      } else if (key === 'm') {
+        e.preventDefault();
+        if (window.parent && window.parent.appShell && typeof window.parent.appShell.toggleSidebar === 'function') {
+          if (this.modalMgr) {
+            this.modalMgr.closeAllModals();
+          }
+          window.parent.appShell.toggleSidebar();
+        }
+      }
+    });
   }
 
   // ==================== 排行榜 (Leaderboard) 逻辑 ====================
