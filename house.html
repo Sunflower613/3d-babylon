@@ -181,6 +181,53 @@
     </div>
   </div>
 
+  <!-- 2D世界地图 (World Map) 弹窗 -->
+  <div class="modal-overlay" id="modal-map">
+    <div class="modal-card modal-large" style="max-width: 680px;">
+      <button class="modal-close" data-close="modal-map">&times;</button>
+      <div class="modal-header" style="justify-content: space-between; align-items: center; width: 100%;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <span class="modal-emoji">🗺️</span>
+          <h2>世界地图 · 快速传送</h2>
+        </div>
+      </div>
+      <div class="modal-body no-padding" style="display: flex; flex-direction: column; overflow: hidden; height: 100%;">
+        <div class="world-map-container">
+          <div class="world-map-canvas">
+            <div class="map-decor compass">🧭</div>
+            <div class="map-decor sea-monster">🐳</div>
+            <div class="map-decor clouds cloud-1">☁️</div>
+            <div class="map-decor clouds cloud-2">☁️</div>
+            
+            <div class="map-node node-island" data-map="island">
+              <div class="node-icon">🌴</div>
+              <div class="node-label">海岛广场</div>
+              <div class="node-status">公共区域</div>
+            </div>
+            
+            <div class="map-node node-house" data-map="house">
+              <div class="node-icon">🏡</div>
+              <div class="node-label">个人小家</div>
+              <div class="node-status">我的空间</div>
+            </div>
+            
+            <div class="map-node node-farm" data-map="farm">
+              <div class="node-icon">🌽</div>
+              <div class="node-label">我的农地</div>
+              <div class="node-status">农耕种植</div>
+            </div>
+            
+            <div class="map-node node-pk" data-map="pk_arena">
+              <div class="node-icon">⚔️</div>
+              <div class="node-label">竞技赛场</div>
+              <div class="node-status">擂台PK</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 6. 我的背包 (Backpack) 弹窗 (公共) -->
   <div class="modal-overlay" id="modal-bag">
     <div class="modal-card modal-large">

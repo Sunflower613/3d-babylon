@@ -1056,6 +1056,7 @@ class GameApp {
     this.initPKUI();
     this.initBagUI();
     this.initHomeUI();
+    this.initMapUI();
 
     // 6. 自动状态恢复 (URL modal/action 继承) 与 PK 自动开启
     const urlParams = new URLSearchParams(window.location.search);
@@ -1144,11 +1145,13 @@ class GameApp {
         }
       } else if (key === 'm') {
         e.preventDefault();
-        if (window.parent && window.parent.appShell && typeof window.parent.appShell.toggleSidebar === 'function') {
-          if (this.modalMgr) {
+        if (this.modalMgr) {
+          if (this.modalMgr.modals.map.classList.contains('open')) {
+            this.modalMgr.closeModal('map');
+          } else {
             this.modalMgr.closeAllModals();
+            this.modalMgr.openModal('map');
           }
-          window.parent.appShell.toggleSidebar();
         }
       }
     });
@@ -2128,6 +2131,28 @@ class GameApp {
         }
       });
     }
+  }
+
+  // ==================== 2D 世界地图 (World Map) 逻辑 ====================
+  initMapUI() {
+    const nodes = document.querySelectorAll('#modal-map .map-node');
+    nodes.forEach(node => {
+      node.addEventListener('click', () => {
+        const targetMap = node.getAttribute('data-map');
+        if (targetMap) {
+          // 播放Mario吃金币音效
+          this.playCustomSound(440.0, 0.08, 'sine', 0.15);
+          setTimeout(() => {
+            this.playCustomSound(554.37, 0.08, 'sine', 0.15);
+          }, 80);
+          
+          if (this.modalMgr) {
+            this.modalMgr.closeModal('map');
+          }
+          this.switchMap(targetMap);
+        }
+      });
+    });
   }
 
   // ==================== 我的背包 (Backpack) 逻辑 ====================
@@ -3572,4 +3597,4 @@ class GameApp {
 }
 
 // Start application
-new GameApp();
+window.gameApp = new GameApp();

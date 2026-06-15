@@ -554,10 +554,12 @@ class AppShell {
       } else if (key === 'm') {
         e.preventDefault();
         if (subApp && subApp.modalMgr) {
-          subApp.modalMgr.closeAllModals();
-        }
-        if (typeof this.toggleSidebar === 'function') {
-          this.toggleSidebar();
+          if (subApp.modalMgr.modals.map.classList.contains('open')) {
+            subApp.modalMgr.closeModal('map');
+          } else {
+            subApp.modalMgr.closeAllModals();
+            subApp.modalMgr.openModal('map');
+          }
         }
       }
     });
