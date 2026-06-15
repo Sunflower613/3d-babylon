@@ -2289,7 +2289,11 @@ class GameApp {
           <span>选择出售数量</span>
           <span class="range-val" style="font-weight: bold; color: var(--primary);"><strong id="sell-count-label">1</strong> / ${item.count}</span>
         </div>
-        <input type="range" id="sell-count-range" min="1" max="${item.count}" value="1" style="width: 100%; height: 6px; background: rgba(0,0,0,0.1); border-radius: 4px; outline: none; cursor: pointer; accent-color: var(--primary);" />
+        <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+          <button class="bag-range-btn" id="btn-range-minus">-</button>
+          <input type="range" id="sell-count-range" min="1" max="${item.count}" value="1" style="flex: 1; height: 6px; background: rgba(0,0,0,0.1); border-radius: 4px; outline: none; cursor: pointer; accent-color: var(--primary);" />
+          <button class="bag-range-btn" id="btn-range-plus">+</button>
+        </div>
       </div>
     ` : '';
 
@@ -2310,18 +2314,41 @@ class GameApp {
     const sellBtn = content.querySelector('#btn-bag-sell');
     const rangeInput = content.querySelector('#sell-count-range');
     const countLabel = content.querySelector('#sell-count-label');
+    const minusBtn = content.querySelector('#btn-range-minus');
+    const plusBtn = content.querySelector('#btn-range-plus');
     
     let currentSellCount = 1;
 
+    const updateSellUI = (newVal) => {
+      currentSellCount = Math.max(1, Math.min(item.count, newVal));
+      if (rangeInput) {
+        rangeInput.value = currentSellCount;
+      }
+      if (countLabel) {
+        countLabel.textContent = currentSellCount;
+      }
+      if (sellBtn) {
+        sellBtn.textContent = `出售 (获得 ${currentSellCount * sellPrice}金币)`;
+      }
+    };
+
     if (rangeInput) {
       rangeInput.addEventListener('input', (e) => {
-        currentSellCount = parseInt(e.target.value) || 1;
-        if (countLabel) {
-          countLabel.textContent = currentSellCount;
-        }
-        if (sellBtn) {
-          sellBtn.textContent = `出售 (获得 ${currentSellCount * sellPrice}金币)`;
-        }
+        updateSellUI(parseInt(e.target.value) || 1);
+      });
+    }
+
+    if (minusBtn) {
+      minusBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        updateSellUI(currentSellCount - 1);
+      });
+    }
+
+    if (plusBtn) {
+      plusBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        updateSellUI(currentSellCount + 1);
       });
     }
 
