@@ -1004,11 +1004,13 @@ class GameApp {
     const hCoins = document.getElementById('home-coins');
     const fLevel = document.getElementById('farm-level');
     const fExp = document.getElementById('farm-exp');
+    const bCoins = document.querySelector('#modal-bag .bag-coins-val');
     
     if (fCoins) fCoins.textContent = this.gameData.coins;
     if (hCoins) hCoins.textContent = this.gameData.coins;
     if (fLevel) fLevel.textContent = this.gameData.level;
     if (fExp) fExp.textContent = this.gameData.exp;
+    if (bCoins) bCoins.textContent = this.gameData.coins;
   }
 
   initGameSystems() {

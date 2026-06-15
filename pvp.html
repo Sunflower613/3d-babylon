@@ -142,9 +142,15 @@
   <div class="modal-overlay" id="modal-bag">
     <div class="modal-card modal-large">
       <button class="modal-close" data-close="modal-bag">&times;</button>
-      <div class="modal-header">
-        <span class="modal-emoji">💼</span>
-        <h2>旅者囊匣 · 我的背包</h2>
+      <div class="modal-header" style="justify-content: space-between; align-items: center; width: 100%;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <span class="modal-emoji">💼</span>
+          <h2>旅者囊匣 · 我的背包</h2>
+        </div>
+        <div class="modal-bag-coins" style="display: flex; align-items: center; gap: 6px; margin-right: 45px; font-weight: bold; color: #ffd700; font-size: 0.95rem;">
+          <span>🪙</span>
+          <span class="bag-coins-val">0</span>
+        </div>
       </div>
       <div class="modal-body no-padding" style="display: flex; height: 100%; overflow: hidden;">
         <div class="bag-left" style="flex: 1.8; display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--glass-border);">

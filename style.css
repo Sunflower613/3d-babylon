@@ -922,7 +922,7 @@ body.is-mobile .modal-card {
   border: none !important;
 }
 body.is-mobile .modal-header {
-  padding: 26px 20px 8px !important;
+  padding: 12px 20px 8px !important;
   gap: 10px !important;
 }
 body.is-mobile .modal-header h2,
