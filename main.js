@@ -2282,6 +2282,17 @@ class GameApp {
     else if (item.id.includes('seed')) { showUse = true; useBtnText = '去农田种植'; }
     else { showUse = true; useBtnText = '摆放家具'; }
 
+    const showRangeSlider = item.count > 1;
+    const rangeSliderHtml = showRangeSlider ? `
+      <div class="bag-sell-range-container" style="display: flex; flex-direction: column; gap: 4px; width: 100%; margin-bottom: 6px; padding: 0 10px; box-sizing: border-box;">
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; color: var(--text-muted);">
+          <span>选择出售数量</span>
+          <span class="range-val" style="font-weight: bold; color: var(--primary);"><strong id="sell-count-label">1</strong> / ${item.count}</span>
+        </div>
+        <input type="range" id="sell-count-range" min="1" max="${item.count}" value="1" style="width: 100%; height: 6px; background: rgba(0,0,0,0.1); border-radius: 4px; outline: none; cursor: pointer; accent-color: var(--primary);" />
+      </div>
+    ` : '';
+
     content.innerHTML = `
       <div style="font-size: 3.5rem; margin-top: 20px;">${emoji}</div>
       <h3 style="font-size: 1.1rem; font-weight: bold; color: white; margin-top: 10px;">${item.name}</h3>
@@ -2289,6 +2300,7 @@ class GameApp {
       <p style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; padding: 0 10px; margin-top: 12px; flex-grow: 1;">${item.desc}</p>
       
       <div style="width: 100%; display: flex; flex-direction: column; gap: 10px; margin-top: auto;">
+        ${rangeSliderHtml}
         ${showUse ? `<button class="hud-btn" id="btn-bag-use" style="width: 100%; padding: 8px 0; background: rgba(100, 255, 100, 0.15); border-color: rgba(100,255,100,0.3); color: #fff;">${useBtnText}</button>` : ''}
         <button class="hud-btn" id="btn-bag-sell" style="width: 100%; padding: 8px 0; background: rgba(255, 140, 105, 0.1); border-color: rgba(255, 140, 105, 0.3); color: #fff;">出售 (获得 ${sellPrice}金币)</button>
       </div>
@@ -2296,10 +2308,27 @@ class GameApp {
 
     // 绑定事件
     const sellBtn = content.querySelector('#btn-bag-sell');
+    const rangeInput = content.querySelector('#sell-count-range');
+    const countLabel = content.querySelector('#sell-count-label');
+    
+    let currentSellCount = 1;
+
+    if (rangeInput) {
+      rangeInput.addEventListener('input', (e) => {
+        currentSellCount = parseInt(e.target.value) || 1;
+        if (countLabel) {
+          countLabel.textContent = currentSellCount;
+        }
+        if (sellBtn) {
+          sellBtn.textContent = `出售 (获得 ${currentSellCount * sellPrice}金币)`;
+        }
+      });
+    }
+
     if (sellBtn) {
       sellBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.sellBagItem(item.id, sellPrice, e.clientX, e.clientY);
+        this.sellBagItem(item.id, sellPrice, currentSellCount, e.clientX, e.clientY);
       });
     }
 
@@ -2318,14 +2347,15 @@ class GameApp {
     }
   }
 
-  sellBagItem(itemId, price, clickX, clickY) {
+  sellBagItem(itemId, price, count, clickX, clickY) {
     const item = this.gameData.backpack.find(i => i.id === itemId);
-    if (!item || item.count <= 0) return;
+    if (!item || item.count < count) return;
 
-    item.count--;
-    this.gameData.coins += price;
+    item.count -= count;
+    const totalGains = price * count;
+    this.gameData.coins += totalGains;
     this.saveGameData();
-    this.showCoinFloatText(price, clickX, clickY);
+    this.showCoinFloatText(totalGains, clickX, clickY);
     this.refreshBag(document.querySelector('#modal-bag .bag-tabactive.active').getAttribute('data-tab'));
   }
 
