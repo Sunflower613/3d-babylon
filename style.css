@@ -3493,6 +3493,16 @@ body.is-mobile .item-detail-content .hud-btn {
   border-radius: 4px;
 }
 
+/* 移动端不显示键盘快捷键提示 */
+@media (max-width: 1024px) {
+  #radial-seed-menu .radial-key-hint {
+    display: none !important;
+  }
+}
+body.is-mobile #radial-seed-menu .radial-key-hint {
+  display: none !important;
+}
+
 
 /* 大市集商店 modal-shop 样式 */
 .shop-left .shop-tabactive {
