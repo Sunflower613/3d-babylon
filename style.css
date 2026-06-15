@@ -3376,56 +3376,56 @@ body.is-mobile .item-detail-content .hud-btn {
 
 #radial-seed-menu {
   position: fixed;
-  right: 15px;
-  bottom: 15px;
-  width: 170px;
-  height: 170px;
+  right: calc(32px + env(safe-area-inset-right) + 96px);
+  bottom: calc(48px + env(safe-area-inset-bottom) + 20px);
+  width: 52px;
+  height: 52px;
   z-index: 150;
   pointer-events: none;
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  transform: scale(0.6);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   opacity: 0;
 }
 #radial-seed-menu.open {
-  transform: scale(1);
   opacity: 1;
 }
 
-/* 红色退出键 */
+/* 红色退出键重合在种植按钮中心，打开后代替其变为X */
 #radial-seed-menu .radial-close-btn {
   position: absolute;
-  left: 10px;
-  top: 10px;
-  width: 32px;
-  height: 32px;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
-  background: rgba(255, 82, 82, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(239, 83, 80, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   color: white;
-  font-size: 1.2rem;
+  font-size: 1.5rem;
   font-weight: bold;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   pointer-events: auto;
-  box-shadow: 0 4px 10px rgba(255, 82, 82, 0.3);
-  transition: all 0.25s ease;
+  box-shadow: 0 4px 12px rgba(239, 83, 80, 0.4);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   transform: scale(0);
 }
 #radial-seed-menu.open .radial-close-btn {
   transform: scale(1);
 }
 #radial-seed-menu .radial-close-btn:hover {
-  background: #ff5252;
-  transform: scale(1.15) rotate(90deg);
+  background: #e53935;
+  transform: scale(1.1) rotate(90deg);
 }
 
 /* 种子圆圈按钮 */
 #radial-seed-menu .radial-item-btn {
   position: absolute;
-  width: 54px;
-  height: 54px;
+  left: 0;
+  top: 0;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: rgba(15, 17, 21, 0.85);
   backdrop-filter: blur(10px);
@@ -3439,15 +3439,15 @@ body.is-mobile .item-detail-content .hud-btn {
   justify-content: center;
   box-shadow: var(--card-shadow);
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  transform: translate(30px, 30px) scale(0);
+  transform: translate(0, 0) scale(0);
 }
 
-/* 扇形分布定位及微调 */
+/* 扇形分布定位：以交互键为中心，草莓向左飞78px，向日葵向上飞78px */
 #radial-seed-menu.open #radial-seed-strawberry {
-  transform: translate(0px, 100px) scale(1);
+  transform: translate(-78px, 0px) scale(1);
 }
 #radial-seed-menu.open #radial-seed-sunflower {
-  transform: translate(100px, 0px) scale(1);
+  transform: translate(0px, -78px) scale(1);
 }
 
 #radial-seed-menu .radial-item-btn:hover {
@@ -3456,12 +3456,12 @@ body.is-mobile .item-detail-content .hud-btn {
   box-shadow: 0 0 15px rgba(100, 255, 100, 0.4);
 }
 #radial-seed-strawberry {
-  --hover-tx: 0px;
-  --hover-ty: 100px;
+  --hover-tx: -78px;
+  --hover-ty: 0px;
 }
 #radial-seed-sunflower {
-  --hover-tx: 100px;
-  --hover-ty: 0px;
+  --hover-tx: 0px;
+  --hover-ty: -78px;
 }
 
 #radial-seed-menu .radial-icon {
