@@ -2121,21 +2121,44 @@ class GameApp {
         <div class="settle-score-box">
           <span>当前天梯积分: <strong class="settle-score-val">${this.gameData.pkPoints}</strong></span>
         </div>
-        <button class="hud-btn" id="btn-settle-close">返回群岛 🏝️</button>
+        <div class="settle-buttons">
+          <button class="hud-btn settle-btn-action" id="btn-settle-retry">继续挑战 ⚔️</button>
+          <button class="hud-btn settle-btn-secondary" id="btn-settle-close">返回群岛 🏝️</button>
+        </div>
       </div>
     `;
 
     document.body.appendChild(settlement);
 
+    // 通知外壳隐藏 HUD 遮挡
+    if (window.parent && window.parent.appShell && typeof window.parent.appShell.onModalOpened === 'function') {
+      window.parent.appShell.onModalOpened('pk_settle');
+    }
+
     const closeBtn = settlement.querySelector('#btn-settle-close');
     if (closeBtn) {
       closeBtn.addEventListener('click', () => {
         settlement.remove();
+        if (window.parent && window.parent.appShell && typeof window.parent.appShell.onModalClosed === 'function') {
+          window.parent.appShell.onModalClosed('pk_settle');
+        }
         this.switchMap('island');
         document.getElementById('pk-hud').style.display = 'none';
         if (document.getElementById('pk-debug-info')) {
           document.getElementById('pk-debug-info').style.display = 'none';
         }
+      });
+    }
+
+    const retryBtn = settlement.querySelector('#btn-settle-retry');
+    if (retryBtn) {
+      retryBtn.addEventListener('click', () => {
+        settlement.remove();
+        if (window.parent && window.parent.appShell && typeof window.parent.appShell.onModalClosed === 'function') {
+          window.parent.appShell.onModalClosed('pk_settle');
+        }
+        // 重新开启战斗匹配
+        this.startPKMatch(true);
       });
     }
   }
