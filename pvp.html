@@ -75,26 +75,26 @@
   </div>
 
   <!-- PK 对决血条 HUD -->
-  <div class="pk-hud" id="pk-hud" style="display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 95; background: rgba(15,17,21,0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--glass-border); border-radius: 100px; padding: 10px 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); align-items: center; gap: 20px; width: 90%; max-width: 500px;">
-    <div class="pk-hud-player" style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
-      <div class="pk-hud-name" id="pk-hud-p1-name" style="font-size: 0.75rem; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px;">您自己</div>
-      <div class="pk-hud-hp-bar" style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
-        <div class="pk-hud-hp-fill" id="pk-hud-p1-hp" style="width: 100%; height: 100%; background: linear-gradient(90deg, #2ecc71, #27ae60); transition: width 0.2s ease;"></div>
+  <div class="pk-hud" id="pk-hud" style="display: none;">
+    <div class="pk-hud-player">
+      <div class="pk-hud-name" id="pk-hud-p1-name">您自己</div>
+      <div class="pk-hud-hp-bar">
+        <div class="pk-hud-hp-fill" id="pk-hud-p1-hp" style="width: 100%;"></div>
       </div>
-      <div class="pk-hud-hp-text" id="pk-hud-p1-hp-text" style="font-size: 0.65rem; color: var(--text-muted); text-align: right;">100 / 100</div>
+      <div class="pk-hud-hp-text" id="pk-hud-p1-hp-text">100 / 100</div>
     </div>
-    <div class="pk-hud-vs" style="font-size: 1.1rem; font-weight: 800; color: #e74c3c; font-style: italic;">VS</div>
-    <div class="pk-hud-player" style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
-      <div class="pk-hud-name" id="pk-hud-p2-name" style="font-size: 0.75rem; font-weight: bold; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px;">机器人挑战者</div>
-      <div class="pk-hud-hp-bar" style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
-        <div class="pk-hud-hp-fill" id="pk-hud-p2-hp" style="width: 100%; height: 100%; background: linear-gradient(90deg, #e74c3c, #c0392b); transition: width 0.2s ease; margin-left: auto;"></div>
+    <div class="pk-hud-vs">VS</div>
+    <div class="pk-hud-player">
+      <div class="pk-hud-name" id="pk-hud-p2-name">机器人挑战者</div>
+      <div class="pk-hud-hp-bar">
+        <div class="pk-hud-hp-fill" id="pk-hud-p2-hp" style="width: 100%;"></div>
       </div>
-      <div class="pk-hud-hp-text" id="pk-hud-p2-hp-text" style="font-size: 0.65rem; color: var(--text-muted);">100 / 100</div>
+      <div class="pk-hud-hp-text" id="pk-hud-p2-hp-text">100 / 100</div>
     </div>
   </div>
 
   <!-- PK 战斗调试面板 -->
-  <div id="pk-debug-info" style="display: none; position: fixed; top: 90px; left: 50%; transform: translateX(-50%); z-index: 95; background: rgba(15,17,21,0.85); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 6px 16px; font-size: 0.75rem; color: #fff; font-family: monospace; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); pointer-events: none;"></div>
+  <div id="pk-debug-info" style="display: none;"></div>
 
   <!-- 2. 排行榜 (Leaderboard) 弹窗 (公共) -->
   <div class="modal-overlay" id="modal-leaderboard">

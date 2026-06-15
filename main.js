@@ -1881,6 +1881,10 @@ class GameApp {
 
     // 生成机器人 3D 实例
     if (isRobot) {
+      if (this.opponent3D) {
+        this.pkArenaGroup.remove(this.opponent3D);
+        this.opponent3D = null;
+      }
       const robotGroup = new THREE.Group();
       
       // 头部
@@ -2846,13 +2850,13 @@ class GameApp {
     // 实时调试面板数据输出
     const debugEl = document.getElementById('pk-debug-info');
     if (debugEl) {
-      const pPos = this.player.position;
-      const oPos = opp.position;
-      const dx = pPos.x - oPos.x;
-      const dz = pPos.z - oPos.z;
-      const dist = Math.sqrt(dx * dx + dz * dz);
-      const isEquipped = this.playerEquippedWeapon ? `已装备:${this.playerEquippedWeapon}` : '空手(请去架子拿武器)';
-      debugEl.innerHTML = `玩家: (${pPos.x.toFixed(1)}, ${pPos.z.toFixed(1)}) | 机器人: (${oPos.x.toFixed(1)}, ${oPos.z.toFixed(1)}) | 平面距离: <strong style="color:#00e5ff; font-size:0.8rem;">${dist.toFixed(2)}m</strong> (限制<=4.5m) | 状态: <span style="color: ${this.playerEquippedWeapon ? '#4caf50' : '#ffeb3b'}; font-weight: bold;">${isEquipped}</span>`;
+      if (this.playerEquippedWeapon) {
+        // 已装备武器，直接隐藏防止挡住屏幕
+        debugEl.style.display = 'none';
+      } else {
+        debugEl.style.display = 'block';
+        debugEl.innerHTML = `<span style="font-weight: bold; color: #ffeb3b; animation: settleBlink 1.2s infinite;">⚠️ 尚未装备武器！请走向擂台周边的武器架拾取武器 ⚔️</span>`;
+      }
     }
 
     // 4. 自动拾取/替换武器 (玩家接近对应的武器架)
