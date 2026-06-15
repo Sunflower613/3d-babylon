@@ -380,7 +380,8 @@ class AppShell {
   // 4. 背景音乐常驻播放器
   initAudio() {
     const audioBtn = document.getElementById('sidebar-audio-btn');
-    const audioIcon = document.getElementById('sidebar-audio-icon');
+    const audioMuteIcon = document.getElementById('sidebar-audio-icon-mute');
+    const audioOnIcon = document.getElementById('sidebar-audio-icon-on');
     if (!audioBtn) return;
 
     audioBtn.addEventListener('click', () => {
@@ -390,14 +391,16 @@ class AppShell {
 
       if (window.isPlayingMusic) {
         window.isPlayingMusic = false;
-        if (audioIcon) audioIcon.setAttribute('icon', 'lucide:volume-x');
+        if (audioMuteIcon) audioMuteIcon.style.display = 'flex';
+        if (audioOnIcon) audioOnIcon.style.display = 'none';
         if (this.synthInterval) {
           clearInterval(this.synthInterval);
           this.synthInterval = null;
         }
       } else {
         window.isPlayingMusic = true;
-        if (audioIcon) audioIcon.setAttribute('icon', 'lucide:volume-2');
+        if (audioMuteIcon) audioMuteIcon.style.display = 'none';
+        if (audioOnIcon) audioOnIcon.style.display = 'flex';
         window.audioCtx.resume();
         this.playMelodyLoop();
       }
@@ -465,8 +468,7 @@ class AppShell {
       attackBtn.style.display = mapName === 'pk_arena' ? 'flex' : 'none';
     }
 
-    // 同步把声音图标状态告知子页面 (如有必要)
-    const audioIcon = document.getElementById('sidebar-audio-icon');
+    // 同步把声音状态告知子页面 (如有必要)
     if (window.isPlayingMusic && window.audioCtx) {
       window.audioCtx.resume();
     }
