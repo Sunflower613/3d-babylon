@@ -793,6 +793,12 @@ class GameApp {
 
   unstuckPlayer() {
     if (!this.player) return;
+    
+    // 若正处于坐着或躺着的状态，先重置其姿态起立
+    if (this.player.isSitting || this.player.isLyingDown) {
+      this.player.standUp();
+    }
+    
     if (this.currentMap === 'house') {
       this.player.position.set(0, 0.12 + 0.1, 9.5);
     } else {
