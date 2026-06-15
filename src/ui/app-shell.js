@@ -658,7 +658,7 @@ class AppShell {
     const ctrl = document.getElementById('mobile-controls');
     if (ctrl) {
       ctrl.style.opacity = '1';
-      ctrl.style.pointerEvents = 'auto';
+      ctrl.style.pointerEvents = 'none';
     }
     const ssoProfile = document.getElementById('sso-profile-container');
     if (ssoProfile) {
@@ -690,7 +690,7 @@ class AppShell {
     }
     if (mobileControls) {
       mobileControls.style.opacity = '1';
-      mobileControls.style.pointerEvents = 'auto';
+      mobileControls.style.pointerEvents = 'none';
     }
   }
 }
