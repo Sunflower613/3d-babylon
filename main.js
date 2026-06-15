@@ -2143,6 +2143,7 @@ class GameApp {
   }
 
   refreshBag(tab = 'seed') {
+    this.updateBaseUI();
     const grid = document.getElementById('bag-grid');
     const detail = document.getElementById('bag-item-detail');
     if (!grid || !detail) return;

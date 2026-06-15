@@ -524,10 +524,13 @@ body, html {
 }
 
 .modal-header {
-  padding: 30px 30px 10px;
+  padding: 16px 30px 10px;
   display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .modal-emoji {
@@ -782,8 +785,13 @@ body, html {
   }
   
   .modal-header {
-    padding: 26px 20px 8px !important;
+    padding: 10px 20px 8px !important;
     gap: 10px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   .modal-header h2,
@@ -922,8 +930,13 @@ body.is-mobile .modal-card {
   border: none !important;
 }
 body.is-mobile .modal-header {
-  padding: 12px 20px 8px !important;
+  padding: 10px 20px 8px !important;
   gap: 10px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 body.is-mobile .modal-header h2,
 body.is-mobile .sidebar-header h2 {
@@ -2774,6 +2787,18 @@ body.is-mobile .item-detail-content .hud-btn {
     transform: translate(-50%, -240%) scale(1.0);
     opacity: 0;
   }
+}
+
+/* 背包金币显示 */
+.modal-bag-coins {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-right: 40px !important;
+  font-weight: bold !important;
+  color: #ffd700 !important;
+  font-size: 0.95rem !important;
+  pointer-events: auto !important;
 }
 
 
