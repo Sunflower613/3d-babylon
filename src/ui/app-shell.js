@@ -400,7 +400,16 @@ class AppShell {
 
       const manager = nipplejs.create(options);
       manager.on('move', (evt, data) => {
-        const joyData = data || evt;
+        let joyData = null;
+        if (data) {
+          joyData = data;
+        } else if (evt) {
+          if (evt.vector) {
+            joyData = evt;
+          } else if (evt.detail) {
+            joyData = evt.detail;
+          }
+        }
         if (joyData && joyData.vector) {
           // NippleJS y轴向上为正，ThreeJS相差180度，需将y取反
           window.joystickDir.x = joyData.vector.x;

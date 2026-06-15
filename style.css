@@ -325,10 +325,8 @@ body, html {
 }
 
 /* Mobile Controls Overlay */
-.mobile-controls,
 .joystick-wrapper,
 #joystick-zone,
-.action-buttons,
 .action-btn {
   touch-action: none !important;
 }
