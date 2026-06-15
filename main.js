@@ -1076,7 +1076,9 @@ class GameApp {
 
     if (this.currentMap === 'pk_arena') {
       setTimeout(() => {
-        this.startPKMatch(true); // 竞技场页面自动开启 PK
+        if (this.modalMgr) {
+          this.modalMgr.openModal('pk'); // 进入竞技场自动打开匹配房间面板
+        }
       }, 500);
     }
 
