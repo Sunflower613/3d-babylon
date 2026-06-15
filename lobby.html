@@ -166,15 +166,34 @@
 
   <!-- 6. 每日任务 (Tasks) 弹窗 (公共) -->
   <div class="modal-overlay" id="modal-tasks">
-    <div class="modal-card">
+    <div class="modal-card modal-large">
       <button class="modal-close" data-close="modal-tasks">&times;</button>
       <div class="modal-header">
         <span class="modal-emoji">📋</span>
         <h2>治愈旅途 · 每日任务</h2>
       </div>
-      <div class="modal-body scrollable" style="padding: 20px;">
-        <div class="tasks-list" id="tasks-list">
-          <!-- 动态生成任务 -->
+      <div class="modal-body no-padding" style="display: flex; height: 100%; overflow: hidden;">
+        <!-- 左侧：宝箱区域 -->
+        <div class="tasks-left" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; border-right: 1px solid var(--glass-border); text-align: center; gap: 12px; background: rgba(255,255,255,0.01);">
+          <div class="tasks-chest-icon" id="tasks-chest-btn" style="font-size: 4rem; cursor: pointer; transition: all 0.3s; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2)); user-select: none;">🎁</div>
+          <div style="font-size: 0.95rem; font-weight: bold; color: #fff;">活跃度宝箱</div>
+          <div style="width: 100%; padding: 0 10px; box-sizing: border-box;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">
+              <span>任务进度</span>
+              <span id="tasks-progress-text">0 / 5</span>
+            </div>
+            <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; position: relative;">
+              <div id="tasks-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #ffd700, #ff9800); transition: width 0.4s ease; border-radius: 4px;"></div>
+            </div>
+          </div>
+          <p id="tasks-chest-tips" style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.4; margin: 0; padding: 0 8px;">完成今日全部 5 个任务即可开启宝箱，获得 300 金币与 100 经验！</p>
+          <button class="hud-btn" id="btn-tasks-claim-chest" style="width: 100%; padding: 8px 0; font-size: 0.8rem; font-weight: bold;" disabled>领取奖励</button>
+        </div>
+        <!-- 右侧：任务列表 -->
+        <div class="tasks-right scrollable" style="flex: 2.2; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; width: 100%;">
+          <div class="tasks-list" id="tasks-list" style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+            <!-- 动态生成任务 -->
+          </div>
         </div>
       </div>
     </div>

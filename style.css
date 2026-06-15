@@ -3702,6 +3702,86 @@ body.is-mobile #btn-shop-execute-buy {
   margin-top: auto !important;
 }
 
+/* ==================== 进度宝箱与移动端紧凑型任务卡片样式 ==================== */
+@keyframes chestBounce {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 2px 4px rgba(255, 215, 0, 0.2));
+  }
+  100% {
+    transform: scale(1.18) translateY(-4px);
+    filter: drop-shadow(0 8px 24px rgba(255, 215, 0, 0.75));
+  }
+}
+
+.tasks-left, .tasks-right {
+  box-sizing: border-box;
+}
+
+/* 移动端任务列表紧凑型排版，使其能够直接呈现 5 个任务 */
+body.is-mobile .tasks-right {
+  padding: 10px 12px !important;
+}
+
+body.is-mobile .tasks-list {
+  gap: 6px !important;
+}
+
+body.is-mobile .task-card-item {
+  padding: 8px 12px !important;
+  margin-bottom: 0 !important;
+  gap: 4px !important;
+  border-radius: 12px !important;
+}
+
+body.is-mobile .task-title {
+  font-size: 0.82rem !important;
+}
+
+body.is-mobile .task-reward {
+  font-size: 0.72rem !important;
+}
+
+body.is-mobile .task-progress-wrap {
+  margin-top: 4px !important;
+  gap: 8px !important;
+}
+
+body.is-mobile .task-btn-action {
+  padding: 4px 10px !important;
+  font-size: 0.7rem !important;
+}
+
+body.is-mobile .task-progress-text {
+  font-size: 0.7rem !important;
+}
+
+/* 移动端左侧宝箱区域紧凑优化 */
+body.is-mobile .tasks-left {
+  padding: 12px !important;
+  gap: 8px !important;
+}
+
+body.is-mobile .tasks-chest-icon {
+  font-size: 2.8rem !important;
+}
+
+body.is-mobile .tasks-left div {
+  font-size: 0.8rem !important;
+}
+
+body.is-mobile #tasks-chest-tips {
+  font-size: 0.65rem !important;
+  line-height: 1.2 !important;
+  max-height: 48px !important;
+  overflow-y: auto !important;
+}
+
+body.is-mobile #btn-tasks-claim-chest {
+  padding: 6px 0 !important;
+  font-size: 0.72rem !important;
+}
+
 
 
 

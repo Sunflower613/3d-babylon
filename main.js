@@ -900,6 +900,7 @@ class GameApp {
         { id: 'play_poker', name: '游玩 1 局 21点纸牌游戏', progress: 0, target: 1, reward: 80, status: 'ongoing', type: 'game_poker' },
         { id: 'crop_harvest', name: '收割成熟的农地作物 3 次', progress: 0, target: 3, reward: 100, status: 'ongoing', type: 'harvest' }
       ],
+      dailyChestClaimed: false,
       lastTaskResetDate: new Date().toLocaleDateString()
     };
   }
@@ -950,6 +951,7 @@ class GameApp {
     const today = new Date().toLocaleDateString();
     if (this.gameData.lastTaskResetDate !== today) {
       this.gameData.tasks = this.getInitialGameData().tasks;
+      this.gameData.dailyChestClaimed = false;
       this.gameData.lastTaskResetDate = today;
       this.saveGameData();
     }
@@ -1325,7 +1327,52 @@ class GameApp {
   }
 
   // ==================== 每日任务 (Tasks) 逻辑 ====================
-  initTasksUI() {}
+  initTasksUI() {
+    const claimChestBtn = document.getElementById('btn-tasks-claim-chest');
+    const chestIconBtn = document.getElementById('tasks-chest-btn');
+
+    const handleClaimDailyChest = (e) => {
+      e.stopPropagation();
+      const completedCount = this.gameData.tasks.filter(t => t.progress >= t.target).length;
+      if (completedCount === 5 && !this.gameData.dailyChestClaimed) {
+        this.gameData.dailyChestClaimed = true;
+        
+        // 奖励 300 金币
+        this.gameData.coins += 300;
+        this.showCoinFloatText(300, e.clientX, e.clientY);
+
+        // 奖励 100 经验
+        this.gameData.exp += 100;
+        let isLevelUp = false;
+        if (this.gameData.exp >= 100) {
+          this.gameData.level++;
+          this.gameData.exp -= 100;
+          isLevelUp = true;
+        }
+
+        this.saveGameData();
+        this.updateBaseUI();
+        this.refreshTasks();
+
+        if (isLevelUp) {
+          setTimeout(() => {
+            this.playCustomSound(523.25, 0.4, 'triangle', 0.1); // 升级音效
+            this.showToast('恭喜升级啦！✨ 等级提升！');
+          }, 300);
+        } else {
+          this.playCustomSound(880, 0.1, 'sine', 0.05);
+          setTimeout(() => this.playCustomSound(1200, 0.2, 'sine', 0.05), 100);
+        }
+      }
+    };
+
+    if (claimChestBtn) {
+      claimChestBtn.addEventListener('click', handleClaimDailyChest);
+    }
+    if (chestIconBtn) {
+      chestIconBtn.addEventListener('click', handleClaimDailyChest);
+    }
+  }
 
   updateTaskProgress(type, amount = 1) {
     let changed = false;
@@ -1348,6 +1395,76 @@ class GameApp {
     if (!listEl) return;
 
     listEl.innerHTML = '';
+
+    // 1. 统计任务完成进度
+    const completedCount = this.gameData.tasks.filter(t => t.progress >= t.target).length;
+    
+    // 2. 更新进度宝箱相关的 DOM 状态
+    const progressText = document.getElementById('tasks-progress-text');
+    const progressBar = document.getElementById('tasks-progress-bar');
+    const chestIconBtn = document.getElementById('tasks-chest-btn');
+    const chestTips = document.getElementById('tasks-chest-tips');
+    const claimChestBtn = document.getElementById('btn-tasks-claim-chest');
+
+    if (progressText) {
+      progressText.textContent = `${completedCount} / 5`;
+    }
+    if (progressBar) {
+      progressBar.style.width = `${(completedCount / 5) * 100}%`;
+    }
+
+    if (this.gameData.dailyChestClaimed) {
+      if (chestIconBtn) {
+        chestIconBtn.textContent = '📦';
+        chestIconBtn.style.animation = 'none';
+        chestIconBtn.style.cursor = 'default';
+      }
+      if (chestTips) {
+        chestTips.innerHTML = `<span style="color: #4caf50; font-weight: bold;">每日宝箱奖励已领取！📯</span><br><span style="font-size: 0.68rem;">获得了 300金币 + 100经验。明天再来吧！🌟</span>`;
+      }
+      if (claimChestBtn) {
+        claimChestBtn.textContent = '已领取';
+        claimChestBtn.disabled = true;
+        claimChestBtn.style.background = 'rgba(255,255,255,0.08)';
+        claimChestBtn.style.color = 'var(--text-muted)';
+        claimChestBtn.style.borderColor = 'transparent';
+      }
+    } else {
+      if (completedCount === 5) {
+        if (chestIconBtn) {
+          chestIconBtn.textContent = '🎁';
+          chestIconBtn.style.animation = 'chestBounce 1.2s infinite alternate ease-in-out';
+          chestIconBtn.style.cursor = 'pointer';
+        }
+        if (chestTips) {
+          chestTips.innerHTML = `<span style="color: #ffd700; font-weight: bold;">今日任务已全部达成！✨</span><br><span style="font-size: 0.68rem; color: #fff;">快点击宝箱或下方按钮领取额外大奖！</span>`;
+        }
+        if (claimChestBtn) {
+          claimChestBtn.textContent = '开启宝箱';
+          claimChestBtn.disabled = false;
+          claimChestBtn.style.background = 'linear-gradient(135deg, #ffd700 0%, #ff9800 100%)';
+          claimChestBtn.style.color = '#000';
+          claimChestBtn.style.borderColor = '#ffd700';
+        }
+      } else {
+        if (chestIconBtn) {
+          chestIconBtn.textContent = '🎁';
+          chestIconBtn.style.animation = 'none';
+          chestIconBtn.style.cursor = 'default';
+        }
+        if (chestTips) {
+          chestTips.textContent = '完成今日全部 5 个任务即可开启宝箱，获得 300 金币与 100 经验！';
+        }
+        if (claimChestBtn) {
+          claimChestBtn.textContent = '未达成';
+          claimChestBtn.disabled = true;
+          claimChestBtn.style.background = 'rgba(255,255,255,0.04)';
+          claimChestBtn.style.color = 'var(--text-muted)';
+          claimChestBtn.style.borderColor = 'transparent';
+        }
+      }
+    }
+
     this.gameData.tasks.forEach(task => {
       const card = document.createElement('div');
       card.className = `task-card-item ${task.status === 'claimed' ? 'task-completed' : ''}`;
