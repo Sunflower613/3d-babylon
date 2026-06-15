@@ -2693,6 +2693,19 @@ body.is-mobile .scrollable {
   transform: scale(0.9);
 }
 
+/* 种植状态下改为翠绿色外观 */
+#btn-pk-attack.is-plant {
+  background: rgba(46, 204, 113, 0.18) !important;
+  border-color: rgba(46, 204, 113, 0.35) !important;
+  color: #2ecc71 !important;
+}
+#btn-pk-attack.is-plant:active {
+  background: #2ecc71 !important;
+  border-color: #2ecc71 !important;
+  box-shadow: 0 0 15px rgba(46, 204, 113, 0.6) !important;
+  transform: scale(0.9);
+}
+
 /* 受击飘血提示 */
 .damage-bubble {
   position: absolute;

@@ -504,6 +504,7 @@ class AppShell {
     if (attackBtn) {
       if (mapName === 'pk_arena') {
         attackBtn.style.display = 'flex';
+        attackBtn.classList.remove('is-plant');
         attackBtn.setAttribute('title', '攻击');
         attackBtn.setAttribute('aria-label', '攻击');
         attackBtn.innerHTML = `
@@ -519,6 +520,7 @@ class AppShell {
 </svg>`;
       } else if (mapName === 'farm') {
         attackBtn.style.display = 'flex';
+        attackBtn.classList.add('is-plant');
         attackBtn.setAttribute('title', '种植');
         attackBtn.setAttribute('aria-label', '种植');
         attackBtn.innerHTML = `
@@ -530,6 +532,7 @@ class AppShell {
 </svg>`;
       } else {
         attackBtn.style.display = 'none';
+        attackBtn.classList.remove('is-plant');
       }
     }
 
