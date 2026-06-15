@@ -1878,7 +1878,8 @@ class GameApp {
     this.activeBombs = [];
     this.activeExplosions = [];
     this.bombCooldownActive = false;
-    if (document.getElementById('btn-pk-attack')) document.getElementById('btn-pk-attack').style.display = 'none';
+    const parentAtkBtn = document.getElementById('btn-pk-attack') || (window.parent && window.parent.document.getElementById('btn-pk-attack'));
+    if (parentAtkBtn) parentAtkBtn.style.display = 'none';
 
     // 开启调试面板
     const debugEl = document.getElementById('pk-debug-info');
@@ -2124,6 +2125,17 @@ class GameApp {
     updateCDUI();
 
     const cdInterval = setInterval(() => {
+      // 若倒计时期间玩家换了武器，则终止定时器并将按钮状态恢复（新武器不需要 CD）
+      if (this.playerEquippedWeapon !== 'bomb') {
+        clearInterval(cdInterval);
+        this.bombCooldownActive = false;
+        if (parentAttackBtn) {
+          parentAttackBtn.disabled = false;
+          parentAttackBtn.style.opacity = '1';
+        }
+        return;
+      }
+
       cdLeft--;
       if (cdLeft <= 0) {
         clearInterval(cdInterval);
@@ -2408,7 +2420,8 @@ class GameApp {
     if (this.pkCrystalMesh) this.pkCrystalMesh.visible = true;
 
     // 清除武器 HUD
-    if (document.getElementById('btn-pk-attack')) document.getElementById('btn-pk-attack').style.display = 'none';
+    const parentAtkBtn = document.getElementById('btn-pk-attack') || (window.parent && window.parent.document.getElementById('btn-pk-attack'));
+    if (parentAtkBtn) parentAtkBtn.style.display = 'none';
 
     // 计算分数变化
     let scoreChange = isPlayerWinner ? 20 : -10;
