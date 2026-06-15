@@ -3614,6 +3614,81 @@ body.is-mobile #radial-seed-menu .radial-key-hint {
   border-radius: 6px !important;
 }
 
+/* ==================== 移动端大商店内容排版与按钮溢出截断修复 ==================== */
+body.is-mobile .shop-right {
+  padding: 8px 12px !important;
+}
+
+body.is-mobile .shop-detail-content {
+  gap: 6px !important;
+  justify-content: flex-start !important;
+}
+
+body.is-mobile .shop-detail-icon {
+  font-size: 2.0rem !important;
+  margin: 0 !important;
+}
+
+body.is-mobile .shop-detail-header {
+  gap: 2px !important;
+}
+
+body.is-mobile .shop-detail-title {
+  font-size: 0.9rem !important;
+  margin-top: 2px !important;
+}
+
+body.is-mobile .shop-detail-owned {
+  font-size: 0.7rem !important;
+}
+
+body.is-mobile .shop-detail-desc {
+  font-size: 0.7rem !important;
+  line-height: 1.25 !important;
+  max-height: 34px !important;
+  margin: 2px 0 !important;
+  overflow-y: auto !important;
+  padding: 0 6px !important;
+}
+
+body.is-mobile .shop-buy-panel {
+  padding: 6px 10px !important;
+  gap: 4px !important;
+  border-radius: 10px !important;
+}
+
+body.is-mobile .shop-buy-panel > div:first-child {
+  font-size: 0.72rem !important;
+}
+
+body.is-mobile .shop-buy-count-control {
+  gap: 6px !important;
+}
+
+body.is-mobile .shop-buy-count-control .bag-range-btn {
+  height: 20px !important;
+  width: 20px !important;
+  font-size: 0.75rem !important;
+}
+
+body.is-mobile .shop-buy-count-control #btn-shop-count-plus10 {
+  width: auto !important;
+  height: 20px !important;
+  font-size: 0.65rem !important;
+  padding: 0 4px !important;
+  border-radius: 4px !important;
+}
+
+body.is-mobile .shop-buy-panel > div:last-child {
+  font-size: 0.72rem !important;
+}
+
+body.is-mobile #btn-shop-execute-buy {
+  padding: 8px !important;
+  font-size: 0.8rem !important;
+  margin-top: auto !important;
+}
+
 
 
 
