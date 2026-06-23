@@ -1,0 +1,1 @@
+fix(joystick-touch): 移除控制层容器的touch-action限制并全面适配NippleJS各参数结构以防摇杆死锁

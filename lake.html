@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>云顶天池 | 3D 治愈群岛</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body id="page-lake" style="background: #090b0e; overflow: hidden; margin: 0; height: 100%;">
+  <!-- 3D 渲染画布容器 -->
+  <div id="canvas-container"></div>
+
+  <!-- -------------------- 弹窗层 (Modal Overlays) -------------------- -->
+
+  <!-- 1. 钢琴弹奏 (Piano) 弹窗 -->
+  <div class="modal-overlay" id="modal-piano">
+    <div class="modal-card modal-game" style="max-width: 650px; background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(255, 255, 255, 0.08);">
+      <button class="modal-close" data-close="modal-piano">&times;</button>
+      <div class="modal-header">
+        <span class="modal-emoji">🎹</span>
+        <h2>云顶天琴 · 湖畔心曲</h2>
+      </div>
+      <div class="modal-body" style="padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; overflow: hidden;">
+        <p class="description" style="color: rgba(255,255,255,0.7); font-size: 0.85rem; text-align: center; margin: 0 0 10px 0;">
+          在云顶弹奏一段舒缓的旋律。支持键盘按键 <strong style="color: #ffd700;">A S D F G H J K</strong> 弹奏 8 个自然音符。
+        </p>
+        
+        <!-- 钢琴琴键区域 -->
+        <div class="piano-keyboard-container" style="display: flex; gap: 4px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); position: relative; width: 100%; max-width: 520px; box-shadow: inset 0 2px 8px rgba(0,0,0,0.8);">
+          <!-- 8个白键 -->
+          <div class="piano-key white-key" data-note="C4" data-key="A">
+            <span class="key-note">Do</span>
+            <span class="key-bind">A</span>
+          </div>
+          <div class="piano-key white-key" data-note="D4" data-key="S">
+            <span class="key-note">Re</span>
+            <span class="key-bind">S</span>
+          </div>
+          <div class="piano-key white-key" data-note="E4" data-key="D">
+            <span class="key-note">Mi</span>
+            <span class="key-bind">D</span>
+          </div>
+          <div class="piano-key white-key" data-note="F4" data-key="F">
+            <span class="key-note">Fa</span>
+            <span class="key-bind">F</span>
+          </div>
+          <div class="piano-key white-key" data-note="G4" data-key="G">
+            <span class="key-note">Sol</span>
+            <span class="key-bind">G</span>
+          </div>
+          <div class="piano-key white-key" data-note="A4" data-key="H">
+            <span class="key-note">La</span>
+            <span class="key-bind">H</span>
+          </div>
+          <div class="piano-key white-key" data-note="B4" data-key="J">
+            <span class="key-note">Si</span>
+            <span class="key-bind">J</span>
+          </div>
+          <div class="piano-key white-key" data-note="C5" data-key="K">
+            <span class="key-note">Do⁺</span>
+            <span class="key-bind">K</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 关于我 (About Me) 弹窗 -->
+  <div class="modal-overlay" id="modal-about">
+    <div class="modal-card">
+      <button class="modal-close" data-close="modal-about">&times;</button>
+      <div class="modal-header">
+        <span class="modal-emoji">🏠</span>
+        <h2>林间树屋 · 关于我</h2>
+      </div>
+      <div class="modal-body scrollable">
+        <!-- 由 ModalManager 动态装填 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 技术栈 (Skills) 弹窗 -->
+  <div class="modal-overlay" id="modal-skills">
+    <div class="modal-card">
+      <button class="modal-close" data-close="modal-skills">&times;</button>
+      <div class="modal-header">
+        <span class="modal-emoji">🌳</span>
+        <h2>知识神树 · 技术栈</h2>
+      </div>
+      <div class="modal-body scrollable"></div>
+    </div>
+  </div>
+
+  <!-- 4. 项目展示 (Projects) 弹窗 -->
+  <div class="modal-overlay" id="modal-projects">
+    <div class="modal-card modal-large">
+      <button class="modal-close" data-close="modal-projects">&times;</button>
+      <div class="modal-header">
+        <span class="modal-emoji">🎬</span>
+        <h2>时光放映机 · 项目展示</h2>
+      </div>
+      <div class="modal-body scrollable"></div>
+    </div>
+  </div>
+
+  <!-- 5. 复古街机 21点游戏 (Arcade) 弹窗 -->
+  <div class="modal-overlay" id="modal-arcade">
+    <div class="modal-card modal-game">
+      <button class="modal-close" id="btn-close-arcade" data-close="modal-arcade">&times;</button>
+      <div class="modal-header">
+        <span class="modal-emoji">🕹️</span>
+        <h2 id="arcade-title">复古街机 · 游戏大厅</h2>
+      </div>
+      <div class="modal-body no-padding"></div>
+    </div>
+  </div>
+
+  <!-- 6. 排行榜 (Leaderboard) 弹窗 (公共) -->
+  <div class="modal-overlay" id="modal-leaderboard">
+    <div class="modal-card">
+      <button class="modal-close" data-close="modal-leaderboard">&times;</button>
+      <div class="modal-header">
+        <span class="modal-emoji">🏆</span>
+        <h2>个人大厅 · 排行榜</h2>
+      </div>
+      <div class="modal-body no-padding" style="display: flex; flex-direction: column; overflow: hidden; height: 100%;">
+        <div class="leaderboard-tabs">
+          <button class="tab-btn active" data-tab="pkPoints">⚔️ 战力榜</button>
+          <button class="tab-btn" data-tab="coins">💰 财富榜</button>
+          <button class="tab-btn" data-tab="level">✨ 等级榜</button>
+        </div>
+        <div class="leaderboard-container scrollable" style="flex-grow: 1; padding: 20px; overflow-y: auto;">
+          <div class="leaderboard-list-view" id="leaderboard-list-view"></div>
+        </div>
+        <div class="leaderboard-my-rank" id="leaderboard-my-rank"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. 每日任务 (Tasks) 弹窗 (公共) -->
+  <div class="modal-overlay" id="modal-tasks">
+    <div class="modal-card modal-large">
+      <button class="modal-close" data-close="modal-tasks">&times;</button>
+      <div class="modal-header">
+        <span class="modal-emoji">📋</span>
+        <h2>治愈旅途 · 每日任务</h2>
+      </div>
+      <div class="modal-body no-padding" style="display: flex; height: 100%; overflow: hidden;">
+        <!-- 左侧：宝箱区域 -->
+        <div class="tasks-left" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; border-right: 1px solid var(--glass-border); text-align: center; gap: 12px; background: rgba(255,255,255,0.01);">
+          <div class="tasks-chest-icon" id="tasks-chest-btn" style="font-size: 4rem; cursor: pointer; transition: all 0.3s; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2)); user-select: none;">🎁</div>
+          <div style="font-size: 0.95rem; font-weight: bold; color: #fff;">活跃度宝箱</div>
+          <div style="width: 100%; padding: 0 10px; box-sizing: border-box;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">
+              <span>任务进度</span>
+              <span id="tasks-progress-text">0 / 5</span>
+            </div>
+            <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; position: relative;">
+              <div id="tasks-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #ffd700, #ff9800); transition: width 0.4s ease; border-radius: 4px;"></div>
+            </div>
+          </div>
+          <p id="tasks-chest-tips" style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.4; margin: 0; padding: 0 8px;">完成今日全部 5 个任务即可开启宝箱，获得 300 金币与 100 经验！</p>
+          <button class="hud-btn" id="btn-tasks-claim-chest" style="width: 100%; padding: 8px 0; font-size: 0.8rem; font-weight: bold;" disabled>领取奖励</button>
+        </div>
+        <!-- 右侧：任务列表 -->
+        <div class="tasks-right scrollable" style="flex: 2.2; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; width: 100%;">
+          <div class="tasks-list" id="tasks-list" style="display: flex; flex-direction: column; gap: 8px; width: 100%;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. 2D世界地图 (World Map) 弹窗 -->
+  <div class="modal-overlay" id="modal-map">
+    <div class="modal-card modal-large" style="max-width: 680px;">
+      <button class="modal-close" data-close="modal-map">&times;</button>
+      <div class="modal-header">
+        <span class="modal-emoji">🗺️</span>
+        <h2>世界地图 · 快速传送</h2>
+      </div>
+      <div class="modal-body no-padding" style="display: flex; flex-direction: column; overflow: hidden; height: 100%;">
+        <div class="world-map-container">
+          <div class="world-map-canvas">
+            <div class="map-decor compass">🧭</div>
+            <div class="map-decor sea-monster">🐳</div>
+            <div class="map-decor clouds cloud-1">☁️</div>
+            <div class="map-decor clouds cloud-2">☁️</div>
+            
+            <div class="map-node node-island" data-map="island">
+              <div class="node-icon">🌴</div>
+              <div class="node-label">海岛广场</div>
+              <div class="node-status">公共区域</div>
+            </div>
+            
+            <div class="map-node node-house" data-map="house">
+              <div class="node-icon">🏡</div>
+              <div class="node-label">个人小家</div>
+              <div class="node-status">我的空间</div>
+            </div>
+            
+            <div class="map-node node-farm" data-map="farm">
+              <div class="node-icon">🌽</div>
+              <div class="node-label">我的农地</div>
+              <div class="node-status">农耕种植</div>
+            </div>
+            
+            <div class="map-node node-pk" data-map="pk_arena">
+              <div class="node-icon">⚔️</div>
+              <div class="node-label">竞技赛场</div>
+              <div class="node-status">擂台PK</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. 我的背包 (Backpack) 弹窗 (公共) -->
+  <div class="modal-overlay" id="modal-bag">
+    <div class="modal-card modal-large">
+      <button class="modal-close" data-close="modal-bag">&times;</button>
+      <div class="modal-header" style="justify-content: space-between; align-items: center; width: 100%;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <span class="modal-emoji">💼</span>
+          <h2>旅者囊匣 · 我的背包</h2>
+        </div>
+        <div class="modal-bag-coins" style="display: flex; align-items: center; gap: 6px; margin-right: 45px; font-weight: bold; color: #ffd700; font-size: 0.95rem;">
+          <span>🪙</span>
+          <span class="bag-coins-val">0</span>
+        </div>
+      </div>
+      <div class="modal-body no-padding" style="display: flex; height: 100%; overflow: hidden;">
+        <div class="bag-left" style="flex: 1.8; display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--glass-border);">
+          <div class="bag-tabs" style="display: flex; background: rgba(0,0,0,0.15); border-bottom: 1px solid var(--glass-border);">
+            <button class="bag-tabactive active" data-tab="seed" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s;">消耗品</button>
+            <button class="bag-tabactive" data-tab="decor" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s;">装饰品</button>
+            <button class="bag-tabactive" data-tab="collect" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s;">珍藏品</button>
+          </div>
+          <div class="bag-grid scrollable" id="bag-grid" style="flex-grow: 1; padding: 16px; overflow-y: auto; display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; max-height: 280px; width: 100%;"></div>
+        </div>
+        <div class="bag-right" id="bag-item-detail" style="flex: 1.2; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: rgba(255,255,255,0.01); width: 100%;">
+          <div class="item-detail-empty" style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+            <div style="font-size: 2.6rem; opacity: 0.2;">💼</div>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">点击左侧背包物品查看详情</p>
+          </div>
+          <div class="item-detail-content" style="display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: space-between; gap: 16px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. 市集商店 (Shop) 弹窗 (公共) -->
+  <div class="modal-overlay" id="modal-shop">
+    <div class="modal-card modal-large">
+      <button class="modal-close" data-close="modal-shop">&times;</button>
+      <div class="modal-header" style="justify-content: space-between; align-items: center; width: 100%;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <span class="modal-emoji">🛒</span>
+          <h2>云端集市 · 市集商店</h2>
+        </div>
+        <div class="modal-shop-coins" style="display: flex; align-items: center; gap: 6px; margin-right: 45px; font-weight: bold; color: #ffd700; font-size: 0.95rem;">
+          <span>🪙 当前金币: </span>
+          <span class="shop-coins-val">0</span>
+        </div>
+      </div>
+      <div class="modal-body no-padding" style="display: flex; height: 100%; overflow: hidden;">
+        <div class="shop-left" style="flex: 1.8; display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--glass-border);">
+          <div class="shop-tabs" style="display: flex; background: rgba(0,0,0,0.15); border-bottom: 1px solid var(--glass-border);">
+            <button class="shop-tabactive active" data-tab="agriculture" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px;">🌱 农业物资</button>
+            <button class="shop-tabactive" data-tab="decorations" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px;">🛋️ 装饰家具</button>
+            <button class="shop-tabactive" data-tab="topup" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px;">💎 金币充值</button>
+          </div>
+          <div class="shop-grid scrollable" id="shop-grid" style="flex-grow: 1; padding: 16px; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-height: 280px; width: 100%;"></div>
+        </div>
+        <div class="shop-right" id="shop-item-detail" style="flex: 1.2; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: rgba(255,255,255,0.01); width: 100%;">
+          <div class="shop-detail-empty" style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+            <div style="font-size: 2.6rem; opacity: 0.2;">🛒</div>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">点击左侧商品查看详情并购买</p>
+          </div>
+          <div class="shop-detail-content" style="display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: space-between; gap: 14px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 11. 退出确认 (Exit Confirm) 弹窗 -->
+  <div class="modal-overlay" id="modal-exit">
+    <div class="modal-card">
+      <button class="modal-close" data-close="modal-exit">&times;</button>
+      <div class="modal-header">
+        <span class="modal-emoji">🚪</span>
+        <h2>传送确认</h2>
+      </div>
+      <div class="modal-body" style="padding: 24px; text-align: center;">
+        <p style="color: #fff; font-size: 1rem; margin-bottom: 24px;">你确定要离开天池，传送回海岛大厅吗？</p>
+        <div style="display: flex; justify-content: center; gap: 16px;">
+          <button class="hud-btn" id="btn-exit-confirm" style="background: linear-gradient(135deg, #e53935, #c62828); border: none;">确定</button>
+          <button class="hud-btn" data-close="modal-exit" style="background: rgba(255,255,255,0.1);">取消</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- -------------------- 常驻 HUD & 交互面板 -------------------- -->
+
+  <!-- 退出坐下状态 (Exit Sitting) HUD -->
+  <div id="exit-sitting-hud" class="sitting-hud" style="display: none;">
+    <div class="sitting-hud-content">
+      <span>🧘 您已坐下，静赏瓷碗唱歌</span>
+      <button id="btn-exit-sitting" class="hud-btn">起身离开</button>
+    </div>
+  </div>
+
+  <!-- Device rotation overlay (visible on mobile in portrait mode) -->
+  <div id="rotation-overlay">
+    <div class="rotation-message">
+      <div class="phone-icon-animate">🔄📱</div>
+      <p style="font-size: 1.1rem; font-weight: 700; margin-bottom: 8px;">为了获得最佳体验，请旋转手机至横屏模式</p>
+      <span style="font-size:0.75rem; color:var(--text-muted);">Please rotate your device to landscape</span>
+    </div>
+  </div>
+
+  <!-- Screen fade transition overlay -->
+  <div id="fade-overlay"></div>
+
+  <!-- 引入主逻辑 -->
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

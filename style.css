@@ -2413,6 +2413,16 @@ body.is-mobile .arcade-game-title {
 body.is-mobile .scrollable {
   -webkit-overflow-scrolling: touch;
   overflow-y: auto !important;
+  /* 注意：不再全局设置 pointer-events: auto !important，
+     否则未打开的 modal 内的 scrollable 会拦截全屏触摸事件，
+     导致移动端视角旋转只在右上角一小片区域可用 */
+}
+/* 已打开的弹窗中的 scrollable 需要接收触摸以支持滚动 */
+body.is-mobile .modal-overlay.open .scrollable {
+  pointer-events: auto !important;
+}
+/* 侧边栏内容区的 scrollable 保持可交互 */
+body.is-mobile .sso-sidebar .scrollable {
   pointer-events: auto !important;
 }
 
@@ -3780,14 +3790,214 @@ body.is-mobile #btn-tasks-claim-chest {
   font-size: 0.72rem !important;
 }
 
+/* ==========================================================================
+   云顶天池钢琴与静赏特有样式
+   ========================================================================== */
 
+/* 1. 钢琴弹奏按键 */
+.piano-keyboard-container {
+  display: flex;
+  gap: 6px;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  width: 100%;
+  max-width: 540px;
+  box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.8), 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+}
 
+.piano-key {
+  position: relative;
+  flex: 1;
+  height: 180px;
+  border-radius: 0 0 10px 10px;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding-bottom: 16px;
+  box-sizing: border-box;
+  transition: all 0.1s ease;
+}
 
+.white-key {
+  background: linear-gradient(to bottom, #f5f5f7 0%, #ffffff 85%, #e0e0e5 100%);
+  border: 1px solid #d1d1d6;
+  border-top: none;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15), inset 0 -3px 0 #bcbcbf;
+  color: #333333;
+}
 
+.white-key:hover {
+  background: linear-gradient(to bottom, #ffffff 0%, #f5f5f7 100%);
+}
 
+/* 键盘按下激活态 */
+.white-key.active, .white-key:active {
+  background: linear-gradient(to bottom, #ffd54f 0%, #ffca28 85%, #ffb300 100%) !important;
+  border-color: #ffb300;
+  box-shadow: 0 2px 3px rgba(255, 202, 40, 0.3), inset 0 2px 5px rgba(0, 0, 0, 0.2), inset 0 -1px 0 #ff9100 !important;
+  transform: translateY(2px);
+  padding-bottom: 14px;
+}
 
+/* 琴键标签 */
+.key-note {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+  opacity: 0.8;
+}
 
+.key-bind {
+  font-size: 0.68rem;
+  font-weight: 800;
+  background: rgba(0, 0, 0, 0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #666666;
+  font-family: 'Outfit', sans-serif;
+}
 
+.white-key.active .key-bind, .white-key:active .key-bind {
+  color: #ff6f00;
+  background: rgba(255, 255, 255, 0.4);
+}
 
+/* 2. 退出坐下状态 HUD */
+.sitting-hud {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  pointer-events: auto;
+}
 
+.sitting-hud-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 20px;
+  border-radius: 24px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.sitting-hud-content .hud-btn {
+  background: linear-gradient(135deg, #26a69a 0%, #00897b 100%);
+  border: none;
+  font-size: 0.8rem;
+  padding: 6px 14px;
+  box-shadow: 0 4px 12px rgba(0, 137, 123, 0.3);
+  transition: all 0.2s ease;
+}
+
+.sitting-hud-content .hud-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 137, 123, 0.5);
+}
+
+/* 移动端适配 */
+body.is-mobile .piano-keyboard-container {
+  max-width: 100%;
+  padding: 8px;
+  gap: 3px;
+}
+
+body.is-mobile .piano-key {
+  height: 110px;
+  padding-bottom: 8px;
+}
+
+body.is-mobile .key-note {
+  font-size: 0.7rem;
+}
+
+body.is-mobile .key-bind {
+  font-size: 0.55rem;
+  padding: 1px 3px;
+}
+
+body.is-mobile .white-key.active, body.is-mobile .white-key:active {
+  padding-bottom: 6px;
+}
+
+body.is-mobile .sitting-hud-content {
+  font-size: 0.8rem;
+  padding: 8px 14px;
+  gap: 10px;
+}
+
+body.is-mobile .sitting-hud-content .hud-btn {
+  font-size: 0.72rem;
+  padding: 4px 10px;
+}
+
+/* ==========================================================================
+   粉色庄园 (Barbie Manor) 专属美化样式
+   ========================================================================== */
+
+#page-castle #exit-sitting-hud {
+  background: rgba(253, 226, 236, 0.28) !important;
+  border: 1px solid rgba(244, 143, 177, 0.45) !important;
+  box-shadow: 0 8px 32px rgba(244, 143, 177, 0.3) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+#page-castle #exit-sitting-hud-text {
+  color: #f8bbd0;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  font-weight: 600;
+}
+
+#page-castle .modal-card {
+  background: rgba(36, 24, 32, 0.72) !important;
+  border: 1px solid rgba(244, 143, 177, 0.22) !important;
+  box-shadow: 0 16px 48px rgba(244, 143, 177, 0.2) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+#page-castle .modal-header h2 {
+  color: #f8bbd0 !important;
+  text-shadow: 0 0 6px rgba(244, 143, 177, 0.4);
+}
+
+#page-castle .modal-close {
+  color: #f8bbd0;
+}
+
+#page-castle .modal-close:hover {
+  color: #ff4081;
+}
+
+#page-castle .hud-btn {
+  background: linear-gradient(135deg, #f50057, #ff4081) !important;
+  border: 1px solid rgba(255, 64, 129, 0.3) !important;
+}
+
+#page-castle .hud-btn:hover {
+  box-shadow: 0 0 10px rgba(255, 64, 129, 0.5) !important;
+}
+
+#page-castle .tasks-left {
+  border-right: 1px solid rgba(244, 143, 177, 0.15) !important;
+}
+
+#page-castle #tasks-progress-bar {
+  background: linear-gradient(90deg, #ff4081, #f50057) !important;
+}
 

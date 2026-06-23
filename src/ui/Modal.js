@@ -19,7 +19,8 @@ export class ModalManager {
       home: document.getElementById('modal-home'),
       exit: document.getElementById('modal-exit'),
       map: document.getElementById('modal-map'),
-      shop: document.getElementById('modal-shop')
+      shop: document.getElementById('modal-shop'),
+      piano: document.getElementById('modal-piano')
     };
     
     this.iframe = document.getElementById('arcade-iframe');

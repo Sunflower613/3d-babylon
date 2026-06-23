@@ -85,8 +85,11 @@ export class IslandGenerator {
     // 11. Create Paimon guide NPC
     this.createPaimon(2.5, 2.5);
 
-    // 12. Create the farm field (South-East)
-    // this.createFarmField(12.0, 0.6, -10.0);
+    // 12. Create the lake portal (South-West)
+    this.createLakePortal(-6.5, 0.6, -1.5);
+
+    // 13. Create the castle portal (North-West)
+    this.createCastlePortal(-7.5, 0.6, 7.5);
   }
 
   createFarmField(startX, y, startZ) {
@@ -1497,6 +1500,192 @@ export class IslandGenerator {
       y: 0.6,
       z: z,
       triggerRadius: 2.2
+    });
+  }
+
+  createLakePortal(x, y, z) {
+    const portalGroup = new THREE.Group();
+    portalGroup.position.set(x, y, z);
+
+    // 1. 喷泉石质双层水盆底座
+    const stoneColor = 0xb0bec5; // 浅灰石色
+    const stoneMat = new THREE.MeshLambertMaterial({ color: stoneColor, flatShading: true });
+
+    // 下层大底座
+    const bottomBasin = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.0, 0.22, 12), stoneMat);
+    bottomBasin.position.y = 0.11;
+    bottomBasin.castShadow = true;
+    bottomBasin.receiveShadow = true;
+    portalGroup.add(bottomBasin);
+
+    // 上层水盆
+    const topBasin = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.65, 0.35, 12), stoneMat);
+    topBasin.position.y = 0.38;
+    topBasin.castShadow = true;
+    topBasin.receiveShadow = true;
+    portalGroup.add(topBasin);
+
+    // 2. 水盆中的积水面 (治愈半透明蓝色)
+    const poolWaterMat = new THREE.MeshBasicMaterial({
+      color: 0x00b0ff,
+      transparent: true,
+      opacity: 0.65,
+      side: THREE.DoubleSide
+    });
+    const poolWater = new THREE.Mesh(new THREE.CircleGeometry(0.7, 12), poolWaterMat);
+    poolWater.rotateX(-Math.PI / 2);
+    poolWater.position.y = 0.54;
+    portalGroup.add(poolWater);
+
+    // 3. 喷水柱 (白色/青蓝色半透明涌泉效果)
+    const waterSpoutGeo = new THREE.CylinderGeometry(0.08, 0.16, 0.9, 8);
+    const waterSpoutMat = new THREE.MeshBasicMaterial({
+      color: 0xe0f7fa,
+      transparent: true,
+      opacity: 0.82
+    });
+    const waterSpout = new THREE.Mesh(waterSpoutGeo, waterSpoutMat);
+    waterSpout.position.y = 0.95;
+    portalGroup.add(waterSpout);
+
+    // 4. 喷出的飞溅水滴颗粒 (Low-poly 飞溅颗粒)
+    const particleMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.08), particleMat);
+    p1.position.set(0.12, 1.35, 0.08);
+    portalGroup.add(p1);
+
+    const p2 = p1.clone();
+    p2.position.set(-0.14, 1.4, -0.1);
+    portalGroup.add(p2);
+
+    const p3 = p1.clone();
+    p3.position.set(0.05, 1.25, -0.15);
+    portalGroup.add(p3);
+
+    // 5. 旁边歪插着的治愈系小木指示牌 (前往天池的方向牌，自然清秀)
+    const signPost = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.8, 8), new THREE.MeshLambertMaterial({ color: 0x4e342e }));
+    signPost.position.set(1.0, 0.4, 0.4);
+    signPost.rotation.z = 0.15; // 稍微歪一点点
+    signPost.castShadow = true;
+    portalGroup.add(signPost);
+
+    const signBoard = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.16, 0.03), new THREE.MeshLambertMaterial({ color: 0x8d6e63 }));
+    signBoard.position.set(1.05, 0.72, 0.4);
+    signBoard.rotation.z = 0.15;
+    signBoard.rotation.y = 0.2; // 稍微偏向玩家方向
+    signBoard.castShadow = true;
+    portalGroup.add(signBoard);
+
+    // 蓝色小发光指示条
+    const signText = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.06, 0.04), new THREE.MeshBasicMaterial({ color: 0x00e5ff }));
+    signText.position.set(1.04, 0.72, 0.42);
+    signText.rotation.z = 0.15;
+    signText.rotation.y = 0.2;
+    portalGroup.add(signText);
+
+    this.scene.add(portalGroup);
+
+    // 注册天池传送交互区
+    this.interactables.push({
+      id: 'enter_lake',
+      name: '前往云顶天池',
+      x: x,
+      y: y,
+      z: z,
+      triggerRadius: 1.8
+    });
+  }
+
+  createCastlePortal(x, y, z) {
+    const portalGroup = new THREE.Group();
+    portalGroup.position.set(x, y, z);
+
+    // 1. 喷泉石质双层水盆底座 (采用梦幻粉色调)
+    const stoneColor = 0xffccd5; // 梦幻樱花粉
+    const stoneMat = new THREE.MeshLambertMaterial({ color: stoneColor, flatShading: true });
+
+    // 下层大底座
+    const bottomBasin = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.0, 0.22, 12), stoneMat);
+    bottomBasin.position.y = 0.11;
+    bottomBasin.castShadow = true;
+    bottomBasin.receiveShadow = true;
+    portalGroup.add(bottomBasin);
+
+    // 上层水盆
+    const topBasin = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.65, 0.35, 12), stoneMat);
+    topBasin.position.y = 0.38;
+    topBasin.castShadow = true;
+    topBasin.receiveShadow = true;
+    portalGroup.add(topBasin);
+
+    // 2. 水盆中的积水面 (治愈粉红色)
+    const poolWaterMat = new THREE.MeshBasicMaterial({
+      color: 0xff6b8b,
+      transparent: true,
+      opacity: 0.7,
+      side: THREE.DoubleSide
+    });
+    const poolWater = new THREE.Mesh(new THREE.CircleGeometry(0.7, 12), poolWaterMat);
+    poolWater.rotateX(-Math.PI / 2);
+    poolWater.position.y = 0.54;
+    portalGroup.add(poolWater);
+
+    // 3. 喷水柱 (奶粉色半透明涌泉效果)
+    const waterSpoutGeo = new THREE.CylinderGeometry(0.08, 0.16, 0.9, 8);
+    const waterSpoutMat = new THREE.MeshBasicMaterial({
+      color: 0xfff0f3,
+      transparent: true,
+      opacity: 0.85
+    });
+    const waterSpout = new THREE.Mesh(waterSpoutGeo, waterSpoutMat);
+    waterSpout.position.y = 0.95;
+    portalGroup.add(waterSpout);
+
+    // 4. 喷出的飞溅水滴颗粒 (粉白色 Low-poly 颗粒)
+    const particleMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.08), particleMat);
+    p1.position.set(0.12, 1.35, 0.08);
+    portalGroup.add(p1);
+
+    const p2 = p1.clone();
+    p2.position.set(-0.14, 1.4, -0.1);
+    portalGroup.add(p2);
+
+    const p3 = p1.clone();
+    p3.position.set(0.05, 1.25, -0.15);
+    portalGroup.add(p3);
+
+    // 5. 旁边歪插着的指示牌 (前往粉色庄园)
+    const signPost = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.8, 8), new THREE.MeshLambertMaterial({ color: 0x5d4037 }));
+    signPost.position.set(1.0, 0.4, 0.4);
+    signPost.rotation.z = 0.15;
+    signPost.castShadow = true;
+    portalGroup.add(signPost);
+
+    const signBoard = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.16, 0.03), new THREE.MeshLambertMaterial({ color: 0xff8da1 }));
+    signBoard.position.set(1.05, 0.72, 0.4);
+    signBoard.rotation.z = 0.15;
+    signBoard.rotation.y = 0.2;
+    signBoard.castShadow = true;
+    portalGroup.add(signBoard);
+
+    // 粉色发光指示条
+    const signText = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.06, 0.04), new THREE.MeshBasicMaterial({ color: 0xff4081 }));
+    signText.position.set(1.04, 0.72, 0.42);
+    signText.rotation.z = 0.15;
+    signText.rotation.y = 0.2;
+    portalGroup.add(signText);
+
+    this.scene.add(portalGroup);
+
+    // 注册粉色庄园传送交互区
+    this.interactables.push({
+      id: 'enter_castle',
+      name: '前往粉色庄园',
+      x: x,
+      y: y,
+      z: z,
+      triggerRadius: 1.8
     });
   }
 }

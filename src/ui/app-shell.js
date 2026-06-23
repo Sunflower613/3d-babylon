@@ -40,6 +40,7 @@ class AppShell {
     this.iframe = document.getElementById('game-frame');
     this.synthInterval = null;
     this.activeTheme = 'summer'; // 默认夏季主题，可通过子页面载入时更新
+    this.wasMusicPlayingBeforeLake = false;
     
     this.init();
   }
@@ -250,6 +251,22 @@ class AppShell {
         closeSidebar();
       });
     }
+    const btnMapLake = document.getElementById('btn-map-lake');
+    if (btnMapLake) {
+      btnMapLake.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.switchMap('lake');
+        closeSidebar();
+      });
+    }
+    const btnMapCastle = document.getElementById('btn-map-castle');
+    if (btnMapCastle) {
+      btnMapCastle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.switchMap('castle');
+        closeSidebar();
+      });
+    }
 
     const sidebarButtons = [
       { id: 'btn-sidebar-leaderboard', name: 'leaderboard' },
@@ -399,21 +416,14 @@ class AppShell {
       };
 
       const manager = nipplejs.create(options);
-      manager.on('move', (evt, data) => {
-        let joyData = null;
-        if (data) {
-          joyData = data;
-        } else if (evt) {
-          if (evt.vector) {
-            joyData = evt;
-          } else if (evt.detail) {
-            joyData = evt.detail;
-          }
-        }
-        if (joyData && joyData.vector) {
+      manager.on('move', (evt) => {
+        // nipplejs v1.0+ 回调签名：(evt) => {}
+        // evt 结构为 { type, target, data }，其中 data 包含 vector、angle、distance 等
+        const moveData = evt && evt.data ? evt.data : null;
+        if (moveData && moveData.vector) {
           // NippleJS y轴向上为正，ThreeJS相差180度，需将y取反
-          window.joystickDir.x = joyData.vector.x;
-          window.joystickDir.y = -joyData.vector.y;
+          window.joystickDir.x = moveData.vector.x;
+          window.joystickDir.y = -moveData.vector.y;
         }
       });
 
@@ -452,6 +462,20 @@ class AppShell {
         this.playMelodyLoop();
       }
     });
+  }
+
+  stopMusic() {
+    if (window.isPlayingMusic) {
+      window.isPlayingMusic = false;
+      const audioMuteIcon = document.getElementById('sidebar-audio-icon-mute');
+      const audioOnIcon = document.getElementById('sidebar-audio-icon-on');
+      if (audioMuteIcon) audioMuteIcon.style.display = 'flex';
+      if (audioOnIcon) audioOnIcon.style.display = 'none';
+      if (this.synthInterval) {
+        clearInterval(this.synthInterval);
+        this.synthInterval = null;
+      }
+    }
   }
 
   playMelodyLoop() {
@@ -505,6 +529,30 @@ class AppShell {
   // 6. iframe 地图页面载入时的回调方法
   onMapLoaded(mapName) {
     console.log(`地图已加载到 iframe: ${mapName}`);
+
+    // 如果是天池地图，强制暂停背景音乐，避免干扰弹钢琴和推碗音效
+    if (mapName === 'lake') {
+      if (window.isPlayingMusic) {
+        this.wasMusicPlayingBeforeLake = true;
+        this.stopMusic();
+      } else {
+        this.wasMusicPlayingBeforeLake = false;
+      }
+    } else {
+      // 离开天池地图时，若此前在天池被临时关闭了背景音乐，则自动恢复它
+      if (this.wasMusicPlayingBeforeLake && !window.isPlayingMusic) {
+        this.wasMusicPlayingBeforeLake = false;
+        window.isPlayingMusic = true;
+        const audioMuteIcon = document.getElementById('sidebar-audio-icon-mute');
+        const audioOnIcon = document.getElementById('sidebar-audio-icon-on');
+        if (audioMuteIcon) audioMuteIcon.style.display = 'none';
+        if (audioOnIcon) audioOnIcon.style.display = 'flex';
+        if (window.audioCtx) {
+          window.audioCtx.resume();
+        }
+        this.playMelodyLoop();
+      }
+    }
     
     // 动态调整动作按钮状态
     const interactBtn = document.getElementById('btn-interact');

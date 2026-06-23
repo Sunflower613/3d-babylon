@@ -448,6 +448,8 @@ class GameApp {
     else if (document.body.id === 'page-house') this.currentMap = 'house';
     else if (document.body.id === 'page-farm') this.currentMap = 'farm';
     else if (document.body.id === 'page-pvp') this.currentMap = 'pk_arena';
+    else if (document.body.id === 'page-lake') this.currentMap = 'lake';
+    else if (document.body.id === 'page-castle') this.currentMap = 'castle';
 
     // 实例化弹窗管理器与环境
     this.modalMgr = new ModalManager();
@@ -481,6 +483,29 @@ class GameApp {
       this.player = new Player(this.scene, this.camera, this.pkArenaColliders || [], this.themeConfig);
       this.interactMgr = new InteractsManager(this.player, { interactables: this.pkArenaInteractables || [] }, this.modalMgr, this);
       this.environment.setIndoorMode(false);
+    } else if (this.currentMap === 'lake') {
+      this.lakeGroup = new THREE.Group();
+      this.scene.add(this.lakeGroup);
+      this.lakeGroup.visible = true;
+      this.buildLakePlatform();
+      this.player = new Player(this.scene, this.camera, this.lakeColliders || [], this.themeConfig);
+      this.interactMgr = new InteractsManager(this.player, { interactables: this.lakeInteractables || [] }, this.modalMgr, this);
+      this.environment.setIndoorMode(false);
+
+      // 监听钢琴弹琴事件
+      window.addEventListener('piano-note-played', (e) => {
+        if (this.currentMap === 'lake') {
+          this.spawnNoteParticle(e.detail.note);
+        }
+      });
+    } else if (this.currentMap === 'castle') {
+      this.castleGroup = new THREE.Group();
+      this.scene.add(this.castleGroup);
+      this.castleGroup.visible = true;
+      this.buildCastlePlatform();
+      this.player = new Player(this.scene, this.camera, this.castleColliders || [], this.themeConfig);
+      this.interactMgr = new InteractsManager(this.player, { interactables: this.castleInteractables || [] }, this.modalMgr, this);
+      this.environment.setIndoorMode(false);
     }
 
     this.player.app = this; // 共享引用
@@ -495,7 +520,7 @@ class GameApp {
         this.player.group.position.copy(this.player.position);
         
         // 合理朝向
-        if (this.currentMap === 'house' || this.currentMap === 'farm') {
+        if (this.currentMap === 'house' || this.currentMap === 'farm' || this.currentMap === 'castle') {
           this.player.group.rotation.y = Math.PI;
           this.player.cameraAngleH = Math.PI;
         } else if (this.currentMap === 'pk_arena') {
@@ -506,7 +531,7 @@ class GameApp {
             this.player.group.rotation.y = -Math.PI / 2;
             this.player.cameraAngleH = -Math.PI / 2;
           }
-        } else if (this.currentMap === 'island') {
+        } else if (this.currentMap === 'island' || this.currentMap === 'lake') {
           this.player.group.rotation.y = 0;
           this.player.cameraAngleH = 0;
         }
@@ -528,6 +553,16 @@ class GameApp {
         this.player.group.position.copy(this.player.position);
         this.player.group.rotation.y = -Math.PI / 2;
         this.player.cameraAngleH = -Math.PI / 2;
+      } else if (this.currentMap === 'lake') {
+        this.player.position.set(0, 0.6 + 0.1, 8.5);
+        this.player.group.position.copy(this.player.position);
+        this.player.group.rotation.y = Math.PI; // 面朝池中心 (0,0)
+        this.player.cameraAngleH = Math.PI;
+      } else if (this.currentMap === 'castle') {
+        this.player.position.set(-2.5, 0.6 + 0.1, 11.5);
+        this.player.group.position.copy(this.player.position);
+        this.player.group.rotation.y = Math.PI; // 面朝城堡北边
+        this.player.cameraAngleH = Math.PI;
       } else {
         // 大厅岛默认
         this.player.position.set(0, 4, 0);
@@ -777,6 +812,8 @@ class GameApp {
     else if (targetMap === 'house') targetUrl = 'house.html';
     else if (targetMap === 'farm') targetUrl = 'farm.html';
     else if (targetMap === 'pk_arena') targetUrl = 'pvp.html';
+    else if (targetMap === 'lake') targetUrl = 'lake.html';
+    else if (targetMap === 'castle') targetUrl = 'castle.html';
 
     const params = [];
     if (spawnPoint) {
@@ -871,6 +908,16 @@ class GameApp {
 
     // 每帧更新新侧边栏系统 (包括农田作物、PK人机及摆放等)
     this.updateGameSystemsFrame(delta, time);
+
+    // 每帧更新天池物理与粒子
+    if (this.currentMap === 'lake') {
+      this.updateLakeFrame(delta, time);
+    }
+
+    // 每帧更新粉色庄园物理与粒子
+    if (this.currentMap === 'castle') {
+      this.updateCastleFrame(delta, time);
+    }
 
     // Render scene
     if (this.renderer && this.scene && this.camera) {
@@ -4680,6 +4727,2125 @@ class GameApp {
 
     const cropName = seedId === 'sunflower_seed' ? '向日葵' : '草莓';
     this.showToast(`成功播种了 1 颗 ${cropName} 种子 🌱`);
+  }
+
+  // ==========================================================================
+  // 云顶天池（Lake）场景 3D 地形与物理交互核心方法
+  // ==========================================================================
+
+  buildLakePlatform() {
+    this.lakeGroup.clear();
+    this.lakeColliders = [
+      // 大岛的 floor 碰撞体，Y = 0.6，半径 12.0
+      { type: 'floor', worldX: 0, worldZ: 0, worldY: 0.6, radius: 12.0 }
+    ];
+    this.lakeInteractables = [];
+    this.bowlsList = [];
+    this.ripplesList = [];
+    this.noteParticles = [];
+    this.lastBowlSoundTime = 0;
+    this.lastWaterStepTime = 0;
+
+    // 1. 浮空大岛基座 (浅汉白玉石色，半径 12.0)
+    const islandGeo = new THREE.CylinderGeometry(12.0, 12.5, 1.2, 32);
+    const islandMat = new THREE.MeshLambertMaterial({ color: 0xefeff4, flatShading: true }); // 干净极简的石色
+    const island = new THREE.Mesh(islandGeo, islandMat);
+    island.position.y = 0.0; // 表面 Y = 0.6
+    island.receiveShadow = true;
+    island.castShadow = true;
+    this.lakeGroup.add(island);
+
+    // 2. 泥土与底部基座 (深灰泥土色)
+    const dirtGeo = new THREE.CylinderGeometry(12.5, 11.8, 1.8, 32);
+    const dirtMat = new THREE.MeshLambertMaterial({ color: 0x455a64, flatShading: true });
+    const dirt = new THREE.Mesh(dirtGeo, dirtMat);
+    dirt.position.y = -1.5;
+    this.lakeGroup.add(dirt);
+
+    // 3. 极简禅意水池 - 池底与水面 (叠层材质，避免 Z-fighting 且呈现透亮深蓝质感)
+    const poolBottomGeo = new THREE.CircleGeometry(6.0, 32);
+    poolBottomGeo.rotateX(-Math.PI / 2);
+    const poolBottomMat = new THREE.MeshBasicMaterial({
+      color: 0x00acc1, // 治愈的青蓝色池底
+      side: THREE.DoubleSide
+    });
+    const poolBottom = new THREE.Mesh(poolBottomGeo, poolBottomMat);
+    poolBottom.position.y = 0.602;
+    this.lakeGroup.add(poolBottom);
+
+    const waterGeo = new THREE.CircleGeometry(6.0, 32);
+    waterGeo.rotateX(-Math.PI / 2); // 铺平
+    const waterMat = new THREE.MeshBasicMaterial({
+      color: 0x4fc3f7, // 明亮的治愈浅蓝
+      transparent: true,
+      opacity: 0.55,
+      side: THREE.DoubleSide
+    });
+    const water = new THREE.Mesh(waterGeo, waterMat);
+    water.position.y = 0.61;
+    this.lakeGroup.add(water);
+
+    // 4. 池塘堤岸石围边框 (环绕水池一圈的白石，高出水面 Y=0.65，防止出界视觉提示)
+    const borderMat = new THREE.MeshLambertMaterial({ color: 0xe0e0e0, flatShading: true });
+    const borderStoneGeo = new THREE.BoxGeometry(1.6, 0.22, 0.4);
+    const stoneCount = 24;
+    const borderRadius = 6.1;
+    for (let i = 0; i < stoneCount; i++) {
+      const angle = (i * Math.PI * 2) / stoneCount;
+      const sx = Math.cos(angle) * borderRadius;
+      const sz = Math.sin(angle) * borderRadius;
+      
+      const stone = new THREE.Mesh(borderStoneGeo, borderMat);
+      stone.position.set(sx, 0.65, sz);
+      stone.rotation.y = -angle + Math.PI / 2; // 沿圆弧法线对齐
+      stone.castShadow = true;
+      stone.receiveShadow = true;
+      this.lakeGroup.add(stone);
+    }
+
+    // 5. 漂浮的 6 个白瓷碗 (Cylinder 无盖，外宽内窄)
+    const bowlGeo = new THREE.CylinderGeometry(0.42, 0.28, 0.22, 12, 1, true);
+    const bowlBottomGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.02, 12);
+    const bowlMat = new THREE.MeshLambertMaterial({
+      color: 0xffffff,
+      flatShading: true,
+      side: THREE.DoubleSide,
+      emissive: 0x111111 // 微弱荧光感
+    });
+
+    for (let i = 0; i < 6; i++) {
+      const bowlGroup = new THREE.Group();
+      
+      // 用极坐标随机散开在池塘中，半径 2.0 到 4.8 之间
+      const angle = (i * Math.PI * 2) / 6 + (Math.random() - 0.5) * 0.5;
+      const radius = 2.0 + Math.random() * 2.8;
+      const bx = Math.cos(angle) * radius;
+      const bz = Math.sin(angle) * radius;
+      
+      bowlGroup.position.set(bx, 0.61, bz);
+
+      // 碗壁 Mesh
+      const bowlWall = new THREE.Mesh(bowlGeo, bowlMat);
+      bowlWall.castShadow = true;
+      bowlWall.receiveShadow = true;
+      bowlGroup.add(bowlWall);
+
+      // 碗底 Mesh
+      const bowlBottom = new THREE.Mesh(bowlBottomGeo, bowlMat);
+      bowlBottom.position.y = -0.1;
+      bowlBottom.castShadow = true;
+      bowlGroup.add(bowlBottom);
+
+      this.lakeGroup.add(bowlGroup);
+
+      // 存储瓷碗的物理属性
+      this.bowlsList.push({
+        group: bowlGroup,
+        position: bowlGroup.position,
+        rotation: bowlGroup.rotation,
+        velocity: new THREE.Vector3(
+          (Math.random() - 0.5) * 0.35,
+          0,
+          (Math.random() - 0.5) * 0.35
+        ),
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+
+    // 6. 湖畔的立式 3D 钢琴 (钢琴放置在 x = 0, z = -8.0 处，面朝南，即面向水池)
+    const pianoGroup = new THREE.Group();
+    pianoGroup.position.set(0, 0.6, -8.0);
+
+    const blackWood = new THREE.MeshLambertMaterial({ color: 0x1a1a1a, flatShading: true });
+    const whiteIvory = new THREE.MeshLambertMaterial({ color: 0xfafafa, flatShading: true });
+
+    // 钢琴琴身
+    const pianoBody = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.82, 0.65), blackWood);
+    pianoBody.position.y = 0.41;
+    pianoBody.castShadow = true;
+    pianoBody.receiveShadow = true;
+    pianoGroup.add(pianoBody);
+
+    // 钢琴背板
+    const pianoBack = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.6, 0.2), blackWood);
+    pianoBack.position.set(0, 1.12, -0.225);
+    pianoBack.castShadow = true;
+    pianoGroup.add(pianoBack);
+
+    // 钢琴白琴键区 (突出的一条)
+    const keysPanel = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.05, 0.25), whiteIvory);
+    keysPanel.position.set(0, 0.81, 0.22);
+    keysPanel.castShadow = true;
+    pianoGroup.add(keysPanel);
+
+    // 键盘侧盖 (左右各一块)
+    const keyCapL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.12, 0.27), blackWood);
+    keyCapL.position.set(-0.775, 0.85, 0.22);
+    keyCapL.castShadow = true;
+    pianoGroup.add(keyCapL);
+
+    const keyCapR = keyCapL.clone();
+    keyCapR.position.x = 0.775;
+    pianoGroup.add(keyCapR);
+
+    // 钢琴琴凳
+    const bench = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.45, 0.3), blackWood);
+    bench.position.set(0, 0.225, 0.65);
+    bench.castShadow = true;
+    bench.receiveShadow = true;
+    pianoGroup.add(bench);
+
+    this.lakeGroup.add(pianoGroup);
+
+    // 注册钢琴交互点，触发 2D 弹奏 Modal
+    this.lakeInteractables.push({
+      id: 'piano',
+      name: '弹奏钢琴',
+      x: 0,
+      y: 0.6,
+      z: -7.0, // 在琴凳前方
+      triggerRadius: 1.6
+    });
+
+    // 7. 湖畔两个极简白石凳 (可交互坐下，X=7.5 和 X=-7.5，朝向池塘中心)
+    const seatMat = new THREE.MeshLambertMaterial({ color: 0xeeeeee, flatShading: true });
+    const seatGeo = new THREE.BoxGeometry(0.8, 0.36, 0.45);
+    
+    // 石凳 1 (东侧，坐标 7.5, 0.6, 0，朝向西)
+    const seat1 = new THREE.Mesh(seatGeo, seatMat);
+    seat1.position.set(7.5, 0.78, 0); // 高度 0.6 + 0.18
+    seat1.castShadow = true;
+    seat1.receiveShadow = true;
+    this.lakeGroup.add(seat1);
+
+    this.lakeInteractables.push({
+      id: 'lake_seat_1',
+      name: '坐下静赏',
+      x: 7.5,
+      y: 0.6,
+      z: 0,
+      triggerRadius: 1.5
+    });
+
+    // 石凳 2 (西侧，坐标 -7.5, 0.6, 0，朝向东)
+    const seat2 = new THREE.Mesh(seatGeo, seatMat);
+    seat2.position.set(-7.5, 0.78, 0);
+    seat2.castShadow = true;
+    seat2.receiveShadow = true;
+    this.lakeGroup.add(seat2);
+
+    this.lakeInteractables.push({
+      id: 'lake_seat_2',
+      name: '坐下静赏',
+      x: -7.5,
+      y: 0.6,
+      z: 0,
+      triggerRadius: 1.5
+    });
+
+    // 8. 返回大厅传送石碑 (x = 0, z = 9.5，光幕朝向北)
+    const exitPortalGroup = new THREE.Group();
+    exitPortalGroup.position.set(0, 0.6, 9.5);
+
+    // 1. 喷泉石质双层水盆底座
+    const stoneMat = borderMat; // 天池原本的边框材质
+
+    // 下层大底座
+    const bottomBasin = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.9, 0.22, 12), stoneMat);
+    bottomBasin.position.y = 0.11;
+    bottomBasin.castShadow = true;
+    bottomBasin.receiveShadow = true;
+    exitPortalGroup.add(bottomBasin);
+
+    // 上层水盆
+    const topBasin = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.58, 0.35, 12), stoneMat);
+    topBasin.position.y = 0.38;
+    topBasin.castShadow = true;
+    topBasin.receiveShadow = true;
+    exitPortalGroup.add(topBasin);
+
+    // 2. 水盆中的积水面 (治愈半透明蓝色)
+    const poolWaterMat = new THREE.MeshBasicMaterial({
+      color: 0x00b0ff,
+      transparent: true,
+      opacity: 0.65,
+      side: THREE.DoubleSide
+    });
+    const poolWater = new THREE.Mesh(new THREE.CircleGeometry(0.64, 12), poolWaterMat);
+    poolWater.rotateX(-Math.PI / 2);
+    poolWater.position.y = 0.54;
+    exitPortalGroup.add(poolWater);
+
+    // 3. 喷水柱 (白色/青蓝色半透明涌泉效果)
+    const waterSpoutGeo = new THREE.CylinderGeometry(0.07, 0.14, 0.8, 8);
+    const waterSpoutMat = new THREE.MeshBasicMaterial({
+      color: 0xe0f7fa,
+      transparent: true,
+      opacity: 0.82
+    });
+    const waterSpout = new THREE.Mesh(waterSpoutGeo, waterSpoutMat);
+    waterSpout.position.y = 0.9;
+    exitPortalGroup.add(waterSpout);
+
+    // 4. 喷出的飞溅水滴颗粒 (Low-poly 飞溅颗粒)
+    const particleMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.07), particleMat);
+    p1.position.set(0.1, 1.25, 0.07);
+    exitPortalGroup.add(p1);
+
+    const p2 = p1.clone();
+    p2.position.set(-0.12, 1.3, -0.09);
+    exitPortalGroup.add(p2);
+
+    const p3 = p1.clone();
+    p3.position.set(0.04, 1.15, -0.13);
+    exitPortalGroup.add(p3);
+
+    // 5. 旁边歪插着的治愈系小木指示牌 (返回大厅的方向牌)
+    const signPost = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.8, 8), new THREE.MeshLambertMaterial({ color: 0x4e342e }));
+    signPost.position.set(0.9, 0.4, 0.4);
+    signPost.rotation.z = -0.15; // 稍微往另一边歪一点
+    signPost.castShadow = true;
+    exitPortalGroup.add(signPost);
+
+    const signBoard = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.16, 0.03), new THREE.MeshLambertMaterial({ color: 0x8d6e63 }));
+    signBoard.position.set(0.85, 0.72, 0.4);
+    signBoard.rotation.z = -0.15;
+    signBoard.rotation.y = -0.2;
+    signBoard.castShadow = true;
+    exitPortalGroup.add(signBoard);
+
+    // 蓝色小发光指示条
+    const signText = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.06, 0.04), new THREE.MeshBasicMaterial({ color: 0x00e5ff }));
+    signText.position.set(0.86, 0.72, 0.42);
+    signText.rotation.z = -0.15;
+    signText.rotation.y = -0.2;
+    exitPortalGroup.add(signText);
+
+    this.lakeGroup.add(exitPortalGroup);
+
+    this.lakeInteractables.push({
+      id: 'exit_house', // 复用 exit_house 交互 ID, 退出子场景
+      name: '返回海岛大厅',
+      x: 0,
+      y: 0.6,
+      z: 8.5, // 偏前位置
+      triggerRadius: 1.5
+    });
+
+    // 9. 摆放一些治愈盆景松树 (四角)
+    const treeTrunkGeo = new THREE.CylinderGeometry(0.1, 0.14, 0.8, 6);
+    const treeTrunkMat = new THREE.MeshLambertMaterial({ color: 0x4e342e });
+    const leavesGeo = new THREE.DodecahedronGeometry(0.55);
+    const leavesMat = new THREE.MeshLambertMaterial({ color: 0x2e7d32, flatShading: true });
+
+    const treePositions = [
+      { x: -9.5, z: -9.5 },
+      { x: 9.5, z: -9.5 },
+      { x: -9.5, z: 9.5 },
+      { x: 9.5, z: 9.5 }
+    ];
+
+    treePositions.forEach(pos => {
+      const tree = new THREE.Group();
+      tree.position.set(pos.x, 0.6, pos.z);
+
+      const trunk = new THREE.Mesh(treeTrunkGeo, treeTrunkMat);
+      trunk.position.y = 0.4;
+      trunk.castShadow = true;
+      tree.add(trunk);
+
+      const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+      leaves.position.y = 0.95;
+      leaves.castShadow = true;
+      tree.add(leaves);
+
+      this.lakeGroup.add(tree);
+    });
+
+    // 2D 钢琴界面琴键点击绑定
+    this.initPianoKeysEvents();
+  }
+
+  initPianoKeysEvents() {
+    const keys = document.querySelectorAll('#modal-piano .piano-key');
+    const noteFreqs = {
+      'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23,
+      'G4': 392.00, 'A4': 440.00, 'B4': 493.88, 'C5': 523.25
+    };
+
+    keys.forEach(key => {
+      // 鼠标点击弹奏
+      const playHandler = (e) => {
+        e.preventDefault();
+        const note = key.getAttribute('data-note');
+        const freq = noteFreqs[note];
+        if (freq) {
+          // 播放琴音
+          this.playCustomSound(freq, 0.8, 'sine', 0.1);
+          // 向上派发 3D 音符粒子事件
+          window.dispatchEvent(new CustomEvent('piano-note-played', { detail: { note: note } }));
+          
+          // 按键动效
+          key.classList.add('active');
+          setTimeout(() => key.classList.remove('active'), 120);
+        }
+      };
+
+      key.addEventListener('mousedown', playHandler);
+      key.addEventListener('touchstart', playHandler, { passive: false });
+    });
+
+    // 键盘按键事件绑定
+    const keyNotesMap = {
+      'a': 'C4', 's': 'D4', 'd': 'E4', 'f': 'F4',
+      'g': 'G4', 'h': 'A4', 'j': 'B4', 'k': 'C5'
+    };
+
+    const handleKeyDown = (e) => {
+      const activeModal = this.modalMgr ? this.modalMgr.modals.piano : null;
+      if (activeModal && activeModal.classList.contains('open')) {
+        const keyChar = e.key.toLowerCase();
+        const note = keyNotesMap[keyChar];
+        if (note) {
+          const keyEl = document.querySelector(`#modal-piano .piano-key[data-note="${note}"]`);
+          if (keyEl) {
+            const freq = noteFreqs[note];
+            this.playCustomSound(freq, 0.8, 'sine', 0.1);
+            window.dispatchEvent(new CustomEvent('piano-note-played', { detail: { note: note } }));
+            
+            keyEl.classList.add('active');
+            setTimeout(() => keyEl.classList.remove('active'), 120);
+          }
+        }
+      }
+    };
+
+    // 移防冲突
+    if (window._pianoKeydownHandler) {
+      window.removeEventListener('keydown', window._pianoKeydownHandler);
+    }
+    window._pianoKeydownHandler = handleKeyDown;
+    window.addEventListener('keydown', handleKeyDown);
+
+    // 绑定起立离开按钮
+    const btnExitSitting = document.getElementById('btn-exit-sitting');
+    if (btnExitSitting) {
+      btnExitSitting.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (this.player) {
+          if (this.player.isSitting || this.player.isLyingDown) {
+            this.player.standUp();
+          }
+        }
+      });
+    }
+  }
+
+  // 3D 发光金色音符粒子
+  spawnNoteParticle(note) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    
+    // 金色发光音符
+    ctx.fillStyle = '#ffd700'; 
+    ctx.font = 'bold 44px Outfit, "Noto Sans SC", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    const symbols = ['🎵', '🎶', '楽', '✨', '♩', '♩'];
+    const sym = symbols[Math.floor(Math.random() * symbols.length)];
+    ctx.fillText(sym, 32, 32);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const spriteMat = new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      opacity: 0.95,
+      blending: THREE.AdditiveBlending // 极佳的发光质感
+    });
+    
+    const sprite = new THREE.Sprite(spriteMat);
+    // 从钢琴凳子和键盘中央上方抛出 (钢琴中心 x = 0, y = 0.6, z = -8.0)
+    const px = (Math.random() - 0.5) * 0.9;
+    const pz = -7.5 + (Math.random() - 0.5) * 0.3;
+    sprite.position.set(px, 1.45, pz);
+    
+    // 随机缩放
+    const scale = 0.32 + Math.random() * 0.16;
+    sprite.scale.set(scale, scale, scale);
+    this.lakeGroup.add(sprite);
+
+    this.noteParticles.push({
+      sprite: sprite,
+      texture: texture,
+      material: spriteMat,
+      velocity: new THREE.Vector3(
+        (Math.random() - 0.5) * 0.7, // 左右扩散
+        1.1 + Math.random() * 0.7,   // 向上漂移
+        (Math.random() - 0.5) * 0.5  // 前后扩散
+      ),
+      age: 0,
+      maxAge: 1.6 + Math.random() * 0.8
+    });
+  }
+
+  // 碗碰撞声音合成器 (空灵磬钟声)
+  playBowlCollisionSound(pos, intensity) {
+    const now = Date.now();
+    // 节流阀：0.08秒内限响一次，防止大量重叠声音刺耳
+    if (now - this.lastBowlSoundTime < 80) return;
+    this.lastBowlSoundTime = now;
+
+    // 清脆的五声音阶频率 (C5, D5, E5, G5, A5, C6, D6, E6)
+    const frequencies = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66, 1318.51];
+    const baseFreq = frequencies[Math.floor(Math.random() * frequencies.length)];
+    
+    // Web Audio 实时声学合成
+    try {
+      if (!window.audioCtx) {
+        window.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (window.audioCtx.state === 'suspended') {
+        window.audioCtx.resume();
+      }
+      
+      const currentTime = window.audioCtx.currentTime;
+      const duration = 0.75 * Math.min(intensity, 1.2);
+      const mainVolume = 0.05 * Math.min(intensity, 1.2);
+
+      // 1. 主音 Sine
+      const osc1 = window.audioCtx.createOscillator();
+      const gain1 = window.audioCtx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(baseFreq, currentTime);
+      gain1.gain.setValueAtTime(mainVolume, currentTime);
+      // 指数快速衰减，制造清脆敲击感
+      gain1.gain.exponentialRampToValueAtTime(0.0001, currentTime + duration);
+      osc1.connect(gain1);
+      gain1.connect(window.audioCtx.destination);
+      osc1.start();
+      osc1.stop(currentTime + duration);
+
+      // 2. 泛音 Sine (频率为 1.5 倍)
+      const osc2 = window.audioCtx.createOscillator();
+      const gain2 = window.audioCtx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(baseFreq * 1.5, currentTime);
+      gain2.gain.setValueAtTime(mainVolume * 0.28, currentTime);
+      gain2.gain.exponentialRampToValueAtTime(0.0001, currentTime + 0.25);
+      osc2.connect(gain2);
+      gain2.connect(window.audioCtx.destination);
+      osc2.start();
+      osc2.stop(currentTime + 0.25);
+
+      // 3. 高次泛音 (频率为 2.0 倍)
+      const osc3 = window.audioCtx.createOscillator();
+      const gain3 = window.audioCtx.createGain();
+      osc3.type = 'sine';
+      osc3.frequency.setValueAtTime(baseFreq * 2.0, currentTime);
+      gain3.gain.setValueAtTime(mainVolume * 0.15, currentTime);
+      gain3.gain.exponentialRampToValueAtTime(0.0001, currentTime + 0.18);
+      osc3.connect(gain3);
+      gain3.connect(window.audioCtx.destination);
+      osc3.start();
+      osc3.stop(currentTime + 0.18);
+
+    } catch (e) {
+      console.warn('[音效] 白瓷碗磬钟音效合成失败:', e);
+    }
+  }
+
+  // 产生波纹涟漪
+  createRipple(x, y, z) {
+    // 初始半径极小 0.08
+    const rippleGeo = new THREE.RingGeometry(0.06, 0.09, 32);
+    rippleGeo.rotateX(-Math.PI / 2); // 贴平湖面
+    
+    const rippleMat = new THREE.MeshBasicMaterial({
+      color: 0x80deea, // 浅青色波纹
+      transparent: true,
+      opacity: 0.48,
+      side: THREE.DoubleSide
+    });
+
+    const rippleMesh = new THREE.Mesh(rippleGeo, rippleMat);
+    rippleMesh.position.set(x, y, z);
+    this.lakeGroup.add(rippleMesh);
+
+    this.ripplesList.push({
+      mesh: rippleMesh,
+      geometry: rippleGeo,
+      material: rippleMat,
+      size: 0.08,
+      maxSize: 1.4 + Math.random() * 0.6,
+      speed: 1.1,
+      maxOpacity: 0.5
+    });
+  }
+
+  // 天池每一帧的物理及动画模拟
+  updateLakeFrame(dt, time) {
+    if (!this.player) return;
+
+    // 1. 玩家进入水池的“涉水与踩水波纹”逻辑
+    const playerX = this.player.position.x;
+    const playerZ = this.player.position.z;
+    const playerDist = Math.sqrt(playerX * playerX + playerZ * playerZ);
+
+    if (playerDist < 6.0 && !this.player.isSitting) {
+      // 在池塘中，强制下沉没入水中 (Y = 0.52)
+      this.player.position.y = 0.52;
+      this.player.velocity.y = 0;
+      this.player.isGrounded = true;
+
+      // 玩家走动时，按运动幅度生成涉水小涟漪
+      const keysPressed = this.player.keys.w || this.player.keys.s || this.player.keys.a || this.player.keys.d || 
+                           (window.joystickDir && (window.joystickDir.x !== 0 || window.joystickDir.y !== 0));
+      if (keysPressed) {
+        const now = Date.now();
+        // 涉水脚下泛水花节流：每 0.32秒产生一次小脚印涟漪
+        if (now - this.lastWaterStepTime > 320) {
+          this.createRipple(playerX, 0.612, playerZ);
+          this.lastWaterStepTime = now;
+          // 播放小声的涉水踩水音效 (低音 Sine)
+          this.playCustomSound(120, 0.18, 'sine', 0.03);
+        }
+      }
+
+      // 2. 玩家推动漂浮瓷碗物理碰撞
+      this.bowlsList.forEach(bowl => {
+        const dx = bowl.position.x - playerX;
+        const dz = bowl.position.z - playerZ;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        const touchRadius = 0.82; // 玩家碰撞 0.4 + 碗半径 0.42
+        
+        if (dist < touchRadius) {
+          // 法线碰撞方向 (玩家往外推碗)
+          const nx = dist > 0 ? dx / dist : 1;
+          const nz = dist > 0 ? dz / dist : 0;
+          
+          // 给碗施加冲量速度
+          const pushForce = 1.35;
+          bowl.velocity.x += nx * pushForce;
+          bowl.velocity.z += nz * pushForce;
+          
+          // 速度封顶，防止推飞
+          const speed = bowl.velocity.length();
+          if (speed > 2.2) {
+            bowl.velocity.normalize().multiplyScalar(2.2);
+          }
+
+          // 防止玩家跟碗发生物理穿插，强行把碗推回碰撞边界外
+          bowl.position.x = playerX + nx * 0.83;
+          bowl.position.z = playerZ + nz * 0.83;
+
+          // 触发碰撞发声与涟漪
+          this.playBowlCollisionSound(bowl.position, 1.1);
+          this.createRipple(bowl.position.x, 0.612, bowl.position.z);
+        }
+      });
+    }
+
+    // 3. 玩家小岛边缘防坠落阻挡 (高空浮岛，外边缘半径 11.8 阻挡)
+    if (playerDist > 11.8) {
+      const nx = playerX / playerDist;
+      const nz = playerZ / playerDist;
+      this.player.position.x = nx * 11.8;
+      this.player.position.z = nz * 11.8;
+      this.player.group.position.copy(this.player.position);
+      this.player.velocity.set(0, 0, 0);
+    }
+
+    // 4. 漂浮白瓷碗自身轨迹与两两弹性碰撞
+    this.bowlsList.forEach(bowl => {
+      // 物理位移
+      bowl.position.x += bowl.velocity.x * dt;
+      bowl.position.z += bowl.velocity.z * dt;
+
+      // 缓慢的水流粘滞阻力，使速度衰减
+      bowl.velocity.multiplyScalar(0.982);
+
+      // 微弱的随机背景风阻/洋流力，使其保持缓慢漫游状态
+      bowl.velocity.x += (Math.random() - 0.5) * 0.08 * dt;
+      bowl.velocity.z += (Math.random() - 0.5) * 0.08 * dt;
+
+      // 碗在水面上的三维起伏与微晃动画
+      bowl.position.y = 0.61 + Math.sin(time * 0.0022 + bowl.phase) * 0.018;
+      bowl.rotation.x = Math.sin(time * 0.0018 + bowl.phase) * 0.038;
+      bowl.rotation.z = Math.cos(time * 0.0024 + bowl.phase) * 0.038;
+
+      // 池塘圆形水池物理边界碰撞反弹 (池塘半径 6.0，碗安全限制 5.58)
+      const bowlDist = Math.sqrt(bowl.position.x * bowl.position.x + bowl.position.z * bowl.position.z);
+      if (bowlDist > 5.58) {
+        const nx = bowl.position.x / bowlDist;
+        const nz = bowl.position.z / bowlDist;
+        // 二维速度反弹
+        const dot = bowl.velocity.x * nx + bowl.velocity.z * nz;
+        bowl.velocity.x -= 2 * dot * nx;
+        bowl.velocity.z -= 2 * dot * nz;
+        
+        // 推回安全区域，防卡出界
+        bowl.position.x = nx * 5.56;
+        bowl.position.z = nz * 5.56;
+
+        // 碰壁发声并起涟漪
+        this.playBowlCollisionSound(bowl.position, 0.45);
+        this.createRipple(bowl.position.x, 0.612, bowl.position.z);
+      }
+    });
+
+    // 5. 碗与碗之间的弹性碰撞检测
+    for (let i = 0; i < this.bowlsList.length; i++) {
+      for (let j = i + 1; j < this.bowlsList.length; j++) {
+        const b1 = this.bowlsList[i];
+        const b2 = this.bowlsList[j];
+        
+        const dx = b2.position.x - b1.position.x;
+        const dz = b2.position.z - b1.position.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        const minDist = 0.84; // 碗直径大约 0.84
+
+        if (dist < minDist) {
+          // 弹性反弹计算
+          const nx = dx / dist;
+          const nz = dz / dist;
+          
+          // 沿碰撞法线的相对速度
+          const rvx = b2.velocity.x - b1.velocity.x;
+          const rvz = b2.velocity.z - b1.velocity.z;
+          const velAlongNormal = rvx * nx + rvz * nz;
+
+          if (velAlongNormal < 0) { // 正在相互靠拢才进行反弹
+            const impulse = -1.05 * velAlongNormal; // 稍加一点能量系数
+            b1.velocity.x -= impulse * nx * 0.5;
+            b1.velocity.z -= impulse * nz * 0.5;
+            b2.velocity.x += impulse * nx * 0.5;
+            b2.velocity.z += impulse * nz * 0.5;
+          }
+
+          // 强制拉开，防止粘连
+          const overlap = minDist - dist;
+          b1.position.x -= nx * overlap * 0.5;
+          b1.position.z -= nz * overlap * 0.5;
+          b2.position.x += nx * overlap * 0.5;
+          b2.position.z += nz * overlap * 0.5;
+
+          // 计算碰撞中点并产生发音和水波纹
+          const cx = (b1.position.x + b2.position.x) / 2;
+          const cz = (b1.position.z + b2.position.z) / 2;
+          this.playBowlCollisionSound(new THREE.Vector3(cx, 0.61, cz), 1.0);
+          this.createRipple(cx, 0.612, cz);
+        }
+      }
+    }
+
+    // 6. 更新并缩小水面波纹涟漪
+    for (let i = this.ripplesList.length - 1; i >= 0; i--) {
+      const r = this.ripplesList[i];
+      r.size += r.speed * dt;
+      r.mesh.scale.set(r.size * 10, 1, r.size * 10);
+      r.material.opacity = r.maxOpacity * (1 - r.size / r.maxSize);
+
+      if (r.size >= r.maxSize) {
+        this.lakeGroup.remove(r.mesh);
+        r.geometry.dispose();
+        r.material.dispose();
+        this.ripplesList.splice(i, 1);
+      }
+    }
+
+    // 7. 更新飘动的金色发光音符粒子
+    for (let i = this.noteParticles.length - 1; i >= 0; i--) {
+      const p = this.noteParticles[i];
+      p.age += dt;
+      // 飘动位移
+      p.sprite.position.addScaledVector(p.velocity, dt);
+      // 正弦风阻晃动
+      p.sprite.position.x += Math.sin(p.age * 6.0) * 0.012;
+      
+      const pct = p.age / p.maxAge;
+      p.material.opacity = 0.95 * (1 - pct);
+      
+      // 缩小
+      const sc = (0.32 + Math.sin(p.age * 2.0) * 0.05) * (1 - pct * 0.4);
+      p.sprite.scale.set(sc, sc, sc);
+
+      if (p.age >= p.maxAge) {
+        this.lakeGroup.remove(p.sprite);
+        p.texture.dispose();
+        p.material.dispose();
+        this.noteParticles.splice(i, 1);
+      }
+    }
+  }
+
+  buildCastlePlatform() {
+    this.castleGroup.clear();
+    this.castleColliders = [
+      // 整个草地基盘物理碰撞体，Y = 0.6，半径 24
+      { type: 'floor', worldX: 0, worldZ: 0, worldY: 0.6, radius: 24.0 }
+    ];
+    this.castleInteractables = [];
+    this.sakuraList = [];
+    this.castleRipples = [];
+    this.lastCastleWaterStepTime = 0;
+
+    // --- 材质与颜色定义 ---
+    const wallColor = 0xff85a1; // 芭比粉外墙
+    const trimColor = 0xffffff; // 白色装饰与柱子
+    const roofColor = 0xb71c1c; // 西班牙红瓦顶
+    const grassColor = 0x81c784; // 翠绿草坪
+    const roadColor = 0xd7ccc8; // 温暖沙石色车道
+    const poolColor = 0xff4d6d; // 泳池粉红底
+    const waterColor = 0x80deea; // 清凉水蓝色
+    const heartPinkMat = new THREE.MeshBasicMaterial({ color: 0xff4081 });
+    const tilePink = new THREE.MeshLambertMaterial({ color: 0xffb3c6, flatShading: true });
+    const tileWhite = new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true });
+    
+    const wallMat = new THREE.MeshLambertMaterial({ color: wallColor, flatShading: true });
+    const trimMat = new THREE.MeshLambertMaterial({ color: trimColor, flatShading: true });
+    const roofMat = new THREE.MeshLambertMaterial({ color: roofColor, flatShading: true });
+    const grassMat = new THREE.MeshLambertMaterial({ color: grassColor, flatShading: true });
+    const roadMat = new THREE.MeshLambertMaterial({ color: roadColor, flatShading: true });
+    const poolMat = new THREE.MeshLambertMaterial({ color: poolColor, flatShading: true });
+    const waterMat = new THREE.MeshBasicMaterial({ color: waterColor, transparent: true, opacity: 0.65, side: THREE.DoubleSide });
+    const glassMat = new THREE.MeshLambertMaterial({ color: 0x80deea, transparent: true, opacity: 0.7, flatShading: true });
+    
+    // 长拱窗内发光材质
+    const windowLightMat = new THREE.MeshLambertMaterial({
+      color: 0xe0f7fa,
+      emissive: 0x80deea,
+      emissiveIntensity: 0.4,
+      transparent: true,
+      opacity: 0.9,
+      flatShading: true
+    });
+    const barkMat = new THREE.MeshLambertMaterial({ color: 0x5d4037, flatShading: true }); // 树干棕
+    const leafMat = new THREE.MeshLambertMaterial({ color: 0x2e7d32, flatShading: true }); // 树叶深绿
+    const coconutMat = new THREE.MeshLambertMaterial({ color: 0x8d6e63, flatShading: true }); // 椰子
+
+    // =========================================================================
+    // 1. 宽广庭院绿地基座 (33x33) 与粉色泥土底座
+    // =========================================================================
+    const baseWidth = 33.0;
+    const baseDepth = 33.0;
+    const halfW = baseWidth / 2 - 0.3;
+    const halfD = baseDepth / 2 - 0.3;
+    
+    // 绿色草坪顶盖 Y=0.60
+    const lawn = new THREE.Mesh(new THREE.BoxGeometry(baseWidth, 1.2, baseDepth), grassMat);
+    lawn.position.set(0, 0, 0); // 顶面正好在 Y = 0.6
+    lawn.receiveShadow = true;
+    lawn.castShadow = true;
+    this.castleGroup.add(lawn);
+
+    // 紫色底泥土 (厚度 2.2)
+    const dirt = new THREE.Mesh(new THREE.BoxGeometry(baseWidth - 0.2, 2.2, baseDepth - 0.2), new THREE.MeshLambertMaterial({ color: 0x9c27b0, flatShading: true }));
+    dirt.position.set(0, -1.7, 0);
+    this.castleGroup.add(dirt);
+
+    // =========================================================================
+    // 2. 欧式粉白铁艺围栏
+    // =========================================================================
+    const fenceHeight = 0.8;
+    const pillarGeo = new THREE.CylinderGeometry(0.16, 0.16, fenceHeight + 0.2, 8);
+
+    const drawFenceLine = (x1, z1, x2, z2, step = 2.2) => {
+      const dx = x2 - x1;
+      const dz = z2 - z1;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      const count = Math.round(dist / step);
+      
+      const posts = [];
+      for (let i = 0; i <= count; i++) {
+        const t = i / count;
+        const px = x1 + dx * t;
+        const pz = z1 + dz * t;
+        
+        // 南侧开口在大门开口内 (-4 到 4)，则跳过柱子
+        if (Math.abs(pz - halfD) < 0.5 && Math.abs(px) < 4.0) {
+          continue;
+        }
+
+        const p = new THREE.Mesh(pillarGeo, trimMat);
+        p.position.set(px, 0.6 + (fenceHeight + 0.2) / 2, pz);
+        p.castShadow = true;
+        this.castleGroup.add(p);
+        posts.push({ x: px, z: pz });
+      }
+
+      for (let i = 0; i < posts.length - 1; i++) {
+        const pA = posts[i];
+        const pB = posts[i + 1];
+        
+        const gap = Math.sqrt((pB.x - pA.x) * (pB.x - pA.x) + (pB.z - pA.z) * (pB.z - pA.z));
+        if (gap > step * 1.5) continue; // 跳过大门开口
+
+        const mx = (pA.x + pB.x) / 2;
+        const mz = (pA.z + pB.z) / 2;
+        const angle = Math.atan2(pB.z - pA.z, pB.x - pA.x);
+
+        const rGroup = new THREE.Group();
+        rGroup.position.set(mx, 0.6 + fenceHeight / 2, mz);
+        rGroup.rotation.y = -angle;
+
+        const segRailGeo = new THREE.BoxGeometry(gap - 0.1, 0.05, 0.05);
+        
+        const rail1 = new THREE.Mesh(segRailGeo, tilePink);
+        rail1.position.set(0, 0.16, 0);
+        rGroup.add(rail1);
+
+        const rail2 = new THREE.Mesh(segRailGeo, tilePink);
+        rail2.position.set(0, -0.16, 0);
+        rGroup.add(rail2);
+
+        // 中间的心形花纹
+        const heartDeco = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.24, 6), heartPinkMat);
+        heartDeco.rotation.x = Math.PI;
+        heartDeco.position.set(0, 0, 0);
+        rGroup.add(heartDeco);
+
+        this.castleGroup.add(rGroup);
+      }
+    };
+
+    drawFenceLine(-halfW, -halfD, halfW, -halfD, 2.2); // 北侧
+    drawFenceLine(-halfW, -halfD, -halfW, halfD, 2.2); // 左侧
+    drawFenceLine(halfW, -halfD, halfW, halfD, 2.2);  // 右侧
+    drawFenceLine(-halfW, halfD, halfW, halfD, 2.2);  // 南侧
+
+    // =========================================================================
+    // 3. 前院环形车道 (Arched Driveway) 与叠水喷泉 (Central Fountain)
+    // =========================================================================
+    const fountainX = 0;
+    const fountainZ = 4.5;
+
+    // 环形车道路面
+    const roadRingGeo = new THREE.RingGeometry(4.8, 7.8, 32);
+    roadRingGeo.rotateX(-Math.PI / 2);
+    const roadRing = new THREE.Mesh(roadRingGeo, roadMat);
+    roadRing.position.set(fountainX, 0.605, fountainZ);
+    roadRing.receiveShadow = true;
+    this.castleGroup.add(roadRing);
+
+    // 直通道连向南边入口
+    const roadStraight = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.01, 9.0), roadMat);
+    roadStraight.position.set(0, 0.605, fountainZ + 6.3);
+    roadStraight.receiveShadow = true;
+    this.castleGroup.add(roadStraight);
+
+    // 大门廊连接车道
+    const porchConnectRoad = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.01, 3.5), roadMat);
+    porchConnectRoad.position.set(-2.5, 0.605, 0.0);
+    porchConnectRoad.receiveShadow = true;
+    this.castleGroup.add(porchConnectRoad);
+
+    // 车库连接车道 (斜向弯道)
+    const garageConnectRoad = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.01, 5.0), roadMat);
+    garageConnectRoad.position.set(6.5, 0.605, 0.5);
+    garageConnectRoad.rotation.y = -Math.PI / 6;
+    garageConnectRoad.receiveShadow = true;
+    this.castleGroup.add(garageConnectRoad);
+
+    // 中央叠水大喷泉
+    const fountainGroup = new THREE.Group();
+    fountainGroup.position.set(fountainX, 0.6, fountainZ);
+
+    const fBasin1 = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.4, 0.35, 16), trimMat);
+    fBasin1.position.y = 0.175;
+    fBasin1.castShadow = true;
+    fBasin1.receiveShadow = true;
+    fountainGroup.add(fBasin1);
+
+    const fWater = new THREE.Mesh(new THREE.CylinderGeometry(2.0, 2.0, 0.05, 16), waterMat);
+    fWater.position.y = 0.28;
+    fountainGroup.add(fWater);
+
+    const fPillar = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 1.2, 8), trimMat);
+    fPillar.position.y = 0.7;
+    fPillar.castShadow = true;
+    fountainGroup.add(fPillar);
+
+    const fBasin2 = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.3, 0.25, 12), trimMat);
+    fBasin2.position.y = 1.325;
+    fBasin2.castShadow = true;
+    fountainGroup.add(fBasin2);
+
+    const fSpout = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, 0.4, 8), trimMat);
+    fSpout.position.y = 1.6;
+    fountainGroup.add(fSpout);
+
+    const waterSpoutMat = new THREE.MeshBasicMaterial({ color: 0xfff0f3, transparent: true, opacity: 0.75 });
+    for (let i = 0; i < 8; i++) {
+      const angle = (i * Math.PI * 2) / 8;
+      const arcGroup = new THREE.Group();
+      arcGroup.rotation.y = angle;
+      arcGroup.position.set(0, 1.6, 0);
+
+      const wSeg1 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.6, 6), waterSpoutMat);
+      wSeg1.rotation.z = -0.4;
+      wSeg1.position.set(0.15, 0.25, 0);
+      arcGroup.add(wSeg1);
+
+      const wSeg2 = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 1.2, 6), waterSpoutMat);
+      wSeg2.rotation.z = -1.1;
+      wSeg2.position.set(0.85, 0.05, 0);
+      arcGroup.add(wSeg2);
+
+      fountainGroup.add(arcGroup);
+    }
+    
+    const fLight = new THREE.PointLight(0x80deea, 1.5, 4.0);
+    fLight.position.set(0, 1.8, 0);
+    fountainGroup.add(fLight);
+
+    const particleMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    for (let i = 0; i < 8; i++) {
+      const p = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.08), particleMat);
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 0.6 + Math.random() * 1.3;
+      p.position.set(Math.cos(angle) * radius, 1.0 + Math.random() * 0.9, Math.sin(angle) * radius);
+      fountainGroup.add(p);
+    }
+
+    this.castleGroup.add(fountainGroup);
+
+    this.castleInteractables.push({
+      id: 'exit_portal',
+      name: '返航传送泉 (传送回海岛)',
+      x: fountainX,
+      y: 0.6,
+      z: fountainZ,
+      triggerRadius: 2.2
+    });
+
+    // =========================================================================
+    // 4. 3D 热带椰子树生成
+    // =========================================================================
+    const createPalmTree = (tx, tz, treeScale = 1.0) => {
+      const tree = new THREE.Group();
+      tree.position.set(tx, 0.6, tz);
+      tree.scale.set(treeScale, treeScale, treeScale);
+
+      let currentY = 0;
+      let currentX = 0;
+      let currentZ = 0;
+      const trunkSegments = 6;
+      const segHeight = 1.0;
+      
+      for (let i = 0; i < trunkSegments; i++) {
+        const segGeo = new THREE.CylinderGeometry(0.18 - i * 0.018, 0.22 - i * 0.018, segHeight, 8);
+        const seg = new THREE.Mesh(segGeo, barkMat);
+        
+        seg.position.set(currentX, currentY + segHeight / 2, currentZ);
+        const tiltX = tx > 0 ? 0.07 : -0.07;
+        const tiltZ = tz > 0 ? 0.07 : -0.07;
+        seg.rotation.set(tiltZ * (i + 1), 0, -tiltX * (i + 1));
+        
+        seg.castShadow = true;
+        tree.add(seg);
+
+        currentY += segHeight - 0.06;
+        currentX += Math.sin(-tiltX * (i + 1)) * segHeight;
+        currentZ += Math.sin(tiltZ * (i + 1)) * segHeight;
+      }
+
+      const leafCenterY = currentY;
+      const leafCenterX = currentX;
+      const leafCenterZ = currentZ;
+
+      const leafCount = 8;
+      for (let l = 0; l < leafCount; l++) {
+        const angle = (l * Math.PI * 2) / leafCount;
+        const leafGroup = new THREE.Group();
+        leafGroup.position.set(leafCenterX, leafCenterY, leafCenterZ);
+        leafGroup.rotation.y = angle;
+
+        let lx = 0;
+        let ly = 0;
+        const sW = 0.26;
+        
+        const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.02, sW), leafMat);
+        s1.rotation.z = 0.42;
+        s1.rotation.x = (l % 2 === 0 ? 0.15 : -0.15);
+        s1.position.set(0.36, 0.12, 0);
+        s1.castShadow = true;
+        leafGroup.add(s1);
+        lx += Math.cos(0.42) * 0.8;
+        ly += Math.sin(0.42) * 0.8;
+
+        const s2 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.02, sW - 0.04), leafMat);
+        s2.rotation.z = -0.18;
+        s2.rotation.x = (l % 2 === 0 ? 0.1 : -0.1);
+        s2.position.set(lx + 0.38, ly - 0.04, 0);
+        s2.castShadow = true;
+        leafGroup.add(s2);
+        lx += Math.cos(-0.18) * 0.8;
+        ly += Math.sin(-0.18) * 0.8;
+
+        const s3 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.02, sW - 0.08), leafMat);
+        s3.rotation.z = -0.85;
+        s3.position.set(lx + 0.32, ly - 0.28, 0);
+        s3.castShadow = true;
+        leafGroup.add(s3);
+
+        tree.add(leafGroup);
+      }
+
+      for (let c = 0; c < 3; c++) {
+        const coco = new THREE.Mesh(new THREE.SphereGeometry(0.18, 6, 6), coconutMat);
+        const ca = (c * Math.PI * 2) / 3;
+        coco.position.set(leafCenterX + Math.cos(ca) * 0.24, leafCenterY - 0.15, leafCenterZ + Math.sin(ca) * 0.24);
+        tree.add(coco);
+      }
+
+      this.castleGroup.add(tree);
+    };
+
+    createPalmTree(-14.0, 9.0, 1.15);
+    createPalmTree(14.0, 9.0, 1.15);
+    createPalmTree(-15.0, -1.0, 1.1);
+    createPalmTree(15.0, -1.0, 1.1);
+    createPalmTree(-13.0, -12.0, 1.0);
+    createPalmTree(13.0, -12.0, 1.0);
+
+    // =========================================================================
+    // 5. 模块化构建多房间城堡主体 (西班牙巴洛克风格)
+    // =========================================================================
+    const mZ = -7.5;
+    const f1Height = 4.2;
+    const secondFloorY = 0.6 + f1Height; // 二楼地面 Y = 4.8
+
+    // 辅助函数：创建高品质欧式窗户
+    const createArchWindow = (parentGroup, wx, wy, wz, rotY = 0) => {
+      const wGroup = new THREE.Group();
+      wGroup.position.set(wx, wy, wz);
+      wGroup.rotation.y = rotY;
+
+      // 白色窗框 (带圆角拱门框效果)
+      const frameMain = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.7, 0.25), trimMat);
+      frameMain.castShadow = true;
+      wGroup.add(frameMain);
+
+      const frameTopArch = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.65, 0.25, 10, 1, false, 0, Math.PI), trimMat);
+      frameTopArch.rotation.x = Math.PI / 2;
+      frameTopArch.position.y = 0.85;
+      frameTopArch.castShadow = true;
+      wGroup.add(frameTopArch);
+
+      // 发光拱形玻璃
+      const glass = new THREE.Mesh(new THREE.BoxGeometry(1.05, 1.45, 0.12), windowLightMat);
+      glass.position.y = 0.05;
+      wGroup.add(glass);
+
+      // 窗沿托石
+      const sill = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.1, 0.35), trimMat);
+      sill.position.y = -0.9;
+      sill.position.z = 0.05;
+      sill.castShadow = true;
+      wGroup.add(sill);
+
+      parentGroup.add(wGroup);
+    };
+
+    // --- 5.1 中央大厅 (Central Hall - 一楼) ---
+    const hallWidth = 6.0;
+    const hallDepth = 7.5;
+    const hallX = -2.5;
+
+    const hallGroup = new THREE.Group();
+    hallGroup.position.set(hallX, 0.6, mZ);
+    this.castleGroup.add(hallGroup);
+
+    // 地板与物理碰撞
+    const hallFloor = new THREE.Mesh(new THREE.BoxGeometry(hallWidth, 0.12, hallDepth), tileWhite);
+    hallFloor.position.y = 0.06;
+    hallFloor.receiveShadow = true;
+    hallFloor.castShadow = true;
+    hallGroup.add(hallFloor);
+
+    this.castleColliders.push({
+      type: 'floor',
+      worldX: hallX,
+      worldZ: mZ,
+      worldY: 0.72,
+      radius: hallWidth / 2 + 1.0
+    });
+
+    // 墙壁
+    const hallBackWall = new THREE.Mesh(new THREE.BoxGeometry(hallWidth, f1Height, 0.3), wallMat);
+    hallBackWall.position.set(0, f1Height / 2, -hallDepth / 2 + 0.15);
+    hallBackWall.castShadow = true;
+    hallGroup.add(hallBackWall);
+
+    const hallFrontWallL = new THREE.Mesh(new THREE.BoxGeometry(1.8, f1Height, 0.3), wallMat);
+    hallFrontWallL.position.set(-hallWidth / 2 + 0.9, f1Height / 2, hallDepth / 2 - 0.15);
+    hallFrontWallL.castShadow = true;
+    hallGroup.add(hallFrontWallL);
+
+    const hallFrontWallR = new THREE.Mesh(new THREE.BoxGeometry(1.8, f1Height, 0.3), wallMat);
+    hallFrontWallR.position.set(hallWidth / 2 - 0.9, f1Height / 2, hallDepth / 2 - 0.15);
+    hallFrontWallR.castShadow = true;
+    hallGroup.add(hallFrontWallR);
+
+    // --- 5.2 大门廊 (Entry Porch - 一楼大门入口) ---
+    // 正大门设在中央大厅前方 (z 轴突出，x 轴对齐大厅中心)
+    const porchWidth = 2.4;
+    const porchDepth = 1.6;
+    const porchX = hallX;
+    const porchZ = mZ + hallDepth / 2; // -3.75
+
+    const porchGroup = new THREE.Group();
+    porchGroup.position.set(porchX, 0.6, porchZ);
+    this.castleGroup.add(porchGroup);
+
+    // 两侧的双立柱 (每侧 2 根圆柱)
+    const colR = 0.12;
+    const colH = f1Height;
+    const colGeo = new THREE.CylinderGeometry(colR, colR * 1.2, colH, 12);
+    
+    // 左侧罗马柱对
+    const colL1 = new THREE.Mesh(colGeo, trimMat);
+    colL1.position.set(-porchWidth / 2 - 0.1, colH / 2, porchDepth - 0.3);
+    colL1.castShadow = true;
+    porchGroup.add(colL1);
+
+    const colL2 = colL1.clone();
+    colL2.position.z -= 0.45;
+    porchGroup.add(colL2);
+
+    // 右侧罗马柱对
+    const colR1 = new THREE.Mesh(colGeo, trimMat);
+    colR1.position.set(porchWidth / 2 + 0.1, colH / 2, porchDepth - 0.3);
+    colR1.castShadow = true;
+    porchGroup.add(colR1);
+
+    const colR2 = colR1.clone();
+    colR2.position.z -= 0.45;
+    porchGroup.add(colR2);
+
+    // 柱头白色方帽
+    const capGeo = new THREE.BoxGeometry(0.38, 0.12, 0.85);
+    const capL = new THREE.Mesh(capGeo, trimMat);
+    capL.position.set(-porchWidth / 2 - 0.1, colH - 0.06, porchDepth - 0.52);
+    porchGroup.add(capL);
+
+    const capR = capL.clone();
+    capR.position.x = porchWidth / 2 + 0.1;
+    porchGroup.add(capR);
+
+    // 拱门大梁 (带有雕花装饰感觉)
+    const porchArchBeam = new THREE.Mesh(new THREE.BoxGeometry(porchWidth + 0.6, 0.45, 1.2), trimMat);
+    porchArchBeam.position.set(0, colH + 0.225, porchDepth - 0.52);
+    porchArchBeam.castShadow = true;
+    porchGroup.add(porchArchBeam);
+
+    // 门廊斜瓦屋顶 (西班牙红瓦)
+    const porchRoof = new THREE.Mesh(new THREE.BoxGeometry(porchWidth + 0.8, 0.18, 1.4), roofMat);
+    porchRoof.rotation.x = 0.22;
+    porchRoof.position.set(0, colH + 0.48, porchDepth - 0.42);
+    porchRoof.castShadow = true;
+    porchGroup.add(porchRoof);
+
+    // 挑高大门 (粉色木门，镶嵌金色包边)
+    const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(2.4, 3.2, 0.22), trimMat);
+    doorFrame.position.set(0, 1.6, -0.05);
+    porchGroup.add(doorFrame);
+
+    const f1Door = new THREE.Mesh(new THREE.BoxGeometry(2.0, 3.0, 0.12), tilePink);
+    f1Door.position.set(0, 1.5, -0.05);
+    f1Door.castShadow = true;
+    porchGroup.add(f1Door);
+    
+    // 金色门拉手
+    const handleL = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), new THREE.MeshLambertMaterial({ color: 0xffd700 }));
+    handleL.position.set(-0.1, 1.45, 0.05);
+    porchGroup.add(handleL);
+    const handleR = handleL.clone();
+    handleR.position.x = 0.1;
+    porchGroup.add(handleR);
+
+    // --- 5.3 左翼起居室与起伏露台 (Left Wing & Terrace - 一楼) ---
+    const leftWingWidth = 5.0;
+    const leftWingDepth = 7.5;
+    const leftWingX = -8.0;
+
+    const leftWingGroup = new THREE.Group();
+    leftWingGroup.position.set(leftWingX, 0.6, mZ);
+    this.castleGroup.add(leftWingGroup);
+
+    // 一层左翼地板与物理碰撞
+    const leftWingFloor = new THREE.Mesh(new THREE.BoxGeometry(leftWingWidth, 0.12, leftWingDepth), tileWhite);
+    leftWingFloor.position.y = 0.06;
+    leftWingFloor.receiveShadow = true;
+    leftWingFloor.castShadow = true;
+    leftWingGroup.add(leftWingFloor);
+
+    this.castleColliders.push({
+      type: 'floor',
+      worldX: leftWingX,
+      worldZ: mZ,
+      worldY: 0.72,
+      radius: leftWingWidth / 2 + 0.5
+    });
+
+    // 左翼一楼外墙
+    const f1LeftWall = new THREE.Mesh(new THREE.BoxGeometry(0.3, f1Height, leftWingDepth), wallMat);
+    f1LeftWall.position.set(-leftWingWidth / 2 + 0.15, f1Height / 2, 0);
+    f1LeftWall.castShadow = true;
+    leftWingGroup.add(f1LeftWall);
+
+    const f1LeftBackWall = new THREE.Mesh(new THREE.BoxGeometry(leftWingWidth, f1Height, 0.3), wallMat);
+    f1LeftBackWall.position.set(0, f1Height / 2, -leftWingDepth / 2 + 0.15);
+    f1LeftBackWall.castShadow = true;
+    leftWingGroup.add(f1LeftBackWall);
+
+    const f1LeftFrontWall = new THREE.Mesh(new THREE.BoxGeometry(leftWingWidth, f1Height, 0.3), wallMat);
+    f1LeftFrontWall.position.set(0, f1Height / 2, leftWingDepth / 2 - 0.15);
+    f1LeftFrontWall.castShadow = true;
+    leftWingGroup.add(f1LeftFrontWall);
+
+    // 左翼前墙和左侧墙开大拱窗
+    createArchWindow(leftWingGroup, 0, f1Height / 2 + 0.2, leftWingDepth / 2 - 0.05); // 朝南前窗
+    createArchWindow(leftWingGroup, -leftWingWidth / 2 + 0.05, f1Height / 2 + 0.2, 0, -Math.PI / 2); // 朝西侧窗
+
+    // --- ④ 左侧起伏柱廊露台 (Left Terrace) ---
+    const terraceWidth = 3.0;
+    const terraceDepth = 7.5;
+    const terraceX = leftWingX - leftWingWidth / 2 - terraceWidth / 2; // -12.0
+
+    const terraceGroup = new THREE.Group();
+    terraceGroup.position.set(terraceX, 0.6, mZ);
+    this.castleGroup.add(terraceGroup);
+
+    // 露台水泥地板 (略微抬高 Y = 0.15)
+    const terraceFloor = new THREE.Mesh(new THREE.BoxGeometry(terraceWidth, 0.18, terraceDepth), tileWhite);
+    terraceFloor.position.y = 0.09;
+    terraceFloor.receiveShadow = true;
+    terraceFloor.castShadow = true;
+    terraceGroup.add(terraceFloor);
+
+    this.castleColliders.push({
+      type: 'floor',
+      worldX: terraceX,
+      worldZ: mZ,
+      worldY: 0.78,
+      radius: terraceWidth / 2 + 0.5
+    });
+
+    // 露台白罗马柱廊 (立于四周)
+    const tColH = 3.2;
+    const tColGeo = new THREE.CylinderGeometry(0.1, 0.1, tColH, 8);
+    for (let tz = -terraceDepth / 2 + 0.6; tz <= terraceDepth / 2 - 0.6; tz += 2.0) {
+      const tc = new THREE.Mesh(tColGeo, trimMat);
+      tc.position.set(-terraceWidth / 2 + 0.2, 0.18 + tColH / 2, tz);
+      tc.castShadow = true;
+      terraceGroup.add(tc);
+    }
+
+    // 露台柱廊顶部的装饰顶梁盖
+    const terraceBeam = new THREE.Mesh(new THREE.BoxGeometry(terraceWidth + 0.2, 0.24, terraceDepth + 0.2), trimMat);
+    terraceBeam.position.set(0, 0.18 + tColH + 0.12, 0);
+    terraceBeam.castShadow = true;
+    terraceGroup.add(terraceBeam);
+
+    // 露台周边的白色雕花格栅矮栏杆 (高 0.72)
+    const tRailPillarGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.6, 6);
+    const drawTerraceRail = (rx1, rz1, rx2, rz2) => {
+      const rdx = rx2 - rx1;
+      const rdz = rz2 - rz1;
+      const rdist = Math.sqrt(rdx * rdx + rdz * rdz);
+      const rstep = 0.5;
+      const rcount = Math.round(rdist / rstep);
+      for (let i = 0; i <= rcount; i++) {
+        const rt = i / rcount;
+        const rp = new THREE.Mesh(tRailPillarGeo, trimMat);
+        rp.position.set(rx1 + rdx * rt, 0.18 + 0.3, rz1 + rdz * rt);
+        rp.castShadow = true;
+        terraceGroup.add(rp);
+      }
+      // 上横栏
+      const railH = new THREE.Mesh(new THREE.BoxGeometry(rdist + 0.1, 0.06, 0.06), trimMat);
+      railH.position.set((rx1 + rx2) / 2, 0.18 + 0.6, (rz1 + rz2) / 2);
+      railH.rotation.y = -Math.atan2(rz2 - rz1, rx2 - rx1);
+      terraceGroup.add(railH);
+    };
+    // 围栏画在左侧和前后边缘
+    drawTerraceRail(-terraceWidth / 2 + 0.2, -terraceDepth / 2 + 0.2, -terraceWidth / 2 + 0.2, terraceDepth / 2 - 0.2); // 西面
+    drawTerraceRail(-terraceWidth / 2 + 0.2, terraceDepth / 2 - 0.2, terraceWidth / 2 - 0.2, terraceDepth / 2 - 0.2);  // 南面
+    drawTerraceRail(-terraceWidth / 2 + 0.2, -terraceDepth / 2 + 0.2, terraceWidth / 2 - 0.2, -terraceDepth / 2 + 0.2); // 北面
+
+    // --- 层间白色腰线 (Belt Course) ---
+    // 围在中央大厅与左翼大块屋檐的四周
+    const beltW = hallWidth + leftWingWidth + 0.4;
+    const beltD = hallDepth + 0.4;
+    const mainBelt = new THREE.Mesh(new THREE.BoxGeometry(beltW, 0.25, beltD), trimMat);
+    mainBelt.position.set((hallX + leftWingX) / 2, secondFloorY + 0.125, mZ);
+    mainBelt.receiveShadow = true;
+    mainBelt.castShadow = true;
+    this.castleGroup.add(mainBelt);
+
+    // =========================================================================
+    // 6. 二层房间群 (Master & Secondary Bedrooms - F2)
+    // =========================================================================
+    // 二楼地板承载面
+    const f2MainFloor = new THREE.Mesh(new THREE.BoxGeometry(hallWidth + leftWingWidth, 0.15, hallDepth), trimMat);
+    f2MainFloor.position.set((hallX + leftWingX) / 2, secondFloorY + 0.075, mZ);
+    f2MainFloor.receiveShadow = true;
+    f2MainFloor.castShadow = true;
+    this.castleGroup.add(f2MainFloor);
+
+    this.castleColliders.push({
+      type: 'floor',
+      worldX: (hallX + leftWingX) / 2,
+      worldZ: mZ,
+      worldY: secondFloorY + 0.15,
+      radius: (hallWidth + leftWingWidth) / 2 + 0.5
+    });
+
+    const f2RoomHeight = 3.5;
+
+    // --- 6.1 主卧套房 (Master Bedroom Suite - 二楼中央偏右) ---
+    const masterWidth = 4.5;
+    const masterDepth = 7.5;
+    const masterX = -1.5;
+
+    const masterGroup = new THREE.Group();
+    masterGroup.position.set(masterX, secondFloorY + 0.15, mZ);
+    this.castleGroup.add(masterGroup);
+
+    const masterBackWall = new THREE.Mesh(new THREE.BoxGeometry(masterWidth, f2RoomHeight, 0.3), wallMat);
+    masterBackWall.position.set(0, f2RoomHeight / 2, -masterDepth / 2 + 0.15);
+    masterBackWall.castShadow = true;
+    masterGroup.add(masterBackWall);
+
+    const masterFrontWall = new THREE.Mesh(new THREE.BoxGeometry(masterWidth, f2RoomHeight, 0.3), wallMat);
+    masterFrontWall.position.set(0, f2RoomHeight / 2, masterDepth / 2 - 0.15);
+    masterFrontWall.castShadow = true;
+    masterGroup.add(masterFrontWall);
+
+    const masterRightWall = new THREE.Mesh(new THREE.BoxGeometry(0.3, f2RoomHeight, masterDepth), wallMat);
+    masterRightWall.position.set(masterWidth / 2 - 0.15, f2RoomHeight / 2, 0);
+    masterRightWall.castShadow = true;
+    masterGroup.add(masterRightWall);
+
+    // 主卧前侧开两个豪华双联圆拱窗
+    createArchWindow(masterGroup, -1.1, f2RoomHeight / 2 + 0.1, masterDepth / 2 - 0.05);
+    createArchWindow(masterGroup, 1.1, f2RoomHeight / 2 + 0.1, masterDepth / 2 - 0.05);
+
+    // --- 6.2 次卧1 (Secondary Bedroom - 二楼左翼) ---
+    // 比一层左翼收缩 0.5 米，让前方留出一个阳台小走道
+    const bed1Width = 4.0;
+    const bed1Depth = 6.5;
+    const bed1X = -8.5;
+    const bed1Z = mZ - 0.5; // 向北微移，南面留白
+
+    const bed1Group = new THREE.Group();
+    bed1Group.position.set(bed1X, secondFloorY + 0.15, bed1Z);
+    this.castleGroup.add(bed1Group);
+
+    const bed1BackWall = new THREE.Mesh(new THREE.BoxGeometry(bed1Width, f2RoomHeight, 0.3), wallMat);
+    bed1BackWall.position.set(0, f2RoomHeight / 2, -bed1Depth / 2 + 0.15);
+    bed1BackWall.castShadow = true;
+    bed1Group.add(bed1BackWall);
+
+    const bed1LeftWall = new THREE.Mesh(new THREE.BoxGeometry(0.3, f2RoomHeight, bed1Depth), wallMat);
+    bed1LeftWall.position.set(-bed1Width / 2 + 0.15, f2RoomHeight / 2, 0);
+    bed1LeftWall.castShadow = true;
+    bed1Group.add(bed1LeftWall);
+
+    const bed1RightWall = new THREE.Mesh(new THREE.BoxGeometry(0.3, f2RoomHeight, bed1Depth), wallMat);
+    bed1RightWall.position.set(bed1Width / 2 - 0.15, f2RoomHeight / 2, 0);
+    bed1RightWall.castShadow = true;
+    bed1Group.add(bed1RightWall);
+
+    const bed1FrontWall = new THREE.Mesh(new THREE.BoxGeometry(bed1Width, f2RoomHeight, 0.3), wallMat);
+    bed1FrontWall.position.set(0, f2RoomHeight / 2, bed1Depth / 2 - 0.15);
+    bed1FrontWall.castShadow = true;
+    bed1Group.add(bed1FrontWall);
+
+    createArchWindow(bed1Group, 0, f2RoomHeight / 2 + 0.1, bed1Depth / 2 - 0.05); // 正面窗户
+    createArchWindow(bed1Group, -bed1Width / 2 + 0.05, f2RoomHeight / 2 + 0.1, 0, -Math.PI / 2); // 西面窗户
+
+    // --- 6.3 次卧2/书房 (Study Room - 二楼中部凹凸感) ---
+    // 比主卧更朝南突出 0.5 米，制造强烈的凹凸感
+    const studyWidth = 3.0;
+    const studyDepth = 6.5;
+    const studyX = -5.0;
+    const studyZ = mZ + 0.5; // 向南凸出
+
+    const studyGroup = new THREE.Group();
+    studyGroup.position.set(studyX, secondFloorY + 0.15, studyZ);
+    this.castleGroup.add(studyGroup);
+
+    const studyBackWall = new THREE.Mesh(new THREE.BoxGeometry(studyWidth, f2RoomHeight, 0.3), wallMat);
+    studyBackWall.position.set(0, f2RoomHeight / 2, -studyDepth / 2 + 0.15);
+    studyBackWall.castShadow = true;
+    studyGroup.add(studyBackWall);
+
+    const studyFrontWall = new THREE.Mesh(new THREE.BoxGeometry(studyWidth, f2RoomHeight, 0.3), wallMat);
+    studyFrontWall.position.set(0, f2RoomHeight / 2, studyDepth / 2 - 0.15);
+    studyFrontWall.castShadow = true;
+    studyGroup.add(studyFrontWall);
+
+    const studyLeftWall = new THREE.Mesh(new THREE.BoxGeometry(0.3, f2RoomHeight, studyDepth), wallMat);
+    studyLeftWall.position.set(-studyWidth / 2 + 0.15, f2RoomHeight / 2, 0);
+    studyLeftWall.castShadow = true;
+    studyGroup.add(studyLeftWall);
+
+    createArchWindow(studyGroup, 0, f2RoomHeight / 2 + 0.1, studyDepth / 2 - 0.05); // 正面单拱窗
+
+    // --- 二层南侧前露台护栏 (二楼阳台) ---
+    // 围住左翼前方的未占满区域
+    const f2PillarGeo = new THREE.CylinderGeometry(0.07, 0.07, 0.72, 8);
+    const f2RailGeo = new THREE.BoxGeometry(hallWidth + leftWingWidth, 0.08, 0.08);
+
+    const f2FenceGroup = new THREE.Group();
+    f2FenceGroup.position.set((hallX + leftWingX) / 2, secondFloorY + 0.15, mZ);
+    
+    // 前横栏
+    const f2FrontRail = new THREE.Mesh(f2RailGeo, trimMat);
+    f2FrontRail.position.set(0, 0.72, hallDepth / 2 - 0.1);
+    f2FrontRail.castShadow = true;
+    f2FenceGroup.add(f2FrontRail);
+
+    // 罗马短栏杆柱
+    for (let x = -(hallWidth + leftWingWidth) / 2 + 0.4; x <= (hallWidth + leftWingWidth) / 2 - 0.4; x += 0.8) {
+      // 跳过被二层突出房间（次卧2）和主卧挡住的区间坐标
+      const worldX = x + (hallX + leftWingX) / 2;
+      if (worldX > studyX - studyWidth / 2 - 0.2 && worldX < studyX + studyWidth / 2 + 0.2) continue;
+      if (worldX > masterX - masterWidth / 2 - 0.2) continue;
+
+      const p = new THREE.Mesh(f2PillarGeo, trimMat);
+      p.position.set(x, 0.36, hallDepth / 2 - 0.1);
+      p.castShadow = true;
+      f2FenceGroup.add(p);
+    }
+    this.castleGroup.add(f2FenceGroup);
+
+    // =========================================================================
+    // 7. 西班牙红色斜屋顶群 (Roofs)
+    // =========================================================================
+    const roofY = secondFloorY + 0.15 + f2RoomHeight; // 屋顶高度 Y = 8.45
+    
+    // 7.1 左翼次卧1屋顶 (Spain-style slope roof)
+    const r1Width = 4.6;
+    const r1Depth = 3.8;
+    const r1RoofGroup = new THREE.Group();
+    r1RoofGroup.position.set(bed1X, roofY, bed1Z);
+    
+    const roofSlopeL1 = new THREE.Mesh(new THREE.BoxGeometry(r1Width, 0.18, r1Depth), roofMat);
+    roofSlopeL1.position.set(0, 0.82, -1.6);
+    roofSlopeL1.rotation.x = -0.42;
+    roofSlopeL1.castShadow = true;
+    r1RoofGroup.add(roofSlopeL1);
+
+    const roofSlopeR1 = new THREE.Mesh(new THREE.BoxGeometry(r1Width, 0.18, r1Depth), roofMat);
+    roofSlopeR1.position.set(0, 0.82, 1.6);
+    roofSlopeR1.rotation.x = 0.42;
+    roofSlopeR1.castShadow = true;
+    r1RoofGroup.add(roofSlopeR1);
+
+    // 屋顶侧面粉色三角形山墙 (Gable Wall)
+    const triangleWallL = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.3, bed1Depth - 0.6), wallMat);
+    triangleWallL.position.set(-bed1Width / 2 + 0.15, 0.6, 0);
+    r1RoofGroup.add(triangleWallL);
+    
+    const triangleWallR = triangleWallL.clone();
+    triangleWallR.position.x = bed1Width / 2 - 0.15;
+    r1RoofGroup.add(triangleWallR);
+    this.castleGroup.add(r1RoofGroup);
+
+    // 7.2 主卧套房高斜屋顶 (Master Roof - 略高且深)
+    const rMasterWidth = 5.0;
+    const rMasterDepth = 4.2;
+    const rMasterGroup = new THREE.Group();
+    rMasterGroup.position.set(masterX, roofY + 0.15, mZ); // 高出 15 厘米以错开
+
+    const roofSlopeLMaster = new THREE.Mesh(new THREE.BoxGeometry(rMasterWidth, 0.18, rMasterDepth), roofMat);
+    roofSlopeLMaster.position.set(0, 0.9, -1.8);
+    roofSlopeLMaster.rotation.x = -0.42;
+    roofSlopeLMaster.castShadow = true;
+    rMasterGroup.add(roofSlopeLMaster);
+
+    const roofSlopeRMaster = new THREE.Mesh(new THREE.BoxGeometry(rMasterWidth, 0.18, rMasterDepth), roofMat);
+    roofSlopeRMaster.position.set(0, 0.9, 1.8);
+    roofSlopeRMaster.rotation.x = 0.42;
+    roofSlopeRMaster.castShadow = true;
+    rMasterGroup.add(roofSlopeRMaster);
+
+    const triangleWallMasterL = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.45, masterDepth - 0.6), wallMat);
+    triangleWallMasterL.position.set(-masterWidth / 2 + 0.15, 0.65, 0);
+    rMasterGroup.add(triangleWallMasterL);
+
+    const triangleWallMasterR = triangleWallMasterL.clone();
+    triangleWallMasterR.position.x = masterWidth / 2 - 0.15;
+    rMasterGroup.add(triangleWallMasterR);
+    this.castleGroup.add(rMasterGroup);
+
+    // 7.3 次卧2/书房前倾小斜坡屋顶
+    const rStudyWidth = 3.6;
+    const rStudyDepth = 3.8;
+    const rStudyGroup = new THREE.Group();
+    rStudyGroup.position.set(studyX, roofY - 0.1, studyZ);
+
+    const roofSlopeLStudy = new THREE.Mesh(new THREE.BoxGeometry(rStudyWidth, 0.18, rStudyDepth), roofMat);
+    roofSlopeLStudy.position.set(0, 0.8, -1.6);
+    roofSlopeLStudy.rotation.x = -0.42;
+    roofSlopeLStudy.castShadow = true;
+    rStudyGroup.add(roofSlopeLStudy);
+
+    const roofSlopeRStudy = new THREE.Mesh(new THREE.BoxGeometry(rStudyWidth, 0.18, rStudyDepth), roofMat);
+    roofSlopeRStudy.position.set(0, 0.8, 1.6);
+    roofSlopeRStudy.rotation.x = 0.42;
+    roofSlopeRStudy.castShadow = true;
+    rStudyGroup.add(roofSlopeRStudy);
+    this.castleGroup.add(rStudyGroup);
+
+    // =========================================================================
+    // 8. 贯穿两层的圆顶城堡塔楼 (Domed Tower - ⑤)
+    // =========================================================================
+    const towerX = 1.8; // 紧贴中央大厅右侧
+    const towerZ = mZ + 0.2;
+    const towerRadius = 1.5;
+    const towerHeight = secondFloorY + 0.15 + 3.8; // 总高约 8.75
+
+    const towerGroup = new THREE.Group();
+    towerGroup.position.set(towerX, 0.6, towerZ);
+
+    const towerCylinder = new THREE.Mesh(new THREE.CylinderGeometry(towerRadius, towerRadius, towerHeight, 18), wallMat);
+    towerCylinder.position.y = towerHeight / 2;
+    towerCylinder.castShadow = true;
+    towerCylinder.receiveShadow = true;
+    towerGroup.add(towerCylinder);
+
+    // 塔腰饰线圈
+    const createTowerRing = (ry) => {
+      const ring = new THREE.Mesh(new THREE.CylinderGeometry(towerRadius + 0.12, towerRadius + 0.12, 0.12, 18), trimMat);
+      ring.position.y = ry;
+      towerGroup.add(ring);
+    };
+    createTowerRing(0.12);
+    createTowerRing(secondFloorY - 0.05);
+    createTowerRing(towerHeight - 0.06);
+
+    // 塔楼高大拱形玻璃窗
+    const towerWinGeo = new THREE.CylinderGeometry(0.48, 0.48, 2.2, 10);
+    const towerWin = new THREE.Mesh(towerWinGeo, windowLightMat);
+    towerWin.position.set(0, secondFloorY + 1.2, towerRadius - 0.1);
+    towerWin.rotation.y = Math.PI / 2;
+    towerGroup.add(towerWin);
+
+    const towerWinFrame = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.52, 2.22, 10, 1, true), trimMat);
+    towerWinFrame.position.set(0, secondFloorY + 1.2, towerRadius - 0.08);
+    towerWinFrame.rotation.y = Math.PI / 2;
+    towerGroup.add(towerWinFrame);
+
+    // 塔楼穹顶 (Domed Roof)
+    const domeGeo = new THREE.SphereGeometry(towerRadius + 0.1, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+    const towerDome = new THREE.Mesh(domeGeo, trimMat);
+    towerDome.position.y = towerHeight;
+    towerDome.castShadow = true;
+    towerGroup.add(towerDome);
+
+    // 塔尖金色避雷针
+    const towerSpire = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.05, 1.6, 8), new THREE.MeshLambertMaterial({ color: 0xffd700 }));
+    towerSpire.position.set(0, towerHeight + 1.2, 0);
+    towerDome.add(towerSpire);
+    
+    const spireBall = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), new THREE.MeshLambertMaterial({ color: 0xffd700 }));
+    spireBall.position.y = 0.8;
+    towerSpire.add(spireBall);
+
+    this.castleGroup.add(towerGroup);
+
+    // =========================================================================
+    // 9. 一层白色拱廊连廊与平顶露台 (Service Core - ⑩)
+    // =========================================================================
+    // 原 Colonnade 区域改建为平顶平房作为服务核，顶部是二楼露台
+    const galleryStartX = 3.3;
+    const galleryEndX = 6.7;
+    const galleryZ = mZ - 0.4;
+    const galleryHeight = 3.6;
+
+    const coreWidth = galleryEndX - galleryStartX + 0.6; // 约 4.0
+    const coreDepth = 6.5;
+    const coreX = (galleryStartX + galleryEndX) / 2;
+
+    const coreGroup = new THREE.Group();
+    coreGroup.position.set(coreX, 0.6, galleryZ);
+    this.castleGroup.add(coreGroup);
+
+    // 一层连廊墙体与平顶
+    const coreBody = new THREE.Mesh(new THREE.BoxGeometry(coreWidth, galleryHeight, coreDepth), wallMat);
+    coreBody.position.y = galleryHeight / 2;
+    coreBody.castShadow = true;
+    coreBody.receiveShadow = true;
+    coreGroup.add(coreBody);
+
+    // 连廊一楼正面有白色拱廊装饰 (贴附在墙面外)
+    for (let gx = -coreWidth / 2 + 0.6; gx <= coreWidth / 2 - 0.6; gx += 1.6) {
+      const p = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, galleryHeight, 8), trimMat);
+      p.position.set(gx, galleryHeight / 2, coreDepth / 2 + 0.05);
+      p.castShadow = true;
+      coreGroup.add(p);
+
+      const gArch = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.3, 0.2), trimMat);
+      gArch.position.set(gx + 0.8, galleryHeight - 0.15, coreDepth / 2 + 0.05);
+      coreGroup.add(gArch);
+    }
+
+    // 连廊顶部白色屋檐腰线
+    const coreBelt = new THREE.Mesh(new THREE.BoxGeometry(coreWidth + 0.3, 0.16, coreDepth + 0.3), trimMat);
+    coreBelt.position.y = galleryHeight + 0.08;
+    coreGroup.add(coreBelt);
+
+    // 二层平顶阳台地面物理碰撞
+    this.castleColliders.push({
+      type: 'floor',
+      worldX: coreX,
+      worldZ: galleryZ,
+      worldY: 0.6 + galleryHeight + 0.16,
+      radius: coreWidth / 2 + 0.5
+    });
+
+    // 连廊顶部的平顶露台围栏 (白色格栅)
+    const colFenceGroup = new THREE.Group();
+    colFenceGroup.position.set(coreX, 0.6 + galleryHeight + 0.16, galleryZ);
+    
+    const colRailFront = new THREE.Mesh(new THREE.BoxGeometry(coreWidth, 0.06, 0.06), trimMat);
+    colRailFront.position.set(0, 0.72, coreDepth / 2 - 0.1);
+    colRailFront.castShadow = true;
+    colFenceGroup.add(colRailFront);
+
+    for (let cx = -coreWidth / 2 + 0.3; cx <= coreWidth / 2 - 0.3; cx += 0.7) {
+      const p = new THREE.Mesh(f2PillarGeo, trimMat);
+      p.position.set(cx, 0.36, coreDepth / 2 - 0.1);
+      p.castShadow = true;
+      colFenceGroup.add(p);
+    }
+    this.castleGroup.add(colFenceGroup);
+
+    // =========================================================================
+    // 10. 精细化双车位车库 (Garage - ⑤)
+    // =========================================================================
+    const garageX = 11.2;
+    const garageZ = mZ - 0.4;
+    const garageHeight = 3.8;
+    const garageWidth = 7.0;
+    const garageDepth = 7.0;
+    
+    const garageBody = new THREE.Mesh(new THREE.BoxGeometry(garageWidth, garageHeight, garageDepth), wallMat);
+    garageBody.position.set(garageX, 0.6 + garageHeight / 2, garageZ);
+    garageBody.castShadow = true;
+    garageBody.receiveShadow = true;
+    this.castleGroup.add(garageBody);
+
+    this.castleColliders.push({
+      type: 'floor',
+      worldX: garageX,
+      worldZ: garageZ,
+      worldY: 0.72,
+      radius: garageWidth / 2 + 0.5
+    });
+
+    // 车库顶腰线
+    const garageBelt = new THREE.Mesh(new THREE.BoxGeometry(garageWidth + 0.4, 0.15, garageDepth + 0.4), trimMat);
+    garageBelt.position.set(garageX, 0.6 + garageHeight + 0.075, garageZ);
+    this.castleGroup.add(garageBelt);
+
+    // 双车库白色饰边拱门与卷帘门
+    const doorW = 2.4;
+    const doorH = 2.5;
+    const createGarageDoor = (gDoorX) => {
+      // 白色装饰外边框
+      const outerFrame = new THREE.Mesh(new THREE.BoxGeometry(doorW + 0.3, doorH + 0.15, 0.2), trimMat);
+      outerFrame.position.set(gDoorX, 0.6 + doorH / 2 + 0.075, garageZ + garageDepth / 2 - 0.05);
+      outerFrame.castShadow = true;
+      this.castleGroup.add(outerFrame);
+
+      // 白色大板门
+      const gDoor = new THREE.Mesh(new THREE.BoxGeometry(doorW, doorH, 0.1), trimMat);
+      gDoor.position.set(gDoorX, 0.6 + doorH / 2, garageZ + garageDepth / 2 - 0.02);
+      this.castleGroup.add(gDoor);
+
+      // 车库门横向凸起细线条纹 (具有真实质感)
+      for (let yOffset = -doorH / 2 + 0.3; yOffset < doorH / 2; yOffset += 0.4) {
+        const stripe = new THREE.Mesh(new THREE.BoxGeometry(doorW - 0.15, 0.06, 0.05), roadMat);
+        stripe.position.set(gDoorX, 0.6 + doorH / 2 + yOffset, garageZ + garageDepth / 2 + 0.03);
+        this.castleGroup.add(stripe);
+      }
+    };
+    
+    createGarageDoor(garageX - 1.6);
+    createGarageDoor(garageX + 1.6);
+
+    // 车库人字瓦坡屋顶
+    const garageRoofSlopeL = new THREE.Mesh(new THREE.BoxGeometry(garageWidth + 0.6, 0.18, 4.2), roofMat);
+    garageRoofSlopeL.position.set(garageX, 0.6 + garageHeight + 0.75, garageZ - 1.7);
+    garageRoofSlopeL.rotation.x = -0.42;
+    garageRoofSlopeL.castShadow = true;
+    this.castleGroup.add(garageRoofSlopeL);
+
+    const garageRoofSlopeR = new THREE.Mesh(new THREE.BoxGeometry(garageWidth + 0.6, 0.18, 4.2), roofMat);
+    garageRoofSlopeR.position.set(garageX, 0.6 + garageHeight + 0.75, garageZ + 1.7);
+    garageRoofSlopeR.rotation.x = 0.42;
+    garageRoofSlopeR.castShadow = true;
+    this.castleGroup.add(garageRoofSlopeR);
+
+    // 车库侧墙三角形山墙
+    const gTriangleL = new THREE.Mesh(new THREE.BoxGeometry(garageDepth, 1.2, 0.3), wallMat);
+    gTriangleL.position.set(garageX - garageWidth / 2 + 0.15, 0.6 + garageHeight + 0.5, garageZ);
+    gTriangleL.rotation.y = Math.PI / 2;
+    this.castleGroup.add(gTriangleL);
+    
+    const gTriangleR = gTriangleL.clone();
+    gTriangleR.position.x = garageX + garageWidth / 2 - 0.15;
+    this.castleGroup.add(gTriangleR);
+
+    // =========================================================================
+    // 11. 室内直跑台阶楼梯 (Main Stairs, 通往二楼 - ⑦)
+    // =========================================================================
+    // 对齐大厅内右侧，由 x = -0.8 到 x = 2.4
+    const stairCount = 14;
+    const stairStartX = -0.5;
+    const stairEndX = 2.3;
+    const stairZ = mZ - 1.0;
+    const stairW = 1.3;
+    const stairH = 0.16;
+    
+    const stairHeightStep = (secondFloorY + 0.15 - 0.6) / stairCount;
+    const stairWidthStep = (stairEndX - stairStartX) / stairCount;
+
+    for (let i = 0; i < stairCount; i++) {
+      const tx = stairStartX + i * stairWidthStep;
+      const ty = 0.6 + i * stairHeightStep;
+      const tz = stairZ;
+
+      const stair = new THREE.Mesh(new THREE.BoxGeometry(stairW, stairH, 0.45), trimMat);
+      stair.position.set(tx, ty + stairH / 2, tz);
+      stair.castShadow = true;
+      stair.receiveShadow = true;
+      this.castleGroup.add(stair);
+
+      this.castleColliders.push({
+        type: 'floor',
+        worldX: tx,
+        worldZ: tz,
+        worldY: ty + stairH,
+        radius: 0.85
+      });
+    }
+
+    // =========================================================================
+    // 12. 左翼粉色圆形日光浴泳池与躺椅
+    // =========================================================================
+    // 泳池向南移动一些以适应露台的延伸
+    const poolCenterX = -11.0;
+    const poolCenterZ = 2.0;
+    const poolRadius = 2.6;
+
+    const poolBottom = new THREE.Mesh(new THREE.CircleGeometry(poolRadius, 16), poolMat);
+    poolBottom.rotateX(-Math.PI / 2);
+    poolBottom.position.set(poolCenterX, 0.602, poolCenterZ);
+    poolBottom.receiveShadow = true;
+    this.castleGroup.add(poolBottom);
+
+    const water = new THREE.Mesh(new THREE.CircleGeometry(poolRadius - 0.1, 16), waterMat);
+    water.rotateX(-Math.PI / 2);
+    water.position.set(poolCenterX, 0.61, poolCenterZ);
+    this.castleGroup.add(water);
+
+    const pStoneGeo = new THREE.BoxGeometry(0.7, 0.12, 0.25);
+    const pStoneCount = 14;
+    for (let i = 0; i < pStoneCount; i++) {
+      const angle = (i * Math.PI * 2) / pStoneCount;
+      const sx = poolCenterX + Math.cos(angle) * (poolRadius + 0.1);
+      const sz = poolCenterZ + Math.sin(angle) * (poolRadius + 0.1);
+
+      const bStone = new THREE.Mesh(pStoneGeo, trimMat);
+      bStone.position.set(sx, 0.64, sz);
+      bStone.rotation.y = -angle + Math.PI / 2;
+      bStone.castShadow = true;
+      this.castleGroup.add(bStone);
+    }
+
+    const lMat = new THREE.MeshLambertMaterial({ color: 0xff85a1, flatShading: true });
+    const lx1 = poolCenterX + poolRadius + 0.8;
+    const lz1 = poolCenterZ - 0.7;
+    const lounger1 = new THREE.Group();
+    lounger1.position.set(lx1, 0.6, lz1);
+    lounger1.rotation.y = -Math.PI / 2.5;
+
+    const lBase = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.08, 0.6), lMat);
+    lBase.position.y = 0.04;
+    lBase.castShadow = true;
+    lounger1.add(lBase);
+
+    const lBack = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.08, 0.6), lMat);
+    lBack.position.set(-0.55, 0.18, 0);
+    lBack.rotation.z = 0.42;
+    lBack.castShadow = true;
+    lounger1.add(lBack);
+    this.castleGroup.add(lounger1);
+
+    this.castleInteractables.push({
+      id: 'lie_lounger_1',
+      name: '日光浴 (躺椅)',
+      x: lx1,
+      y: 0.6,
+      z: lz1,
+      triggerRadius: 1.3
+    });
+
+    const lx2 = poolCenterX + poolRadius + 0.8;
+    const lz2 = poolCenterZ + 0.7;
+    const lounger2 = lounger1.clone();
+    lounger2.position.set(lx2, 0.6, lz2);
+    this.castleGroup.add(lounger2);
+
+    this.castleInteractables.push({
+      id: 'lie_lounger_2',
+      name: '日光浴 (躺椅)',
+      x: lx2,
+      y: 0.6,
+      z: lz2,
+      triggerRadius: 1.3
+    });
+
+    // =========================================================================
+    // 13. 家具重定位与交互关联 (沙发、试衣镜、公主床)
+    // =========================================================================
+    // 13.1 大沙发坐在中央大厅里
+    const sofaGroup = new THREE.Group();
+    sofaGroup.position.set(hallX, 0.72, mZ);
+
+    const sofaBase = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.4, 1.2), tilePink);
+    sofaBase.position.y = 0.2;
+    sofaBase.castShadow = true;
+    sofaGroup.add(sofaBase);
+
+    const armGeo = new THREE.BoxGeometry(0.48, 0.68, 1.2);
+    const armL = new THREE.Mesh(armGeo, tilePink);
+    armL.position.set(-2.0 + 0.24, 0.34, 0);
+    armL.castShadow = true;
+    sofaGroup.add(armL);
+
+    const armR = armL.clone();
+    armR.position.x = 2.0 - 0.24;
+    sofaGroup.add(armR);
+
+    const backGeo = new THREE.BoxGeometry(4.0, 0.68, 0.35);
+    const sofaBack = new THREE.Mesh(backGeo, tilePink);
+    sofaBack.position.set(0, 0.5, -0.42);
+    sofaBack.castShadow = true;
+    sofaGroup.add(sofaBack);
+    this.castleGroup.add(sofaGroup);
+
+    this.castleInteractables.push({
+      id: 'sit_sofa',
+      name: '坐下大沙发',
+      x: hallX,
+      y: 0.72,
+      z: mZ + 0.8,
+      triggerRadius: 1.5
+    });
+
+    // 13.2 试衣镜移到左翼起居室
+    const vanityGroup = new THREE.Group();
+    vanityGroup.position.set(leftWingX, 0.72, mZ - 1.2);
+
+    const vanityTable = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.72, 0.65), trimMat);
+    vanityTable.position.y = 0.36;
+    vanityTable.castShadow = true;
+    vanityGroup.add(vanityTable);
+
+    const mirrorBack = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.05, 16), new THREE.MeshLambertMaterial({ color: 0xffd700 }));
+    mirrorBack.rotateX(Math.PI / 2);
+    mirrorBack.position.set(0, 1.3, -0.28);
+    mirrorBack.castShadow = true;
+    vanityGroup.add(mirrorBack);
+
+    const mirrorGlass = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 0.06, 16), new THREE.MeshBasicMaterial({ color: 0x80deea, transparent: true, opacity: 0.85 }));
+    mirrorGlass.rotateX(Math.PI / 2);
+    mirrorGlass.position.set(0, 1.3, -0.26);
+    vanityGroup.add(mirrorGlass);
+
+    const vanityChair = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.42, 12), tilePink);
+    vanityChair.position.set(0, 0.21, 0.55);
+    vanityChair.castShadow = true;
+    vanityGroup.add(vanityChair);
+    this.castleGroup.add(vanityGroup);
+
+    this.castleInteractables.push({
+      id: 'wardrobe',
+      name: '整理仪容 (试衣镜)',
+      x: leftWingX,
+      y: 0.72,
+      z: mZ - 0.6,
+      triggerRadius: 1.5
+    });
+
+    // 13.3 精美公主床移到二楼的主卧套房
+    const bedGroup = new THREE.Group();
+    bedGroup.position.set(masterX, secondFloorY + 0.15, mZ - 1.2);
+
+    const bedFrame = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.32, 2.2), new THREE.MeshLambertMaterial({ color: 0xffd700, flatShading: true }));
+    bedFrame.position.y = 0.16;
+    bedFrame.castShadow = true;
+    bedGroup.add(bedFrame);
+
+    const mattress = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.28, 2.0), tileWhite);
+    mattress.position.set(0, 0.32, 0);
+    mattress.castShadow = true;
+    mattress.receiveShadow = true;
+    bedGroup.add(mattress);
+
+    const pillowGeo = new THREE.BoxGeometry(0.72, 0.1, 0.42);
+    const pillowL = new THREE.Mesh(pillowGeo, tilePink);
+    pillowL.position.set(-0.55, 0.5, -0.75);
+    pillowL.rotation.x = 0.12;
+    pillowL.castShadow = true;
+    bedGroup.add(pillowL);
+
+    const pillowR = pillowL.clone();
+    pillowR.position.x = 0.55;
+    bedGroup.add(pillowR);
+
+    const poleMat = new THREE.MeshLambertMaterial({ color: 0xffd700, flatShading: true });
+    const pPoleGeo = new THREE.CylinderGeometry(0.03, 0.03, 2.0, 8);
+    const p1 = new THREE.Mesh(pPoleGeo, poleMat);
+    p1.position.set(-1.2, 1.0, -0.9);
+    p1.castShadow = true;
+    bedGroup.add(p1);
+
+    const p2 = p1.clone();
+    p2.position.x = 1.2;
+    bedGroup.add(p2);
+
+    const canopyMat = new THREE.MeshLambertMaterial({ color: 0xffc2d1, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+    const canopy = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.4, 0.35, 12, 1, true), canopyMat);
+    canopy.position.set(0, 2.0, -0.45);
+    canopy.castShadow = true;
+    bedGroup.add(canopy);
+    this.castleGroup.add(bedGroup);
+
+    this.castleInteractables.push({
+      id: 'lie_bed',
+      name: '小憩睡下 (公主床)',
+      x: masterX,
+      y: secondFloorY + 0.15,
+      z: mZ - 1.2,
+      triggerRadius: 1.6
+    });
+
+    // =========================================================================
+    // 14. 浪漫樱花飘落系统 (初始化 25 片樱花瓣)
+    // =========================================================================
+    const sakuraGeo = new THREE.BoxGeometry(0.18, 0.02, 0.18);
+    const sakuraMat = new THREE.MeshBasicMaterial({ color: 0xffb7c5, transparent: true, opacity: 0.85 });
+    for (let i = 0; i < 25; i++) {
+      const petal = new THREE.Mesh(sakuraGeo, sakuraMat);
+      const px = (Math.random() - 0.5) * 26.0;
+      const pz = (Math.random() - 0.5) * 26.0 - 2.0;
+      const py = 1.0 + Math.random() * 11.0;
+      petal.position.set(px, py, pz);
+      petal.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+      this.castleGroup.add(petal);
+
+      this.sakuraList.push({
+        mesh: petal,
+        velocity: new THREE.Vector3(
+          (Math.random() - 0.5) * 0.4,
+          -0.5 - Math.random() * 0.5,
+          (Math.random() - 0.5) * 0.4
+        ),
+        rotSpeed: new THREE.Vector3(
+          Math.random() * 1.2,
+          Math.random() * 1.2,
+          0
+        ),
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  updateCastleFrame(dt, time) {
+    if (!this.sakuraList) return;
+
+    // 1. 更新樱花瓣
+    this.sakuraList.forEach(p => {
+      p.mesh.position.addScaledVector(p.velocity, dt);
+      p.mesh.rotation.x += p.rotSpeed.x * dt;
+      p.mesh.rotation.y += p.rotSpeed.y * dt;
+      p.mesh.position.x += Math.sin(time * 1.5 + p.phase) * 0.005;
+
+      if (p.mesh.position.y <= 0.6) {
+        p.mesh.position.y = 11.0 + Math.random() * 3.0;
+        p.mesh.position.x = (Math.random() - 0.5) * 22.0;
+        p.mesh.position.z = (Math.random() - 0.5) * 22.0 - 2.0;
+      }
+    });
+
+    // 2. 涉水物理与粉色涟漪
+    if (this.player) {
+      const px = this.player.position.x;
+      const pz = this.player.position.z;
+      const distToPool = Math.sqrt((px - (-11.0)) * (px - (-11.0)) + (pz - (-4.0)) * (pz - (-4.0)));
+
+      if (distToPool < 3.0) {
+        if (this.player.position.y >= 0.58) {
+          this.player.position.y = 0.52;
+          this.player.velocity.y = 0;
+          this.player.isGrounded = true;
+        }
+
+        const speed = Math.sqrt(this.player.velocity.x * this.player.velocity.x + this.player.velocity.z * this.player.velocity.z);
+        if (speed > 0.05 && time - this.lastCastleWaterStepTime > 0.32) {
+          this.lastCastleWaterStepTime = time;
+          
+          const ripGeo = new THREE.RingGeometry(0.01, 0.28, 12);
+          const ripMat = new THREE.MeshBasicMaterial({
+            color: 0xff85a1,
+            transparent: true,
+            opacity: 0.6,
+            side: THREE.DoubleSide
+          });
+          const ripMesh = new THREE.Mesh(ripGeo, ripMat);
+          ripMesh.rotateX(-Math.PI / 2);
+          ripMesh.position.set(px, 0.612, pz);
+          
+          this.castleGroup.add(ripMesh);
+          this.castleRipples.push({
+            mesh: ripMesh,
+            geometry: ripGeo,
+            material: ripMat,
+            size: 0.01,
+            maxSize: 0.65,
+            speed: 1.4,
+            maxOpacity: 0.6
+          });
+        }
+      }
+    }
+
+    // 3. 更新涟漪
+    for (let i = this.castleRipples.length - 1; i >= 0; i--) {
+      const r = this.castleRipples[i];
+      r.size += r.speed * dt;
+      r.mesh.scale.set(r.size * 5, r.size * 5, 1);
+      r.material.opacity = r.maxOpacity * (1.0 - r.size / r.maxSize);
+
+      if (r.size >= r.maxSize) {
+        this.castleGroup.remove(r.mesh);
+        r.geometry.dispose();
+        r.material.dispose();
+        this.castleRipples.splice(i, 1);
+      }
+    }
   }
 }
 
