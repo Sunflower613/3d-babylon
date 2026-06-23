@@ -5540,7 +5540,178 @@ class GameApp {
     lawn.position.set(0, 0, 0); // 顶面正好在 Y = 0.6
     lawn.receiveShadow = true;
     lawn.castShadow = true;
-    this.cas    // =========================================================================
+    this.castleGroup.add(lawn);
+
+    // 紫色底泥土 (厚度 2.2)
+    const dirt = new THREE.Mesh(new THREE.BoxGeometry(baseWidth - 0.2, 2.2, baseDepth - 0.2), new THREE.MeshLambertMaterial({ color: 0x9c27b0, flatShading: true }));
+    dirt.position.set(0, -1.7, 0);
+    this.castleGroup.add(dirt);
+
+    // =========================================================================
+    // 2. 精确两点连线的欧式粉白铁艺围栏 (完美对齐)
+    // =========================================================================
+    const fenceHeight = 0.8;
+    const pillarGeo = new THREE.CylinderGeometry(0.16, 0.16, fenceHeight + 0.2, 8);
+
+    const drawFenceLine = (x1, z1, x2, z2, step = 2.2) => {
+      const dx = x2 - x1;
+      const dz = z2 - z1;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      const count = Math.round(dist / step);
+      
+      const posts = [];
+      // 放置柱子
+      for (let i = 0; i <= count; i++) {
+        const t = i / count;
+        const px = x1 + dx * t;
+        const pz = z1 + dz * t;
+        
+        // 南侧开口：如果在南侧边缘，且横坐标在大门开口内 (-4 到 4)，则跳过柱子
+        if (Math.abs(pz - halfD) < 0.5 && Math.abs(px) < 4.0) {
+          continue;
+        }
+
+        const p = new THREE.Mesh(pillarGeo, trimMat);
+        p.position.set(px, 0.6 + (fenceHeight + 0.2) / 2, pz);
+        p.castShadow = true;
+        this.castleGroup.add(p);
+        posts.push({ x: px, z: pz });
+      }
+
+      // 柱子间拉横栏
+      for (let i = 0; i < posts.length - 1; i++) {
+        const pA = posts[i];
+        const pB = posts[i + 1];
+        
+        const gap = Math.sqrt((pB.x - pA.x) * (pB.x - pA.x) + (pB.z - pA.z) * (pB.z - pA.z));
+        if (gap > step * 1.5) continue; // 跳过大门开口
+
+        const mx = (pA.x + pB.x) / 2;
+        const mz = (pA.z + pB.z) / 2;
+        // 角度计算：在 XZ 平面上两点连线的旋转角
+        const angle = Math.atan2(pB.z - pA.z, pB.x - pA.x);
+
+        const rGroup = new THREE.Group();
+        rGroup.position.set(mx, 0.6 + fenceHeight / 2, mz);
+        rGroup.rotation.y = -angle; // 配合 Three.js 的旋转
+
+        const segRailGeo = new THREE.BoxGeometry(gap - 0.1, 0.05, 0.05);
+        
+        const rail1 = new THREE.Mesh(segRailGeo, tilePink);
+        rail1.position.set(0, 0.16, 0);
+        rGroup.add(rail1);
+
+        const rail2 = new THREE.Mesh(segRailGeo, tilePink);
+        rail2.position.set(0, -0.16, 0);
+        rGroup.add(rail2);
+
+        // 中间的心形花纹
+        const heartDeco = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.24, 6), heartPinkMat);
+        heartDeco.rotation.x = Math.PI;
+        heartDeco.position.set(0, 0, 0);
+        rGroup.add(heartDeco);
+
+        this.castleGroup.add(rGroup);
+      }
+    };
+
+    // 沿矩形四周拉上线段围栏
+    drawFenceLine(-halfW, -halfD, halfW, -halfD, 2.2); // 北侧
+    drawFenceLine(-halfW, -halfD, -halfW, halfD, 2.2); // 左侧
+    drawFenceLine(halfW, -halfD, halfW, halfD, 2.2);  // 右侧
+    drawFenceLine(-halfW, halfD, halfW, halfD, 2.2);  // 南侧 (大门开口在此线段中自动跳过)
+
+    // =========================================================================
+    // 3. 前院环形车道 (Arched Driveway) 与叠水喷泉 (Central Fountain)
+    // =========================================================================
+    const fountainX = 0;
+    const fountainZ = 4.5;
+
+    // 环形车道路面
+    const roadRingGeo = new THREE.RingGeometry(4.8, 7.8, 32);
+    roadRingGeo.rotateX(-Math.PI / 2);
+    const roadRing = new THREE.Mesh(roadRingGeo, roadMat);
+    roadRing.position.set(fountainX, 0.605, fountainZ);
+    roadRing.receiveShadow = true;
+    this.castleGroup.add(roadRing);
+
+    // 直通道连向南边入口
+    const roadStraight = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.01, 9.0), roadMat);
+    roadStraight.position.set(0, 0.605, fountainZ + 6.3);
+    roadStraight.receiveShadow = true;
+    this.castleGroup.add(roadStraight);
+
+    // 中央叠水大喷泉
+    const fountainGroup = new THREE.Group();
+    fountainGroup.position.set(fountainX, 0.6, fountainZ);
+
+    const fBasin1 = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.4, 0.35, 16), trimMat);
+    fBasin1.position.y = 0.175;
+    fBasin1.castShadow = true;
+    fBasin1.receiveShadow = true;
+    fountainGroup.add(fBasin1);
+
+    const fWater = new THREE.Mesh(new THREE.CylinderGeometry(2.0, 2.0, 0.05, 16), waterMat);
+    fWater.position.y = 0.28;
+    fountainGroup.add(fWater);
+
+    const fPillar = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 1.2, 8), trimMat);
+    fPillar.position.y = 0.7;
+    fPillar.castShadow = true;
+    fountainGroup.add(fPillar);
+
+    const fBasin2 = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.3, 0.25, 12), trimMat);
+    fBasin2.position.y = 1.325;
+    fBasin2.castShadow = true;
+    fountainGroup.add(fBasin2);
+
+    const fSpout = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, 0.4, 8), trimMat);
+    fSpout.position.y = 1.6;
+    fountainGroup.add(fSpout);
+
+    const waterSpoutMat = new THREE.MeshBasicMaterial({ color: 0xfff0f3, transparent: true, opacity: 0.75 });
+    for (let i = 0; i < 8; i++) {
+      const angle = (i * Math.PI * 2) / 8;
+      const arcGroup = new THREE.Group();
+      arcGroup.rotation.y = angle;
+      arcGroup.position.set(0, 1.6, 0);
+
+      const wSeg1 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.6, 6), waterSpoutMat);
+      wSeg1.rotation.z = -0.4;
+      wSeg1.position.set(0.15, 0.25, 0);
+      arcGroup.add(wSeg1);
+
+      const wSeg2 = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 1.2, 6), waterSpoutMat);
+      wSeg2.rotation.z = -1.1;
+      wSeg2.position.set(0.85, 0.05, 0);
+      arcGroup.add(wSeg2);
+
+      fountainGroup.add(arcGroup);
+    }
+    
+    const fLight = new THREE.PointLight(0x80deea, 1.5, 4.0);
+    fLight.position.set(0, 1.8, 0);
+    fountainGroup.add(fLight);
+
+    const particleMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    for (let i = 0; i < 8; i++) {
+      const p = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.08), particleMat);
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 0.6 + Math.random() * 1.3;
+      p.position.set(Math.cos(angle) * radius, 1.0 + Math.random() * 0.9, Math.sin(angle) * radius);
+      fountainGroup.add(p);
+    }
+
+    this.castleGroup.add(fountainGroup);
+
+    this.castleInteractables.push({
+      id: 'exit_portal',
+      name: '返航传送泉 (传送回海岛)',
+      x: fountainX,
+      y: 0.6,
+      z: fountainZ,
+      triggerRadius: 2.2
+    });
     // 5. 模块化构建多房间城堡主体 (西班牙巴洛克风格)
     // =========================================================================
     const mZ = -7.5;
@@ -5579,75 +5750,110 @@ class GameApp {
       parentGroup.add(wGroup);
     };
 
-    // 辅助函数：创建椰子树 (城堡场景专用)
-    const createPalmTree = (x, z, scale) => {
+    // =========================================================================
+    // 4. 3D 热带椰子树生成 (叶片自然低垂弯折，多层次)
+    // =========================================================================
+    const createPalmTree = (tx, tz, treeScale = 1.0) => {
       const tree = new THREE.Group();
-      tree.position.set(x, 0.6, z);
-      tree.scale.set(scale, scale, scale);
+      tree.position.set(tx, 0.6, tz);
+      tree.scale.set(treeScale, treeScale, treeScale);
 
-      const trunkGroup = new THREE.Group();
-      const segmentsCount = 5;
       let currentY = 0;
       let currentX = 0;
-
-      const segmentGeo = new THREE.CylinderGeometry(0.08, 0.12, 0.4, 5);
-
-      for (let i = 0; i < segmentsCount; i++) {
-        const seg = new THREE.Mesh(segmentGeo, barkMat);
-        seg.position.set(currentX, currentY + 0.2, 0);
-        const angle = 0.08 * i;
-        seg.rotation.z = angle;
-        seg.castShadow = true;
-        seg.receiveShadow = true;
-        trunkGroup.add(seg);
-        
-        currentY += 0.36 * Math.cos(angle);
-        currentX -= 0.36 * Math.sin(angle);
-      }
-      tree.add(trunkGroup);
-
-      const leavesGroup = new THREE.Group();
-      leavesGroup.position.set(currentX, currentY, 0);
+      let currentZ = 0;
+      const trunkSegments = 6;
+      const segHeight = 1.0;
       
-      const leafGeo = new THREE.BoxGeometry(0.8, 0.02, 0.25);
-      leafGeo.translate(0.4, 0, 0); 
+      for (let i = 0; i < trunkSegments; i++) {
+        const segGeo = new THREE.CylinderGeometry(0.18 - i * 0.018, 0.22 - i * 0.018, segHeight, 8);
+        const seg = new THREE.Mesh(segGeo, barkMat);
+        
+        seg.position.set(currentX, currentY + segHeight / 2, currentZ);
+        const tiltX = tx > 0 ? 0.07 : -0.07;
+        const tiltZ = tz > 0 ? 0.07 : -0.07;
+        seg.rotation.set(tiltZ * (i + 1), 0, -tiltX * (i + 1));
+        
+        seg.castShadow = true;
+        tree.add(seg);
 
-      const leafCount = 6;
-      for (let j = 0; j < leafCount; j++) {
-        const leaf = new THREE.Mesh(leafGeo, leafMat);
-        leaf.rotation.y = (j / leafCount) * Math.PI * 2;
-        leaf.rotation.z = -0.22; 
-        leaf.castShadow = true;
-        leavesGroup.add(leaf);
+        currentY += segHeight - 0.06;
+        currentX += Math.sin(-tiltX * (i + 1)) * segHeight;
+        currentZ += Math.sin(tiltZ * (i + 1)) * segHeight;
       }
-      tree.add(leavesGroup);
 
-      // 挂两个椰子增加真实度
-      const cocoGeo = new THREE.SphereGeometry(0.09, 4, 4);
-      for (let k = 0; k < 2; k++) {
-        const coco = new THREE.Mesh(cocoGeo, coconutMat);
-        coco.position.set(currentX + 0.08 * Math.cos(k * Math.PI), currentY - 0.05, 0.08 * Math.sin(k * Math.PI));
-        coco.castShadow = true;
+      const leafCenterY = currentY;
+      const leafCenterX = currentX;
+      const leafCenterZ = currentZ;
+
+      const leafCount = 8;
+      for (let l = 0; l < leafCount; l++) {
+        const angle = (l * Math.PI * 2) / leafCount;
+        const leafGroup = new THREE.Group();
+        leafGroup.position.set(leafCenterX, leafCenterY, leafCenterZ);
+        leafGroup.rotation.y = angle;
+
+        let lx = 0;
+        let ly = 0;
+        const sW = 0.26;
+        
+        const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.02, sW), leafMat);
+        s1.rotation.z = 0.42;
+        s1.rotation.x = (l % 2 === 0 ? 0.15 : -0.15);
+        s1.position.set(0.36, 0.12, 0);
+        s1.castShadow = true;
+        leafGroup.add(s1);
+        lx += Math.cos(0.42) * 0.8;
+        ly += Math.sin(0.42) * 0.8;
+
+        const s2 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.02, sW - 0.04), leafMat);
+        s2.rotation.z = -0.18;
+        s2.rotation.x = (l % 2 === 0 ? 0.1 : -0.1);
+        s2.position.set(lx + 0.38, ly - 0.04, 0);
+        s2.castShadow = true;
+        leafGroup.add(s2);
+        lx += Math.cos(-0.18) * 0.8;
+        ly += Math.sin(-0.18) * 0.8;
+
+        const s3 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.02, sW - 0.08), leafMat);
+        s3.rotation.z = -0.85;
+        s3.position.set(lx + 0.32, ly - 0.28, 0);
+        s3.castShadow = true;
+        leafGroup.add(s3);
+
+        tree.add(leafGroup);
+      }
+
+      for (let c = 0; c < 3; c++) {
+        const coco = new THREE.Mesh(new THREE.SphereGeometry(0.18, 6, 6), coconutMat);
+        const ca = (c * Math.PI * 2) / 3;
+        coco.position.set(leafCenterX + Math.cos(ca) * 0.24, leafCenterY - 0.15, leafCenterZ + Math.sin(ca) * 0.24);
         tree.add(coco);
       }
 
       this.castleGroup.add(tree);
     };
 
+    createPalmTree(-14.0, 9.0, 1.15);
+    createPalmTree(14.0, 9.0, 1.15);
+    createPalmTree(-15.0, -1.0, 1.1);
+    createPalmTree(15.0, -1.0, 1.1);
+    createPalmTree(-13.0, -12.0, 1.0);
+    createPalmTree(13.0, -12.0, 1.0);
+
     // --- 5.1 横向主体建筑的一楼底板与物理碰撞 (X 范围 -13.0 到 6.0，宽 19.0) ---
     const mainFloorX = -3.5;
-    const mainFloorWidth = 19.0;
+    const mainFloorWidth = 30.0;
     const mainFloorDepth = 7.5;
     const leftWingX = -10.5;
     const leftWingWidth = 6.0;
     const hallX = -5.5;
-    const hallWidth = 4.0;
+    const hallWidth = 10.0;
     const hallDepth = 7.5;
-    const diningX = -1.5;
-    const diningWidth = 4.0;
-    const stairsX = 1.0;
+    const diningX = 3.5;
+    const diningWidth = 8.0;
+    const stairsX = 3.0;
     const stairsWidth = 2.0;
-    const kitchenX = 4.0;
+    const kitchenX = 10.0;
     const kitchenWidth = 4.0;
 
     const mainFloor = new THREE.Mesh(new THREE.BoxGeometry(mainFloorWidth, 0.12, mainFloorDepth), tileWhite);
@@ -5824,7 +6030,7 @@ class GameApp {
 
     // --- 5.4 楼梯的正南部：圆顶塔楼 (Domed Tower - ⑥) ---
     // 塔楼中心 X 与楼梯对齐 (1.0)，Z 轴在墙外南侧 -4.5
-    const towerX = 1.0;
+    const towerX = 5.0;
     const towerZ = -4.5;
     const towerRadius = 1.35;
     const towerHeight = secondFloorY + 0.15 + 3.8;
@@ -5875,7 +6081,7 @@ class GameApp {
 
     // --- 5.5 厨房的正南部：一层客房 (Guest Room) [NEW] ---
     // 位于厨房 (4.0, -7.5) 正南部，与西侧的塔楼东西并排
-    const guestX = 4.0;
+    const guestX = 10.0;
     const guestZ = -4.5;
     const guestWidth = 4.0;
     const guestDepth = 3.5;
@@ -6156,7 +6362,7 @@ class GameApp {
     // 9. 一层白色拱廊连廊与平顶露台 (Service Core / Colonnade - ⑩)
     // =========================================================================
     // 重写为 x = 4.0，z 轴在 [-2.75, 2.25] 之间，长度为 5.0 的南北向连廊
-    const galleryX = 4.0;
+    const galleryX = 10.0;
     const galleryZ = -0.25;
     const galleryHeight = 3.6;
     const coreWidth = 2.4; // 连廊宽度 (X方向)
@@ -6254,7 +6460,7 @@ class GameApp {
     // 10. 精细化双车位车库 (Garage - ⑤)
     // =========================================================================
     // 重写为 x = 4.0，z = 5.75，车库门朝南
-    const garageX = 4.0;
+    const garageX = 10.0;
     const garageZ = 5.75;
     const garageHeight = 3.8;
     const garageWidth = 7.0;
