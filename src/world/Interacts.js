@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as BABYLON from '@babylonjs/core';
 
 export class InteractsManager {
   constructor(player, generator, modalManager, app) {
@@ -19,14 +19,14 @@ export class InteractsManager {
   }
 
   init() {
-    // Keyboard key listeners
+    // 监听键盘按键 E 触发交互
     window.addEventListener('keydown', (e) => {
       if (e.key.toLowerCase() === 'e') {
         this.triggerActiveInteraction();
       }
     });
 
-    // Mobile screen button click and touch
+    // 移动端交互按钮事件绑定
     if (this.mobileInteractBtn) {
       this.mobileInteractBtn.addEventListener('touchstart', (e) => {
         e.preventDefault();
@@ -38,12 +38,12 @@ export class InteractsManager {
       });
     }
 
-    // Restore player camera focus state when modal is closed
+    // 当网页弹窗关闭时，恢复玩家相机参数
     window.addEventListener('modal-closed', () => {
       if (this.isTransitioningCamera && this.cameraSavedState) {
         this.isTransitioningCamera = false;
         
-        // Reset player orbit parameters
+        // 重置玩家相机轨道追踪参数
         this.player.cameraDistance = this.cameraSavedState.distance;
         this.player.cameraAngleH = this.cameraSavedState.angleH;
         this.player.cameraAngleV = this.cameraSavedState.angleV;
@@ -61,7 +61,7 @@ export class InteractsManager {
   }
 
   update() {
-    // If the player is carrying a ball, they can drop it anywhere!
+    // 如果玩家抱着沙滩球，可以在任何位置执行放下！
     if (this.player.carriedBall) {
       this.activeInteractZone = { id: 'drop_ball', name: '放下' };
       this.showPrompt('放下');
@@ -75,7 +75,7 @@ export class InteractsManager {
 
     const playerPos = this.player.position;
 
-    // Search for closest trigger zone
+    // 搜索最近的感应触发区域
     for (const zone of this.generator.interactables) {
       if (zone.id.startsWith('farm_plot_') && this.app && this.app.gameData) {
         const idx = parseInt(zone.id.replace('farm_plot_', ''));
@@ -94,7 +94,7 @@ export class InteractsManager {
           minDistance = distance;
           closestZone = zone;
 
-          // 动态更新格子提示
+          // 动态更新农田交互状态文字提示
           if (zone.id.startsWith('farm_plot_') && this.app && this.app.gameData) {
             const idx = parseInt(zone.id.replace('farm_plot_', ''));
             const plot = this.app.gameData.farmPlots[idx];
@@ -115,7 +115,7 @@ export class InteractsManager {
       }
     }
 
-    // Also search for closest beach ball to pick up
+    // 搜索最近可抱起的沙滩球
     if (this.app && this.app.beachBallsList) {
       for (const ball of this.app.beachBallsList) {
         if (ball.isCarried) continue;
@@ -124,7 +124,7 @@ export class InteractsManager {
         const dz = playerPos.z - ball.position.z;
         const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-        if (distance < 1.6) { // Pick up radius
+        if (distance < 1.6) { // 抱起半径范围
           if (distance < minDistance) {
             minDistance = distance;
             closestZone = {
@@ -137,7 +137,7 @@ export class InteractsManager {
       }
     }
 
-    // Set UI prompt state
+    // 根据检测到的最近交互区，渲染或隐藏 HUD 提示
     if (closestZone) {
       this.activeInteractZone = closestZone;
       this.showPrompt(closestZone.name);
@@ -148,21 +148,34 @@ export class InteractsManager {
   }
 
   showPrompt(name) {
+    if (this.promptTextEl) {
+      this.promptTextEl.textContent = name;
+    }
     if (this.promptEl) {
       this.promptEl.classList.add('visible');
     }
-    if (this.mobileInteractBtn) {
-      this.mobileInteractBtn.style.display = 'flex';
-      
-      // 动态切换交互按钮的图标
-      let isSprout = false;
-      if (this.activeInteractZone && this.activeInteractZone.id.startsWith('farm_plot_') && this.app && this.app.gameData) {
+
+    // 决定交互按钮的内容类型
+    let iconType = 'interact';
+    if (this.activeInteractZone) {
+      if (this.activeInteractZone.id === 'drop_ball') {
+        iconType = 'drop'; // 放下沙滩球使用向下箭头 SVG
+      } else if (this.activeInteractZone.id.startsWith('farm_plot_') && this.app && this.app.gameData) {
         const idx = parseInt(this.activeInteractZone.id.replace('farm_plot_', ''));
         const plot = this.app.gameData.farmPlots[idx];
         if (plot && plot.status === 'empty') {
-          isSprout = true;
+          iconType = 'sprout'; // 种植时使用发芽 SVG
         }
       }
+    }
+
+    // 联动 Canvas 控制层中的 3D GUI 交互按键
+    if (this.app && typeof this.app.setGuiInteractBtnVisible === 'function') {
+      this.app.setGuiInteractBtnVisible(true, iconType);
+    }
+
+    if (this.mobileInteractBtn) {
+      this.mobileInteractBtn.style.display = 'flex';
       
       const defaultSVG = `
 <svg style="display: flex;" class="lucide lucide-sparkles" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -179,13 +192,29 @@ export class InteractsManager {
   <path d="M12 8a5 5 0 0 1 5-5h3v2h-3a3 3 0 0 0-3 3v0" />
 </svg>`;
 
-      this.mobileInteractBtn.innerHTML = isSprout ? sproutSVG : defaultSVG;
+      const dropSVG = `
+<svg style="display: flex;" class="lucide lucide-arrow-down" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 5v14" />
+  <polyline points="19 12 12 19 5 12" />
+</svg>`;
+
+      if (iconType === 'sprout') {
+        this.mobileInteractBtn.innerHTML = sproutSVG;
+      } else if (iconType === 'drop') {
+        this.mobileInteractBtn.innerHTML = dropSVG;
+      } else {
+        this.mobileInteractBtn.innerHTML = defaultSVG;
+      }
     }
   }
 
   hidePrompt() {
     if (this.promptEl) {
       this.promptEl.classList.remove('visible');
+    }
+    // 联动 Canvas 控制层中的 3D GUI 交互按键
+    if (this.app && typeof this.app.setGuiInteractBtnVisible === 'function') {
+      this.app.setGuiInteractBtnVisible(false);
     }
     if (this.mobileInteractBtn) {
       this.mobileInteractBtn.style.display = 'none';
@@ -196,8 +225,12 @@ export class InteractsManager {
     ball.isCarried = true;
     this.player.carriedBall = ball;
     this.hidePrompt();
+    // 联动 3D GUI 按钮
+    if (this.app && typeof this.app.setGuiInteractBtnVisible === 'function') {
+      this.app.setGuiInteractBtnVisible(true, 'drop');
+    }
     if (this.mobileInteractBtn) {
-      this.mobileInteractBtn.textContent = '👐';
+      this.mobileInteractBtn.textContent = '▼';
     }
   }
 
@@ -208,19 +241,24 @@ export class InteractsManager {
     ball.isCarried = false;
     this.player.carriedBall = null;
 
-    // Set collision cooldown so it doesn't immediately collide with the player on release
-    ball.throwNoCollideTimer = 0.4; // 0.4 seconds of immunity
+    // 设置碰撞免疫，防止扔下的瞬间球又被踢飞
+    ball.throwNoCollideTimer = 0.4; 
 
-    // Toss forward slightly based on player facing direction
-    const playerForward = new THREE.Vector3(0, 0, 1).applyQuaternion(this.player.group.quaternion);
+    // 获取玩家当前的朝向向量（前向向量）
+    const playerForward = this.player.group.forward;
     
-    // Inherit player's current velocity so dropping while running doesn't lag behind
-    ball.velocity.copy(this.player.velocity);
-    ball.velocity.addScaledVector(playerForward, 5.5); // Add forward toss force
-    ball.velocity.y = 2.8; // Hop up slightly on drop
+    // 继承角色当前的行进速度
+    ball.velocity.copyFrom(this.player.velocity);
+    // 加上朝前抛出的力
+    ball.velocity.addInPlace(playerForward.scale(5.5)); 
+    ball.velocity.y = 2.8; // 微微向上弹跳抛出
     ball.isGrounded = false;
 
     this.hidePrompt();
+    // 放下球后将交互按键状态重置为可用
+    if (this.app && typeof this.app.setGuiInteractBtnVisible === 'function') {
+      this.app.setGuiInteractBtnVisible(true, 'interact');
+    }
     if (this.mobileInteractBtn) {
       this.mobileInteractBtn.textContent = '✨';
     }
@@ -242,7 +280,6 @@ export class InteractsManager {
     }
 
     if (zone.id === 'paimon') {
-      // 侧边栏 DOM 在外壳页面中，必须通过 parent 调用外壳层的方法
       try {
         if (window.parent && window.parent.appShell && typeof window.parent.appShell.toggleSidebar === 'function') {
           window.parent.appShell.toggleSidebar();
@@ -269,6 +306,14 @@ export class InteractsManager {
         this.dropCarriedBall();
       }
       this.app.switchMap('castle');
+      return;
+    }
+
+    if (zone.id === 'exit_castle' || zone.id === 'exit_portal') {
+      if (this.player.carriedBall) {
+        this.dropCarriedBall();
+      }
+      this.app.switchMap('island');
       return;
     }
 
@@ -311,11 +356,11 @@ export class InteractsManager {
         if (this.player.carriedBall) {
           this.dropCarriedBall();
         }
-        const bedPos = new THREE.Vector3(zone.x, zone.y, zone.z);
+        const bedPos = new BABYLON.Vector3(zone.x, zone.y, zone.z);
         this.player.lieDown(bedPos);
         this.hidePrompt();
         
-        // Show bed/sitting HUD panel
+        // 显示躺床时的 HUD 控制面板
         const bedHud = document.getElementById('bed-hud') || document.getElementById('exit-sitting-hud');
         if (bedHud) bedHud.style.display = 'flex';
       }
@@ -332,7 +377,7 @@ export class InteractsManager {
         const isSeat1 = zone.id === 'lake_seat_1';
         const seatObj = {
           isStatic: true,
-          position: new THREE.Vector3(isSeat1 ? 7.5 : -7.5, 0.78, 0),
+          position: new BABYLON.Vector3(isSeat1 ? 7.5 : -7.5, 0.78, 0),
           rotationY: isSeat1 ? -Math.PI / 2 : Math.PI / 2
         };
         this.player.sit(seatObj);
@@ -357,8 +402,8 @@ export class InteractsManager {
         }
         const seatObj = {
           isStatic: true,
-          position: new THREE.Vector3(0, 0.72 + 0.1, -8.7),
-          rotationY: Math.PI // 面向南
+          position: new BABYLON.Vector3(0, 0.72 + 0.1, -8.7),
+          rotationY: Math.PI // 面向南面
         };
         this.player.sit(seatObj);
         
@@ -380,8 +425,8 @@ export class InteractsManager {
         if (this.player.carriedBall) {
           this.dropCarriedBall();
         }
-        const loungerPos = new THREE.Vector3(zone.x, zone.y, zone.z);
-        const chairRot = { x: -Math.PI / 6, y: -Math.PI / 2, z: 0 }; // 朝西斜躺 30 度
+        const loungerPos = new BABYLON.Vector3(zone.x, zone.y, zone.z);
+        const chairRot = { x: -Math.PI / 6, y: -Math.PI / 2, z: 0 }; 
         this.player.lieDown(loungerPos, chairRot);
         
         const exitSittingHud = document.getElementById('exit-sitting-hud');
@@ -417,7 +462,7 @@ export class InteractsManager {
     }
 
     if (zone.id === 'house_wardrobe' || zone.id === 'wardrobe') {
-      // Save camera settings for restoration later
+      // 记录关闭换衣间时需要恢复的相机位置
       this.cameraSavedState = {
         distance: this.player.cameraDistance,
         angleH: this.player.cameraAngleH,
@@ -428,11 +473,11 @@ export class InteractsManager {
       this.isTransitioningCamera = true;
       this.player.controlsLocked = true;
       
-      // Zoom camera in front of character (looking at character)
+      // 相机推进至角色正前方近距离
       this.player.cameraDistance = 2.4;
-      this.player.cameraAngleH = 0; // Camera south of player, looking north
+      this.player.cameraAngleH = 0; 
       this.player.cameraAngleV = 0.08; 
-      this.player.group.rotation.y = 0; // Face camera (south, positive Z)
+      this.player.group.rotation.y = 0; 
 
       setTimeout(() => {
         this.modalManager.openModal('wardrobe');
@@ -443,7 +488,7 @@ export class InteractsManager {
 
     if (this.player.controlsLocked) return;
 
-    // Save camera settings for restoration later
+    // 记录日常弹窗关闭时需要恢复的相机设置
     this.cameraSavedState = {
       distance: this.player.cameraDistance,
       angleH: this.player.cameraAngleH,
@@ -452,24 +497,21 @@ export class InteractsManager {
 
     this.isTransitioningCamera = true;
     
-    // Zoom/focus camera based on the zone type
+    // 针对特定三维物体，动态缩放聚焦相机视角以实现沉浸感
     if (zone.id === 'arcade') {
-      // Focus in closely on the arcade screen
       this.player.cameraDistance = 2.4;
-      this.player.cameraAngleH = 0; // Look straight north
+      this.player.cameraAngleH = 0; // 朝向正北
       this.player.cameraAngleV = 0.15;
     } else if (zone.id === 'skills') {
-      // Zoom out to see the cherry tree
       this.player.cameraDistance = 9.5;
       this.player.cameraAngleV = 0.5;
     } else if (zone.id === 'projects') {
-      // Center camera to project screen
       this.player.cameraDistance = 7.0;
-      this.player.cameraAngleH = -Math.PI / 2; // Face east
+      this.player.cameraAngleH = -Math.PI / 2; // 朝向正东
       this.player.cameraAngleV = 0.25;
     }
 
-    // Delay modal open slightly to allow camera glide transition to finish
+    // 延迟打开弹窗让相机滑行过渡完毕
     setTimeout(() => {
       this.modalManager.openModal(zone.id);
       this.hidePrompt();

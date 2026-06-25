@@ -140,217 +140,19 @@
   </div>
 
   <!-- 4. 排行榜 (Leaderboard) 弹窗 (公共) -->
-  <div class="modal-overlay" id="modal-leaderboard">
-    <div class="modal-card">
-      <button class="modal-close" data-close="modal-leaderboard">&times;</button>
-      <div class="modal-header">
-        <span class="modal-emoji">🏆</span>
-        <h2>个人大厅 · 排行榜</h2>
-      </div>
-      <div class="modal-body no-padding" style="display: flex; flex-direction: column; overflow: hidden; height: 100%;">
-        <div class="leaderboard-tabs">
-          <button class="tab-btn active" data-tab="pkPoints">⚔️ 战力榜</button>
-          <button class="tab-btn" data-tab="coins">💰 财富榜</button>
-          <button class="tab-btn" data-tab="level">✨ 等级榜</button>
-        </div>
-        <div class="leaderboard-container scrollable" style="flex-grow: 1; padding: 20px; overflow-y: auto;">
-          <div class="leaderboard-list-view" id="leaderboard-list-view">
-            <!-- 动态生成排行 -->
-          </div>
-        </div>
-        <div class="leaderboard-my-rank" id="leaderboard-my-rank">
-          <!-- 当前用户排行 -->
-        </div>
-      </div>
-    </div>
-  </div>
+  
 
   <!-- 5. 每日任务 (Tasks) 弹窗 (公共) -->
-  <div class="modal-overlay" id="modal-tasks">
-    <div class="modal-card modal-large">
-      <button class="modal-close" data-close="modal-tasks">&times;</button>
-      <div class="modal-header">
-        <span class="modal-emoji">📋</span>
-        <h2>治愈旅途 · 每日任务</h2>
-      </div>
-      <div class="modal-body no-padding" style="display: flex; height: 100%; overflow: hidden;">
-        <!-- 左侧：宝箱区域 -->
-        <div class="tasks-left" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; border-right: 1px solid var(--glass-border); text-align: center; gap: 12px; background: rgba(255,255,255,0.01);">
-          <div class="tasks-chest-icon" id="tasks-chest-btn" style="font-size: 4rem; cursor: pointer; transition: all 0.3s; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2)); user-select: none;">🎁</div>
-          <div style="font-size: 0.95rem; font-weight: bold; color: #fff;">活跃度宝箱</div>
-          <div style="width: 100%; padding: 0 10px; box-sizing: border-box;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">
-              <span>任务进度</span>
-              <span id="tasks-progress-text">0 / 5</span>
-            </div>
-            <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; position: relative;">
-              <div id="tasks-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #ffd700, #ff9800); transition: width 0.4s ease; border-radius: 4px;"></div>
-            </div>
-          </div>
-          <p id="tasks-chest-tips" style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.4; margin: 0; padding: 0 8px;">完成今日全部 5 个任务即可开启宝箱，获得 300 金币与 100 经验！</p>
-          <button class="hud-btn" id="btn-tasks-claim-chest" style="width: 100%; padding: 8px 0; font-size: 0.8rem; font-weight: bold;" disabled>领取奖励</button>
-        </div>
-        <!-- 右侧：任务列表 -->
-        <div class="tasks-right scrollable" style="flex: 2.2; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; width: 100%;">
-          <div class="tasks-list" id="tasks-list" style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
-            <!-- 动态生成任务 -->
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  
 
   <!-- 2D世界地图 (World Map) 弹窗 -->
-  <div class="modal-overlay" id="modal-map">
-    <div class="modal-card modal-large" style="max-width: 680px;">
-      <button class="modal-close" data-close="modal-map">&times;</button>
-      <div class="modal-header" style="justify-content: space-between; align-items: center; width: 100%;">
-        <div style="display: flex; align-items: center; gap: 14px;">
-          <span class="modal-emoji">🗺️</span>
-          <h2>世界地图 · 快速传送</h2>
-        </div>
-      </div>
-      <div class="modal-body no-padding" style="display: flex; flex-direction: column; overflow: hidden; height: 100%;">
-        <div class="world-map-container">
-          <div class="world-map-canvas">
-            <div class="map-decor compass">🧭</div>
-            <div class="map-decor sea-monster">🐳</div>
-            <div class="map-decor clouds cloud-1">☁️</div>
-            <div class="map-decor clouds cloud-2">☁️</div>
-            
-            <div class="map-node node-island" data-map="island">
-              <div class="node-icon">🌴</div>
-              <div class="node-label">海岛广场</div>
-              <div class="node-status">公共区域</div>
-            </div>
-            
-            <div class="map-node node-house" data-map="house">
-              <div class="node-icon">🏡</div>
-              <div class="node-label">个人小家</div>
-              <div class="node-status">我的空间</div>
-            </div>
-            
-            <div class="map-node node-farm" data-map="farm">
-              <div class="node-icon">🌽</div>
-              <div class="node-label">我的农地</div>
-              <div class="node-status">农耕种植</div>
-            </div>
-            
-            <div class="map-node node-pk" data-map="pk_arena">
-              <div class="node-icon">⚔️</div>
-              <div class="node-label">竞技赛场</div>
-              <div class="node-status">擂台PK</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  
 
   <!-- 6. 我的背包 (Backpack) 弹窗 (公共) -->
-  <div class="modal-overlay" id="modal-bag">
-    <div class="modal-card modal-large">
-      <button class="modal-close" data-close="modal-bag">&times;</button>
-      <div class="modal-header" style="justify-content: space-between; align-items: center; width: 100%;">
-        <div style="display: flex; align-items: center; gap: 14px;">
-          <span class="modal-emoji">💼</span>
-          <h2>旅者囊匣 · 我的背包</h2>
-        </div>
-        <div class="modal-bag-coins" style="display: flex; align-items: center; gap: 6px; margin-right: 45px; font-weight: bold; color: #ffd700; font-size: 0.95rem;">
-          <span>🪙</span>
-          <span class="bag-coins-val">0</span>
-        </div>
-      </div>
-      <div class="modal-body no-padding" style="display: flex; height: 100%; overflow: hidden;">
-        <div class="bag-left" style="flex: 1.8; display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--glass-border);">
-          <div class="bag-tabs" style="display: flex; background: rgba(0,0,0,0.15); border-bottom: 1px solid var(--glass-border);">
-            <button class="bag-tabactive active" data-tab="seed" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s;">消耗品</button>
-            <button class="bag-tabactive" data-tab="decor" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s;">装饰品</button>
-            <button class="bag-tabactive" data-tab="collect" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s;">珍藏品</button>
-          </div>
-          <div class="bag-grid scrollable" id="bag-grid" style="flex-grow: 1; padding: 16px; overflow-y: auto; display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; max-height: 280px; width: 100%;">
-            <!-- 10x4 网格 -->
-          </div>
-        </div>
-        <div class="bag-right" id="bag-item-detail" style="flex: 1.2; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: rgba(255,255,255,0.01); width: 100%;">
-          <div class="item-detail-empty" style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
-            <div style="font-size: 2.6rem; opacity: 0.2;">💼</div>
-            <p style="color: var(--text-muted); font-size: 0.85rem;">点击左侧背包物品查看详情</p>
-          </div>
-          <div class="item-detail-content" style="display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: space-between; gap: 16px;">
-            <!-- 动态内容 -->
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  
 
   <!-- 5. 市集商店 (Shop) 弹窗 (公共) -->
-  <div class="modal-overlay" id="modal-shop">
-    <div class="modal-card modal-large">
-      <button class="modal-close" data-close="modal-shop">&times;</button>
-      <div class="modal-header" style="justify-content: space-between; align-items: center; width: 100%;">
-        <div style="display: flex; align-items: center; gap: 14px;">
-          <span class="modal-emoji">🛒</span>
-          <h2>云端集市 · 市集商店</h2>
-        </div>
-        <div class="modal-shop-coins" style="display: flex; align-items: center; gap: 6px; margin-right: 45px; font-weight: bold; color: #ffd700; font-size: 0.95rem;">
-          <span>🪙 当前金币: </span>
-          <span class="shop-coins-val">0</span>
-        </div>
-      </div>
-      <div class="modal-body no-padding" style="display: flex; height: 100%; overflow: hidden;">
-        <!-- 左侧区：包含 Tab 和商品网格 -->
-        <div class="shop-left" style="flex: 1.8; display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--glass-border);">
-          <div class="shop-tabs" style="display: flex; background: rgba(0,0,0,0.15); border-bottom: 1px solid var(--glass-border);">
-            <button class="shop-tabactive active" data-tab="agriculture" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px;">🌱 农业物资</button>
-            <button class="shop-tabactive" data-tab="decorations" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px;">🛋️ 装饰家具</button>
-            <button class="shop-tabactive" data-tab="topup" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px;">💎 金币充值</button>
-          </div>
-          <!-- 商品网格 -->
-          <div class="shop-grid scrollable" id="shop-grid" style="flex-grow: 1; padding: 16px; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-height: 280px; width: 100%;">
-            <!-- 动态渲染商品项 -->
-          </div>
-        </div>
-        <!-- 右侧区：商品详情和购买控制 -->
-        <div class="shop-right" id="shop-item-detail" style="flex: 1.2; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: rgba(255,255,255,0.01); width: 100%;">
-          <div class="shop-detail-empty" style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
-            <div style="font-size: 2.6rem; opacity: 0.2;">🛒</div>
-            <p style="color: var(--text-muted); font-size: 0.85rem;">点击左侧商品查看详情并购买</p>
-          </div>
-          <div class="shop-detail-content" style="display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: space-between; gap: 14px;">
-            <!-- 详情头部 -->
-            <div class="shop-detail-header" style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-              <span class="shop-detail-icon" style="font-size: 3rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));">🌻</span>
-              <h3 class="shop-detail-title" style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #fff;">向日葵种子</h3>
-              <span class="shop-detail-owned" style="font-size: 0.75rem; color: var(--text-muted);">已持有: 0</span>
-            </div>
-            <!-- 描述 -->
-            <p class="shop-detail-desc" style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; margin: 0; text-align: center; max-height: 55px; overflow-y: auto; width: 100%; padding: 0 10px;">成熟需要 30 秒。收割可获得 20 金币 + 15 经验。</p>
-            <!-- 购买控制面板 -->
-            <div class="shop-buy-panel" style="width: 100%; display: flex; flex-direction: column; gap: 10px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 14px; border: 1px solid var(--glass-border);">
-              <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted);">
-                <span>单价: <strong class="shop-detail-unit-price" style="color: #ffd700;">🪙 10</strong></span>
-                <span>总价: <strong class="shop-detail-total-price" style="color: #ffd700;">🪙 10</strong></span>
-              </div>
-              <!-- 数量调节器 -->
-              <div class="shop-buy-count-control" style="display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%;">
-                <button class="bag-range-btn" id="btn-shop-count-minus" style="width: 24px; height: 24px;">-</button>
-                <input type="range" id="shop-buy-count-slider" min="1" max="99" value="1" style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.1); cursor: pointer; accent-color: var(--primary);">
-                <button class="bag-range-btn" id="btn-shop-count-plus" style="width: 24px; height: 24px;">+</button>
-                <button class="bag-range-btn" id="btn-shop-count-plus10" style="padding: 0 6px; height: 24px; font-size: 0.72rem; border-radius: 6px;">+10</button>
-              </div>
-              <div style="font-size: 0.8rem; color: #fff; font-weight: bold;">
-                购买数量: <span id="shop-buy-count-text">1</span>
-              </div>
-            </div>
-            <!-- 最终购买按钮 -->
-            <button class="hud-btn" id="btn-shop-execute-buy" style="width: 100%; padding: 12px; font-weight: bold; font-size: 0.9rem; background: linear-gradient(135deg, var(--primary) 0%, #27ae60 100%); border-color: var(--primary); text-shadow: 0 1px 3px rgba(0,0,0,0.3);">确认购买</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  
 
   <!-- 家园编辑模式 HUD -->
   <div class="home-edit-hud" id="home-edit-hud" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 300; background: rgba(15,17,21,0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 14px 24px; box-shadow: 0 20px 45px rgba(0,0,0,0.5); flex-direction: column; align-items: center; gap: 8px; width: 90%; max-width: 450px;">
@@ -406,6 +208,7 @@
   <div id="fade-overlay"></div>
 
   <!-- 引入主逻辑 -->
+  <script type="module" src="./src/ui/app-shell.js"></script>
   <script type="module" src="./main.js"></script>
 </body>
 </html>

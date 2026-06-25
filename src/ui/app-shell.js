@@ -1,6 +1,17 @@
-import nipplejs from 'nipplejs';
+import sharedUI from './shared-ui.html?raw';
 
-// 初始化全局输入状态，供 iframe 内部的 3D Player 实时同步
+// 同步注入共享 UI 模版
+if (!document.getElementById('mobile-controls')) {
+  if (document.body) {
+    document.body.insertAdjacentHTML('beforeend', sharedUI);
+  } else {
+    document.addEventListener('DOMContentLoaded', () => {
+      document.body.insertAdjacentHTML('beforeend', sharedUI);
+    });
+  }
+}
+
+// 初始化全局输入状态，供 iframe 内部 the 3D Player 实时同步
 window.keys = { space: false, shift: false, j: false };
 window.isRadialMenuOpen = false;
 window.joystickDir = { x: 0, y: 0 };
@@ -59,6 +70,7 @@ class AppShell {
 
     this.initSSO();
     this.initSidebar();
+    this.initGlobalModals(); // 初始化全局弹窗事件绑定
     this.initControls();
     this.initAudio();
     this.initFullscreen();
@@ -169,6 +181,8 @@ class AppShell {
       e.stopPropagation();
       sidebar.classList.add('open');
       sidebarOverlay.classList.add('visible');
+      this.hideMobileControls();
+      
       const subApp = this.getSubApp();
       if (subApp && subApp.player) {
         subApp.player.controlsLocked = true;
@@ -179,6 +193,8 @@ class AppShell {
     const closeSidebar = () => {
       sidebar.classList.remove('open');
       sidebarOverlay.classList.remove('visible');
+      this.showMobileControls();
+      
       const subApp = this.getSubApp();
       if (subApp && subApp.player) {
         subApp.player.controlsLocked = false;
@@ -192,6 +208,8 @@ class AppShell {
       } else {
         sidebar.classList.add('open');
         sidebarOverlay.classList.add('visible');
+        this.hideMobileControls();
+        
         const subApp = this.getSubApp();
         if (subApp && subApp.player) {
           subApp.player.controlsLocked = true;
@@ -307,7 +325,7 @@ class AppShell {
         const subApp = this.getSubApp();
         
         // 1. 如果子页面里有结算面板
-        const subDoc = this.iframe.contentDocument;
+        const subDoc = document;
         if (subDoc) {
           const settleCloseBtn = subDoc.getElementById('btn-settle-close');
           if (settleCloseBtn) {
@@ -327,111 +345,63 @@ class AppShell {
         // 3. 否则，开关侧边栏
         e.preventDefault();
         toggleSidebar();
+      } else if (e.key.toLowerCase() === 'e') {
+        const activeEl = document.activeElement;
+        const isInput = activeEl && (
+          activeEl.tagName.toLowerCase() === 'input' || 
+          activeEl.tagName.toLowerCase() === 'textarea' || 
+          activeEl.isContentEditable
+        );
+        if (!isInput) {
+          const subApp = this.getSubApp();
+          if (subApp && subApp.interacts) {
+            e.preventDefault();
+            subApp.interacts.triggerActiveInteraction();
+          }
+        }
       }
     });
   }
 
-  // 3. 移动端摇杆和虚拟动作按钮控制
+  // 3. 移动端虚拟动作按钮控制 (废除外层，由子页面 3D GUI 渲染)
   initControls() {
-    // 动作按钮事件绑定，直接同步到 window.keys 状态上供 iframe 子页面同步
-    const actionBtns = [
-      { id: 'btn-jump', key: 'space' },
-      { id: 'btn-run', key: 'shift' },
-      { id: 'btn-pk-attack', key: 'j' },
-      { id: 'btn-interact', action: () => {
-        const subApp = this.getSubApp();
-        if (subApp && subApp.interactMgr) {
-          subApp.interactMgr.triggerActiveInteraction();
-        }
-      }}
-    ];
+    // 2D 动作按钮已废弃，改由 3D Canvas 内的原生 GUI 接管
+  }
 
-    actionBtns.forEach(cfg => {
-      const btn = document.getElementById(cfg.id);
-      if (btn) {
-        if (cfg.key) {
-          btn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            if (cfg.key === 'space' && window.isRadialMenuOpen) return;
-            
-            if (cfg.key === 'j') {
-              const subApp = this.getSubApp();
-              if (subApp && subApp.currentMap === 'farm') {
-                if (subApp.isRadialMenuOpen) {
-                  subApp.closeRadialSeedMenu();
-                } else {
-                  subApp.openRadialSeedMenu();
-                }
-                return;
-              }
-            }
-            
-            window.keys[cfg.key] = true;
-          }, { passive: false });
-          btn.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            if (cfg.key === 'j') {
-              const subApp = this.getSubApp();
-              if (subApp && subApp.currentMap === 'farm') {
-                return;
-              }
-            }
-            window.keys[cfg.key] = false;
-          }, { passive: false });
-          btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (cfg.key === 'j') {
-              const subApp = this.getSubApp();
-              if (subApp && subApp.currentMap === 'farm') {
-                if (subApp.isRadialMenuOpen) {
-                  subApp.closeRadialSeedMenu();
-                } else {
-                  subApp.openRadialSeedMenu();
-                }
-              }
-            }
-          });
-        } else if (cfg.action) {
-          btn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            cfg.action();
-          }, { passive: false });
-          btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            cfg.action();
-          });
+  // 3.5 初始化父页面的全局模态框关闭与遮罩事件绑定
+  initGlobalModals() {
+    const closeButtons = document.querySelectorAll('.modal-close');
+    const overlayList = document.querySelectorAll('.modal-overlay');
+
+    closeButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        let modalId = btn.getAttribute('data-close');
+        if (modalId && modalId.startsWith('modal-')) {
+          modalId = modalId.replace('modal-', '');
         }
-      }
+        const subApp = this.getSubApp();
+        if (subApp && subApp.modalMgr) {
+          subApp.modalMgr.closeModal(modalId);
+        } else {
+          const modal = document.getElementById(`modal-${modalId}`);
+          if (modal) modal.classList.remove('open');
+        }
+      });
     });
 
-    // 虚拟摇杆初始化
-    const joystickZone = document.getElementById('joystick-zone');
-    if (joystickZone) {
-      const options = {
-        zone: joystickZone,
-        mode: 'static',
-        position: { left: '50px', bottom: '50px' },
-        color: 'white',
-        size: 96
-      };
-
-      const manager = nipplejs.create(options);
-      manager.on('move', (evt) => {
-        // nipplejs v1.0+ 回调签名：(evt) => {}
-        // evt 结构为 { type, target, data }，其中 data 包含 vector、angle、distance 等
-        const moveData = evt && evt.data ? evt.data : null;
-        if (moveData && moveData.vector) {
-          // NippleJS y轴向上为正，ThreeJS相差180度，需将y取反
-          window.joystickDir.x = moveData.vector.x;
-          window.joystickDir.y = -moveData.vector.y;
+    overlayList.forEach(overlay => {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          const modalId = overlay.id.replace('modal-', '');
+          const subApp = this.getSubApp();
+          if (subApp && subApp.modalMgr) {
+            subApp.modalMgr.closeModal(modalId);
+          } else {
+            overlay.classList.remove('open');
+          }
         }
       });
-
-      manager.on('end', () => {
-        window.joystickDir.x = 0;
-        window.joystickDir.y = 0;
-      });
-    }
+    });
   }
 
   // 4. 背景音乐常驻播放器
@@ -518,12 +488,9 @@ class AppShell {
     }, 320);
   }
 
-  // 5. 辅助方法：获取 iframe 内部子页面的 app 实例
+  // 5. 辅助方法：获取当前页面的 app 实例
   getSubApp() {
-    if (this.iframe && this.iframe.contentWindow) {
-      return this.iframe.contentWindow.gameApp;
-    }
-    return null;
+    return window.gameApp || null;
   }
 
   // 6. iframe 地图页面载入时的回调方法
@@ -602,9 +569,23 @@ class AppShell {
 
   // 7. 外层转场跳转
   switchMap(targetMap) {
+    console.log('[AppShell] switchMap called with targetMap:', targetMap);
+    console.trace('[AppShell] switchMap call trace:');
     const subApp = this.getSubApp();
     if (subApp && typeof subApp.switchMap === 'function') {
       subApp.switchMap(targetMap);
+    } else {
+      let targetUrl = '';
+      if (targetMap === 'island' || targetMap === 'lobby') targetUrl = 'lobby.html';
+      else if (targetMap === 'house') targetUrl = 'house.html';
+      else if (targetMap === 'farm') targetUrl = 'farm.html';
+      else if (targetMap === 'pk_arena' || targetMap === 'pk') targetUrl = 'pvp.html';
+      else if (targetMap === 'lake') targetUrl = 'lake.html';
+      else if (targetMap === 'castle') targetUrl = 'castle.html';
+      
+      if (targetUrl) {
+        window.location.href = targetUrl;
+      }
     }
   }
 
@@ -716,7 +697,7 @@ class AppShell {
     const ctrl = document.getElementById('mobile-controls');
     if (ctrl) {
       ctrl.style.opacity = '1';
-      ctrl.style.pointerEvents = 'none';
+      ctrl.style.pointerEvents = '';
     }
     const ssoProfile = document.getElementById('sso-profile-container');
     if (ssoProfile) {

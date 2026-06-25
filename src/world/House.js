@@ -1,46 +1,90 @@
-import * as THREE from 'three';
+import * as BABYLON from '@babylonjs/core';
+
+function convertColor(hexVal) {
+  if (typeof hexVal === 'number') {
+    const hexStr = "#" + hexVal.toString(16).padStart(6, '0');
+    return BABYLON.Color3.FromHexString(hexStr);
+  }
+  if (typeof hexVal === 'string') {
+    if (!hexVal.startsWith('#')) return BABYLON.Color3.FromHexString('#' + hexVal);
+    return BABYLON.Color3.FromHexString(hexVal);
+  }
+  return new BABYLON.Color3(1, 1, 1);
+}
 
 export class HouseGenerator {
   constructor(scene, themeConfig) {
     this.scene = scene;
     this.themeConfig = themeConfig;
-    this.colliders = []; // Store floor colliders for map physics
-    this.interactables = []; // Store interactive zones
-    this.group = new THREE.Group();
+    this.colliders = []; // 存储地板碰撞体
+    this.interactables = []; // 存储交互点
+    this.shadowCasters = []; // 阴影投射网格
+    this.group = new BABYLON.TransformNode("houseGroup", this.scene);
     
-    // Materials
+    // 材质定义
     this.materials = {
-      wood: new THREE.MeshLambertMaterial({ color: 0x795548, flatShading: true }), // dark brown wood
-      woodLight: new THREE.MeshLambertMaterial({ color: 0xd7ccc8, flatShading: true }), // light wood
-      wall: new THREE.MeshLambertMaterial({ color: 0xfafafa, flatShading: true }), // clean warm walls
-      wallTrim: new THREE.MeshLambertMaterial({ color: 0xefebe9, flatShading: true }),
-      glass: new THREE.MeshBasicMaterial({ color: 0xe0f7fa, transparent: true, opacity: 0.25, side: THREE.DoubleSide }),
-      leaves: new THREE.MeshLambertMaterial({ color: 0x43a047, flatShading: true }), // green leaves
-      coconut: new THREE.MeshLambertMaterial({ color: 0x3e2723, flatShading: true }),
-      carpet: new THREE.MeshLambertMaterial({ color: 0xffecb3, flatShading: true }), // warm gold carpet
-      sofaBody: new THREE.MeshLambertMaterial({ color: 0xbbd6fb, flatShading: true }), // light blue sofa
-      sofaCushion: new THREE.MeshLambertMaterial({ color: 0xe3f2fd, flatShading: true }),
-      metalGold: new THREE.MeshLambertMaterial({ color: 0xffca28, flatShading: true }),
-      white: new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true }),
-      paintingSun: new THREE.MeshBasicMaterial({ color: 0xffeb3b }),
-      paintingArt: new THREE.MeshBasicMaterial({ color: 0xff7043 }),
-      bedSpread: new THREE.MeshLambertMaterial({ color: 0xff8a80, flatShading: true })
+      wood: this.createFlatMaterial("woodMat", 0x795548), // 深褐木
+      woodLight: this.createFlatMaterial("woodLightMat", 0xd7ccc8), // 浅木
+      wall: this.createFlatMaterial("wallMat", 0xfafafa), // 暖白墙
+      wallTrim: this.createFlatMaterial("wallTrimMat", 0xefebe9),
+      
+      glass: (() => {
+        const mat = new BABYLON.StandardMaterial("glassMat", this.scene);
+        mat.diffuseColor = convertColor(0xe0f7fa);
+        mat.alpha = 0.25;
+        mat.backFaceCulling = false;
+        mat.specularColor = new BABYLON.Color3(0, 0, 0);
+        return mat;
+      })(),
+      
+      leaves: this.createFlatMaterial("leavesMat", 0x43a047), // 绿叶
+      coconut: this.createFlatMaterial("coconutMat", 0x3e2723), // 椰果深褐
+      carpet: this.createFlatMaterial("carpetMat", 0xffecb3), // 暖黄地毯
+      sofaBody: this.createFlatMaterial("sofaBodyMat", 0xbbd6fb), // 淡蓝沙发身
+      sofaCushion: this.createFlatMaterial("sofaCushionMat", 0xe3f2fd), // 浅蓝坐垫
+      metalGold: this.createFlatMaterial("metalGoldMat", 0xffca28), // 金色金属
+      white: this.createFlatMaterial("whiteMat", 0xffffff),
+      
+      paintingSun: (() => {
+        const mat = new BABYLON.StandardMaterial("paintingSunMat", this.scene);
+        mat.diffuseColor = convertColor(0xffeb3b);
+        mat.emissiveColor = convertColor(0xffeb3b);
+        mat.specularColor = new BABYLON.Color3(0, 0, 0);
+        return mat;
+      })(),
+      
+      paintingArt: (() => {
+        const mat = new BABYLON.StandardMaterial("paintingArtMat", this.scene);
+        mat.diffuseColor = convertColor(0xff7043);
+        mat.emissiveColor = convertColor(0xff7043);
+        mat.specularColor = new BABYLON.Color3(0, 0, 0);
+        return mat;
+      })(),
+      
+      bedSpread: this.createFlatMaterial("bedSpreadMat", 0xff8a80) // 粉红床单
     };
 
     this.buildHouseMap();
-    this.scene.add(this.group);
+  }
+
+  createFlatMaterial(name, colorHex) {
+    const mat = new BABYLON.StandardMaterial(name, this.scene);
+    mat.diffuseColor = convertColor(colorHex);
+    mat.specularColor = new BABYLON.Color3(0, 0, 0); // Lambert 扁平风格
+    mat.flatShading = true;
+    return mat;
   }
 
   buildHouseMap() {
-    // 1. Large Tiled Wooden Floor (24.0 x 0.12 x 24.0)
-    const floorGeo = new THREE.BoxGeometry(24.0, 0.12, 24.0);
-    const floorMesh = new THREE.Mesh(floorGeo, this.materials.woodLight);
+    // 1. 大型木质地板拼块 (24.0 x 0.12 x 24.0)
+    const floorMesh = BABYLON.MeshBuilder.CreateBox("houseFloor", { width: 24.0, height: 0.12, depth: 24.0 }, this.scene);
     floorMesh.position.y = 0.06;
-    floorMesh.receiveShadow = true;
-    floorMesh.castShadow = true;
-    this.group.add(floorMesh);
+    floorMesh.parent = this.group;
+    floorMesh.receiveShadows = true;
+    floorMesh.material = this.materials.woodLight;
+    this.shadowCasters.push(floorMesh);
 
-    // Register floor collider (stands at Y = 0.12)
+    // 注册地板碰撞区 (物理表面在 Y = 0.12)
     this.colliders.push({
       mesh: floorMesh,
       radius: 16.0,
@@ -50,101 +94,116 @@ export class HouseGenerator {
       type: 'floor'
     });
 
-    // 2. Corner Pillars (0.4 x 5.5 x 0.4)
-    const pillarGeo = new THREE.BoxGeometry(0.4, 5.5, 0.4);
+    // 2. 四角柱支架 (0.4 x 5.5 x 0.4)
     const pillarOffsets = [
       { x: -11.8, z: -11.8 },
       { x: 11.8, z: -11.8 },
       { x: -11.8, z: 11.8 },
       { x: 11.8, z: 11.8 }
     ];
-    pillarOffsets.forEach(offset => {
-      const pillar = new THREE.Mesh(pillarGeo, this.materials.wood);
+    pillarOffsets.forEach((offset, idx) => {
+      const pillar = BABYLON.MeshBuilder.CreateBox("pillar_" + idx, { width: 0.4, height: 5.5, depth: 0.4 }, this.scene);
       pillar.position.set(offset.x, 2.75, offset.z);
-      pillar.castShadow = true;
-      this.group.add(pillar);
+      pillar.parent = this.group;
+      pillar.material = this.materials.wood;
+      this.shadowCasters.push(pillar);
     });
 
-    // 3. Wood ceiling cross beams (Visual aesthetics)
+    // 3. 装饰用天花板横梁架
     for (let i = -10; i <= 10; i += 5) {
-      const beamGeo = new THREE.BoxGeometry(23.6, 0.15, 0.25);
-      const beam = new THREE.Mesh(beamGeo, this.materials.wood);
+      const beam = BABYLON.MeshBuilder.CreateBox("ceilingBeam", { width: 23.6, height: 0.15, depth: 0.25 }, this.scene);
       beam.position.set(0, 5.4, i);
-      this.group.add(beam);
+      beam.parent = this.group;
+      beam.material = this.materials.wood;
+      this.shadowCasters.push(beam);
     }
 
-    // 4. Walls
-    // Back Wall (width 23.6, height 5.5)
-    const backWall = new THREE.Mesh(new THREE.BoxGeometry(23.6, 5.5, 0.1), this.materials.wall);
+    // 4. 墙体
+    // 后墙
+    const backWall = BABYLON.MeshBuilder.CreateBox("wallBack", { width: 23.6, height: 5.5, depth: 0.1 }, this.scene);
     backWall.position.set(0, 2.75, -11.8);
-    backWall.castShadow = true;
-    backWall.receiveShadow = true;
-    this.group.add(backWall);
+    backWall.parent = this.group;
+    backWall.receiveShadows = true;
+    backWall.material = this.materials.wall;
+    this.shadowCasters.push(backWall);
 
-    // Right Wall (solid)
-    const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.1, 5.5, 23.6), this.materials.wall);
+    // 右墙
+    const rightWall = BABYLON.MeshBuilder.CreateBox("wallRight", { width: 0.1, height: 5.5, depth: 23.6 }, this.scene);
     rightWall.position.set(11.8, 2.75, 0);
-    rightWall.castShadow = true;
-    rightWall.receiveShadow = true;
-    this.group.add(rightWall);
+    rightWall.parent = this.group;
+    rightWall.receiveShadows = true;
+    rightWall.material = this.materials.wall;
+    this.shadowCasters.push(rightWall);
 
-    // Left Wall with large window cutout (z from -6 to +6)
-    const leftWallBack = new THREE.Mesh(new THREE.BoxGeometry(0.1, 5.5, 5.8), this.materials.wall);
+    // 左墙（带大窗户开口，Z 轴从 -6 到 +6）
+    const leftWallBack = BABYLON.MeshBuilder.CreateBox("wallLeftBack", { width: 0.1, height: 5.5, depth: 5.8 }, this.scene);
     leftWallBack.position.set(-11.8, 2.75, -8.9);
-    leftWallBack.castShadow = true;
-    this.group.add(leftWallBack);
+    leftWallBack.parent = this.group;
+    leftWallBack.material = this.materials.wall;
+    this.shadowCasters.push(leftWallBack);
 
-    const leftWallFront = new THREE.Mesh(new THREE.BoxGeometry(0.1, 5.5, 5.8), this.materials.wall);
+    const leftWallFront = BABYLON.MeshBuilder.CreateBox("wallLeftFront", { width: 0.1, height: 5.5, depth: 5.8 }, this.scene);
     leftWallFront.position.set(-11.8, 2.75, 8.9);
-    leftWallFront.castShadow = true;
-    this.group.add(leftWallFront);
+    leftWallFront.parent = this.group;
+    leftWallFront.material = this.materials.wall;
+    this.shadowCasters.push(leftWallFront);
 
-    const leftWallBottom = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.6, 12.0), this.materials.wall);
+    const leftWallBottom = BABYLON.MeshBuilder.CreateBox("wallLeftBottom", { width: 0.1, height: 1.6, depth: 12.0 }, this.scene);
     leftWallBottom.position.set(-11.8, 0.8, 0);
-    leftWallBottom.castShadow = true;
-    this.group.add(leftWallBottom);
+    leftWallBottom.parent = this.group;
+    leftWallBottom.material = this.materials.wall;
+    this.shadowCasters.push(leftWallBottom);
 
-    const leftWallTop = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.4, 12.0), this.materials.wall);
+    const leftWallTop = BABYLON.MeshBuilder.CreateBox("wallLeftTop", { width: 0.1, height: 1.4, depth: 12.0 }, this.scene);
     leftWallTop.position.set(-11.8, 4.8, 0);
-    leftWallTop.castShadow = true;
-    this.group.add(leftWallTop);
+    leftWallTop.parent = this.group;
+    leftWallTop.material = this.materials.wall;
+    this.shadowCasters.push(leftWallTop);
 
-    // Cyan window glass pane
-    const windowGlass = new THREE.Mesh(new THREE.BoxGeometry(0.04, 2.4, 12.0), this.materials.glass);
+    // 落地窗淡蓝色玻璃
+    const windowGlass = BABYLON.MeshBuilder.CreateBox("windowGlass", { width: 0.04, height: 2.4, depth: 12.0 }, this.scene);
     windowGlass.position.set(-11.8, 2.8, 0);
-    this.group.add(windowGlass);
+    windowGlass.parent = this.group;
+    windowGlass.material = this.materials.glass;
 
-    // Front Wall with doorway in middle (x from -1.2 to 1.2)
-    const frontWallLeft = new THREE.Mesh(new THREE.BoxGeometry(10.6, 5.5, 0.1), this.materials.wall);
+    // 前墙（留出中间 X 从 -1.2 到 1.2 的门洞）
+    const frontWallLeft = BABYLON.MeshBuilder.CreateBox("wallFrontL", { width: 10.6, height: 5.5, depth: 0.1 }, this.scene);
     frontWallLeft.position.set(-6.5, 2.75, 11.8);
-    frontWallLeft.castShadow = true;
-    this.group.add(frontWallLeft);
+    frontWallLeft.parent = this.group;
+    frontWallLeft.material = this.materials.wall;
+    this.shadowCasters.push(frontWallLeft);
 
-    const frontWallRight = new THREE.Mesh(new THREE.BoxGeometry(10.6, 5.5, 0.1), this.materials.wall);
+    const frontWallRight = BABYLON.MeshBuilder.CreateBox("wallFrontR", { width: 10.6, height: 5.5, depth: 0.1 }, this.scene);
     frontWallRight.position.set(6.5, 2.75, 11.8);
-    frontWallRight.castShadow = true;
-    this.group.add(frontWallRight);
+    frontWallRight.parent = this.group;
+    frontWallRight.material = this.materials.wall;
+    this.shadowCasters.push(frontWallRight);
 
-    const frontWallTop = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.5, 0.1), this.materials.wall);
+    const frontWallTop = BABYLON.MeshBuilder.CreateBox("wallFrontT", { width: 2.4, height: 2.5, depth: 0.1 }, this.scene);
     frontWallTop.position.set(0, 4.25, 11.8);
-    frontWallTop.castShadow = true;
-    this.group.add(frontWallTop);
+    frontWallTop.parent = this.group;
+    frontWallTop.material = this.materials.wall;
+    this.shadowCasters.push(frontWallTop);
 
-    // Exit Door frame & sign board
-    const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(2.5, 3.1, 0.2), this.materials.wood);
+    // 门口木框与招牌板
+    const doorFrame = BABYLON.MeshBuilder.CreateBox("doorFrame", { width: 2.5, height: 3.1, depth: 0.2 }, this.scene);
     doorFrame.position.set(0, 1.5, 11.8);
-    this.group.add(doorFrame);
+    doorFrame.parent = this.group;
+    doorFrame.material = this.materials.wood;
 
-    const signBoard = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.35, 0.05), this.materials.wood);
+    const signBoard = BABYLON.MeshBuilder.CreateBox("doorSignBoard", { width: 1.3, height: 0.35, depth: 0.05 }, this.scene);
     signBoard.position.set(0, 3.25, 11.68);
-    signBoard.castShadow = true;
-    this.group.add(signBoard);
+    signBoard.parent = this.group;
+    signBoard.material = this.materials.wood;
+    this.shadowCasters.push(signBoard);
 
-    const signText = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.12, 0.06), new THREE.MeshLambertMaterial({ color: 0xff5252 }));
+    const signTextMat = this.createFlatMaterial("doorSignTextMat", 0xff5252);
+    const signText = BABYLON.MeshBuilder.CreateBox("doorSignText", { width: 0.8, height: 0.12, depth: 0.06 }, this.scene);
     signText.position.set(0, 3.25, 11.7);
-    this.group.add(signText);
+    signText.parent = this.group;
+    signText.material = signTextMat;
 
-    // Register exit doorway trigger zone
+    // 注册返回大厅的传送区
     this.interactables.push({
       id: 'exit_house',
       name: '离开房子',
@@ -154,99 +213,111 @@ export class HouseGenerator {
       triggerRadius: 1.6
     });
 
-    // 5. Cozy Bed (Interactive, Back-left corner)
+    // 5. 温馨大双人床 (交互点：后左侧)
     this.createBed(-8.0, -7.0);
 
-    // 6. Artist Easel (Interactive, Back-right corner)
+    // 6. 写生画架 (交互点：后右侧)
     this.createEasel(8.0, -8.0);
 
-    // 7. Wardrobe Customizer (Against right wall)
+    // 7. 衣柜与换装镜 (右侧墙壁处)
     this.createWardrobe(11.0, 0);
 
-    // 8. Sofa Lounge setup (Center-left area)
+    // 8. 双人沙发和茶几 (中左区域)
     this.createSofaLounge(0, -2.0);
 
-    // 9. Dining Table and Plant (Under the Window)
+    // 9. 临窗书桌椅及花瓶 (靠落地窗)
     this.createDiningTable(-10.5, 0);
 
-    // 10. Potted Monstera Plant (Front-left corner)
+    // 10. 盆栽琴叶榕 (左前角)
     this.createMonstera(-9.5, 9.5);
 
-    // 11. Large Center Area Carpet
-    const carpetGeo = new THREE.CylinderGeometry(4.0, 4.0, 0.01, 24);
-    const carpet = new THREE.Mesh(carpetGeo, this.materials.carpet);
+    // 11. 地毯 (中前区圆形装饰)
+    const carpet = BABYLON.MeshBuilder.CreateCylinder("centerCarpet", { diameterTop: 8.0, diameterBottom: 8.0, height: 0.01, tessellation: 24 }, this.scene);
     carpet.position.set(0, 0.125, 3.0);
-    carpet.receiveShadow = true;
-    this.group.add(carpet);
+    carpet.parent = this.group;
+    carpet.receiveShadows = true;
+    carpet.material = this.materials.carpet;
 
-    // 12. Hanging Sunset Painting (Centered on back wall)
+    // 12. 挂墙夕阳画 (居中挂在后墙上)
     this.createSunsetPainting(0, -11.73);
 
-    // 13. Reserved spot for future furniture (Front-right corner)
+    // 13. 保留开发空地 (右前侧)
     this.createReservedSpot(8.5, 8.5);
 
-    // 14. Ceiling Light
+    // 14. 吊灯
     this.createCeilingLight();
 
-    // 15. Scenery outside the window
+    // 15. 窗外微缩浮岛背景
     this.createWindowScenery();
 
-    // 16. Cozy floor lamp next to the sofa
+    // 16. 沙发旁的温馨落地灯
     this.createFloorLamp(1.8, -3.2);
   }
 
   createBed(x, z) {
-    const bedGroup = new THREE.Group();
+    const bedGroup = new BABYLON.TransformNode("bedGroup", this.scene);
     bedGroup.position.set(x, 0.12, z);
+    bedGroup.parent = this.group;
 
-    const bedFrame = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.32, 3.0), this.materials.wood);
-    bedFrame.castShadow = true;
-    bedGroup.add(bedFrame);
+    const bedFrame = BABYLON.MeshBuilder.CreateBox("bedFrame", { width: 2.6, height: 0.32, depth: 3.0 }, this.scene);
+    bedFrame.parent = bedGroup;
+    bedFrame.material = this.materials.wood;
+    this.shadowCasters.push(bedFrame);
 
-    const mattress = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.28, 2.8), this.materials.white);
+    const mattress = BABYLON.MeshBuilder.CreateBox("mattress", { width: 2.4, height: 0.28, depth: 2.8 }, this.scene);
     mattress.position.y = 0.24;
-    bedGroup.add(mattress);
+    mattress.parent = bedGroup;
+    mattress.material = this.materials.white;
 
-    const blanket = new THREE.Mesh(new THREE.BoxGeometry(2.42, 0.29, 2.0), this.materials.bedSpread);
+    const blanket = BABYLON.MeshBuilder.CreateBox("blanket", { width: 2.42, height: 0.29, depth: 2.0 }, this.scene);
     blanket.position.set(0, 0.26, 0.4);
-    blanket.castShadow = true;
-    bedGroup.add(blanket);
+    blanket.parent = bedGroup;
+    blanket.material = this.materials.bedSpread;
+    this.shadowCasters.push(blanket);
 
-    const pillowL = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.16, 0.5), this.materials.white);
+    const pillowL = BABYLON.MeshBuilder.CreateBox("pillowL", { width: 0.9, height: 0.16, depth: 0.5 }, this.scene);
     pillowL.position.set(-0.55, 0.4, -1.0);
-    bedGroup.add(pillowL);
+    pillowL.parent = bedGroup;
+    pillowL.material = this.materials.white;
 
-    const pillowR = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.16, 0.5), this.materials.white);
+    const pillowR = BABYLON.MeshBuilder.CreateBox("pillowR", { width: 0.9, height: 0.16, depth: 0.5 }, this.scene);
     pillowR.position.set(0.55, 0.4, -1.0);
-    bedGroup.add(pillowR);
+    pillowR.parent = bedGroup;
+    pillowR.material = this.materials.white;
 
-    // Bedside tables (low-poly drawers)
-    const drawerL = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 0.7), this.materials.wood);
+    // 床头柜
+    const drawerL = BABYLON.MeshBuilder.CreateBox("drawerL", { width: 0.7, height: 0.5, depth: 0.7 }, this.scene);
     drawerL.position.set(-1.8, 0.1, -1.0);
-    drawerL.castShadow = true;
-    bedGroup.add(drawerL);
+    drawerL.parent = bedGroup;
+    drawerL.material = this.materials.wood;
+    this.shadowCasters.push(drawerL);
 
-    const drawerR = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 0.7), this.materials.wood);
+    const drawerR = BABYLON.MeshBuilder.CreateBox("drawerR", { width: 0.7, height: 0.5, depth: 0.7 }, this.scene);
     drawerR.position.set(1.8, 0.1, -1.0);
-    drawerR.castShadow = true;
-    bedGroup.add(drawerR);
+    drawerR.parent = bedGroup;
+    drawerR.material = this.materials.wood;
+    this.shadowCasters.push(drawerR);
 
-    // Small lamp on left drawer
-    const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.18, 4), this.materials.metalGold);
+    // 左柜头灯台
+    const lampBase = BABYLON.MeshBuilder.CreateCylinder("lampBase", { diameterTop: 0.16, diameterBottom: 0.16, height: 0.18, tessellation: 4 }, this.scene);
     lampBase.position.set(-1.8, 0.44, -1.0);
-    bedGroup.add(lampBase);
+    lampBase.parent = bedGroup;
+    lampBase.material = this.materials.metalGold;
 
-    const lampShade = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 0.2, 8), this.materials.white);
+    const lampShade = BABYLON.MeshBuilder.CreateCylinder("lampShade", { diameterTop: 0.24, diameterBottom: 0.36, height: 0.2, tessellation: 8 }, this.scene);
     lampShade.position.set(-1.8, 0.62, -1.0);
-    bedGroup.add(lampShade);
+    lampShade.parent = bedGroup;
+    lampShade.material = this.materials.white;
 
-    const bedsideLight = new THREE.PointLight(0xffb74d, 0.9, 8, 1.5);
-    bedsideLight.position.set(-1.8, 0.65, -1.0);
-    bedGroup.add(bedsideLight);
+    // 床头小暖光点光源
+    const bedsideLight = new BABYLON.PointLight("bedsideLight", new BABYLON.Vector3(-1.8, 0.77, -1.0), this.scene);
+    bedsideLight.diffuse = convertColor(0xffb74d);
+    bedsideLight.specular = new BABYLON.Color3(0, 0, 0);
+    bedsideLight.intensity = 0.9;
+    bedsideLight.range = 8;
+    bedsideLight.parent = bedGroup;
 
-    this.group.add(bedGroup);
-
-    // Register bed interaction
+    // 注册躺床交互
     this.interactables.push({
       id: 'house_bed',
       name: '躺下',
@@ -258,57 +329,72 @@ export class HouseGenerator {
   }
 
   createEasel(x, z) {
-    const easelGroup = new THREE.Group();
+    const easelGroup = new BABYLON.TransformNode("easelGroup", this.scene);
     easelGroup.position.set(x, 0.12, z);
     easelGroup.rotation.y = -Math.PI / 4;
+    easelGroup.parent = this.group;
 
-    const leg1 = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 2.4, 4), this.materials.wood);
+    const leg1 = BABYLON.MeshBuilder.CreateCylinder("easelLeg1", { diameterTop: 0.07, diameterBottom: 0.07, height: 2.4, tessellation: 4 }, this.scene);
     leg1.position.set(-0.5, 1.15, 0);
     leg1.rotation.z = -0.15;
-    leg1.castShadow = true;
-    easelGroup.add(leg1);
+    leg1.parent = easelGroup;
+    leg1.material = this.materials.wood;
+    this.shadowCasters.push(leg1);
 
-    const leg2 = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 2.4, 4), this.materials.wood);
+    const leg2 = BABYLON.MeshBuilder.CreateCylinder("easelLeg2", { diameterTop: 0.07, diameterBottom: 0.07, height: 2.4, tessellation: 4 }, this.scene);
     leg2.position.set(0.5, 1.15, 0);
     leg2.rotation.z = 0.15;
-    leg2.castShadow = true;
-    easelGroup.add(leg2);
+    leg2.parent = easelGroup;
+    leg2.material = this.materials.wood;
+    this.shadowCasters.push(leg2);
 
-    const leg3 = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 2.4, 4), this.materials.wood);
+    const leg3 = BABYLON.MeshBuilder.CreateCylinder("easelLeg3", { diameterTop: 0.07, diameterBottom: 0.07, height: 2.4, tessellation: 4 }, this.scene);
     leg3.position.set(0, 1.15, -0.5);
-    leg3.rotation.x = 0.22; // Corrected sign to lean forward at the top and spread back at the bottom
-    leg3.castShadow = true;
-    easelGroup.add(leg3);
+    leg3.rotation.x = 0.22; 
+    leg3.parent = easelGroup;
+    leg3.material = this.materials.wood;
+    this.shadowCasters.push(leg3);
 
-    const shelf = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.07, 0.14), this.materials.wood);
+    const shelf = BABYLON.MeshBuilder.CreateBox("easelShelf", { width: 1.4, height: 0.07, depth: 0.14 }, this.scene);
     shelf.position.set(0, 1.05, 0.08);
-    shelf.castShadow = true;
-    easelGroup.add(shelf);
+    shelf.parent = easelGroup;
+    shelf.material = this.materials.wood;
+    this.shadowCasters.push(shelf);
 
-    const canvasMesh = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 0.04), this.materials.white);
+    const canvasMesh = BABYLON.MeshBuilder.CreateBox("easelCanvas", { width: 1.2, height: 0.9, depth: 0.04 }, this.scene);
     canvasMesh.position.set(0, 1.5, 0.08);
     canvasMesh.rotation.x = -0.08;
-    canvasMesh.castShadow = true;
-    easelGroup.add(canvasMesh);
+    canvasMesh.parent = easelGroup;
+    canvasMesh.material = this.materials.white;
+    this.shadowCasters.push(canvasMesh);
 
-    // Mini landscape painting
-    const pSky = new THREE.Mesh(new THREE.PlaneGeometry(1.14, 0.84), new THREE.MeshBasicMaterial({ color: 0xb2ebf2 }));
+    // 迷你画作拼块
+    const artSkyMat = new BABYLON.StandardMaterial("artSkyMat", this.scene);
+    artSkyMat.diffuseColor = convertColor(0xb2ebf2);
+    artSkyMat.specularColor = new BABYLON.Color3(0, 0, 0);
+
+    const pSky = BABYLON.MeshBuilder.CreatePlane("paintingSky", { width: 1.14, height: 0.84 }, this.scene);
     pSky.position.set(0, 1.5, 0.11);
     pSky.rotation.x = -0.08;
-    easelGroup.add(pSky);
+    pSky.parent = easelGroup;
+    pSky.material = artSkyMat;
 
-    const pSun = new THREE.Mesh(new THREE.SphereGeometry(0.11, 6, 6), this.materials.paintingSun);
+    const pSun = BABYLON.MeshBuilder.CreateSphere("paintingSunSphere", { diameter: 0.22, segments: 6 }, this.scene);
     pSun.position.set(0.2, 1.62, 0.12);
-    easelGroup.add(pSun);
+    pSun.parent = easelGroup;
+    pSun.material = this.materials.paintingSun;
 
-    const pSea = new THREE.Mesh(new THREE.PlaneGeometry(1.14, 0.35), new THREE.MeshBasicMaterial({ color: 0x00bcd4 }));
+    const artSeaMat = new BABYLON.StandardMaterial("artSeaMat", this.scene);
+    artSeaMat.diffuseColor = convertColor(0x00bcd4);
+    artSeaMat.specularColor = new BABYLON.Color3(0, 0, 0);
+
+    const pSea = BABYLON.MeshBuilder.CreatePlane("paintingSea", { width: 1.14, height: 0.35 }, this.scene);
     pSea.position.set(0, 1.28, 0.12);
     pSea.rotation.x = -0.08;
-    easelGroup.add(pSea);
+    pSea.parent = easelGroup;
+    pSea.material = artSeaMat;
 
-    this.group.add(easelGroup);
-
-    // Register easel interaction
+    // 注册写生交互
     this.interactables.push({
       id: 'house_easel',
       name: '写生',
@@ -320,70 +406,85 @@ export class HouseGenerator {
   }
 
   createWardrobe(x, z) {
-    const wardrobeGroup = new THREE.Group();
+    const wardrobeGroup = new BABYLON.TransformNode("wardrobeGroup", this.scene);
     wardrobeGroup.position.set(x, 0.12, z);
+    wardrobeGroup.parent = this.group;
 
-    const wBody = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2.8, 1.8), this.materials.wood);
+    const wBody = BABYLON.MeshBuilder.CreateBox("wardrobeBody", { width: 0.9, height: 2.8, depth: 1.8 }, this.scene);
     wBody.position.y = 1.4;
-    wBody.castShadow = true;
-    wBody.receiveShadow = true;
-    wardrobeGroup.add(wBody);
+    wBody.parent = wardrobeGroup;
+    wBody.material = this.materials.wood;
+    wBody.receiveShadows = true;
+    this.shadowCasters.push(wBody);
 
-    const wDoorL = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.5, 0.82), this.materials.woodLight);
+    const wDoorL = BABYLON.MeshBuilder.CreateBox("wardrobeDoorL", { width: 0.06, height: 2.5, depth: 0.82 }, this.scene);
     wDoorL.position.set(-0.46, 1.4, -0.42);
-    wardrobeGroup.add(wDoorL);
+    wDoorL.parent = wardrobeGroup;
+    wDoorL.material = this.materials.woodLight;
 
-    const wDoorR = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.5, 0.82), this.materials.woodLight);
+    const wDoorR = BABYLON.MeshBuilder.CreateBox("wardrobeDoorR", { width: 0.06, height: 2.5, depth: 0.82 }, this.scene);
     wDoorR.position.set(-0.46, 1.4, 0.42);
-    wardrobeGroup.add(wDoorR);
+    wDoorR.parent = wardrobeGroup;
+    wDoorR.material = this.materials.woodLight;
 
-    const wHandleL = new THREE.Mesh(new THREE.SphereGeometry(0.06, 4, 4), this.materials.metalGold);
+    const wHandleL = BABYLON.MeshBuilder.CreateSphere("wardrobeHandleL", { diameter: 0.12, segments: 4 }, this.scene);
     wHandleL.position.set(-0.52, 1.4, -0.08);
-    wardrobeGroup.add(wHandleL);
+    wHandleL.parent = wardrobeGroup;
+    wHandleL.material = this.materials.metalGold;
 
-    const wHandleR = new THREE.Mesh(new THREE.SphereGeometry(0.06, 4, 4), this.materials.metalGold);
+    const wHandleR = BABYLON.MeshBuilder.CreateSphere("wardrobeHandleR", { diameter: 0.12, segments: 4 }, this.scene);
     wHandleR.position.set(-0.52, 1.4, 0.08);
-    wardrobeGroup.add(wHandleR);
+    wHandleR.parent = wardrobeGroup;
+    wHandleR.material = this.materials.metalGold;
 
-    // Warm golden carpet in front of wardrobe
-    const wCarpetGeo = new THREE.BoxGeometry(2.0, 0.01, 1.8);
-    const wCarpet = new THREE.Mesh(wCarpetGeo, this.materials.carpet);
+    // 柜子前小地毯
+    const wCarpet = BABYLON.MeshBuilder.CreateBox("wardrobeCarpet", { width: 2.0, height: 0.01, depth: 1.8 }, this.scene);
     wCarpet.position.set(-1.4, 0.005, 0);
-    wCarpet.receiveShadow = true;
-    wardrobeGroup.add(wCarpet);
+    wCarpet.parent = wardrobeGroup;
+    wCarpet.receiveShadows = true;
+    wCarpet.material = this.materials.carpet;
 
-    // Floor lamp to illuminate player during wardrobe customization (placed front-left to avoid blocking camera)
-    const wLampGroup = new THREE.Group();
+    // 落地展示灯 (用于衣柜试衣间玩家侧打光)
+    const wLampGroup = new BABYLON.TransformNode("wardrobeLamp", this.scene);
     wLampGroup.position.set(-2.4, 0.0, 1.0);
+    wLampGroup.parent = wardrobeGroup;
 
-    const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.05, 6), this.materials.metalGold);
+    const lampBase = BABYLON.MeshBuilder.CreateCylinder("wLampBase", { diameterTop: 0.5, diameterBottom: 0.5, height: 0.05, tessellation: 6 }, this.scene);
     lampBase.position.y = 0.025;
-    lampBase.castShadow = true;
-    wLampGroup.add(lampBase);
+    lampBase.parent = wLampGroup;
+    lampBase.material = this.materials.metalGold;
+    this.shadowCasters.push(lampBase);
 
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 2.0, 4), this.materials.wood);
+    const pole = BABYLON.MeshBuilder.CreateCylinder("wLampPole", { diameterTop: 0.07, diameterBottom: 0.07, height: 2.0, tessellation: 4 }, this.scene);
     pole.position.y = 1.0;
-    pole.castShadow = true;
-    wLampGroup.add(pole);
+    pole.parent = wLampGroup;
+    pole.material = this.materials.wood;
+    this.shadowCasters.push(pole);
 
-    const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.3, 0.35, 8), this.materials.white);
+    const shade = BABYLON.MeshBuilder.CreateCylinder("wLampShade", { diameterTop: 0.36, diameterBottom: 0.6, height: 0.35, tessellation: 8 }, this.scene);
     shade.position.y = 2.0;
-    shade.castShadow = true;
-    wLampGroup.add(shade);
+    shade.parent = wLampGroup;
+    shade.material = this.materials.white;
+    this.shadowCasters.push(shade);
 
-    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 6), new THREE.MeshBasicMaterial({ color: 0xfff59d }));
+    const bulbMat = new BABYLON.StandardMaterial("wLampBulbMat", this.scene);
+    bulbMat.diffuseColor = convertColor(0xfff59d);
+    bulbMat.emissiveColor = convertColor(0xfff59d);
+    bulbMat.specularColor = new BABYLON.Color3(0, 0, 0);
+
+    const bulb = BABYLON.MeshBuilder.CreateSphere("wLampBulb", { diameter: 0.14, segments: 6 }, this.scene);
     bulb.position.y = 1.9;
-    wLampGroup.add(bulb);
+    bulb.parent = wLampGroup;
+    bulb.material = bulbMat;
 
-    const wardrobeLight = new THREE.PointLight(0xffecc2, 2.2, 10, 1.2);
-    wardrobeLight.position.set(0, 1.9, 0);
-    wardrobeLight.castShadow = false;
-    wLampGroup.add(wardrobeLight);
+    const wardrobeLight = new BABYLON.PointLight("wardrobeLight", new BABYLON.Vector3(-2.4, 1.9, 1.0), this.scene);
+    wardrobeLight.diffuse = convertColor(0xffecc2);
+    wardrobeLight.specular = new BABYLON.Color3(0, 0, 0);
+    wardrobeLight.intensity = 2.2;
+    wardrobeLight.range = 10;
+    wardrobeLight.parent = wardrobeGroup;
 
-    wardrobeGroup.add(wLampGroup);
-    this.group.add(wardrobeGroup);
-
-    // Register wardrobe interaction (positioned in front of wardrobe)
+    // 注册衣柜交互
     this.interactables.push({
       id: 'house_wardrobe',
       name: '衣柜换装',
@@ -395,335 +496,406 @@ export class HouseGenerator {
   }
 
   createSofaLounge(x, z) {
-    const loungeGroup = new THREE.Group();
+    const loungeGroup = new BABYLON.TransformNode("sofaLounge", this.scene);
     loungeGroup.position.set(x, 0.12, z);
+    loungeGroup.parent = this.group;
 
-    // Large floor rug under the sofa
-    const rugGeo = new THREE.BoxGeometry(4.2, 0.01, 2.8);
-    const rug = new THREE.Mesh(rugGeo, this.materials.carpet);
+    // 沙发小毯
+    const rug = BABYLON.MeshBuilder.CreateBox("sofaRug", { width: 4.2, height: 0.01, depth: 2.8 }, this.scene);
     rug.position.y = 0.005;
-    loungeGroup.add(rug);
+    rug.parent = loungeGroup;
+    rug.material = this.materials.carpet;
 
-    // Sofa body base
-    const base = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.28, 1.2), this.materials.sofaBody);
+    // 沙发底座
+    const base = BABYLON.MeshBuilder.CreateBox("sofaBase", { width: 3.0, height: 0.28, depth: 1.2 }, this.scene);
     base.position.y = 0.24;
-    base.castShadow = true;
-    loungeGroup.add(base);
+    base.parent = loungeGroup;
+    base.material = this.materials.sofaBody;
+    this.shadowCasters.push(base);
 
-    // Backrest
-    const backrest = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.8, 0.25), this.materials.sofaBody);
+    // 靠背
+    const backrest = BABYLON.MeshBuilder.CreateBox("sofaBackrest", { width: 3.0, height: 0.8, depth: 0.25 }, this.scene);
     backrest.position.set(0, 0.72, -0.475);
-    backrest.castShadow = true;
-    loungeGroup.add(backrest);
+    backrest.parent = loungeGroup;
+    backrest.material = this.materials.sofaBody;
+    this.shadowCasters.push(backrest);
 
-    // Armrests
-    const armL = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.55, 1.2), this.materials.sofaBody);
+    // 扶手
+    const armL = BABYLON.MeshBuilder.CreateBox("sofaArmL", { width: 0.25, height: 0.55, depth: 1.2 }, this.scene);
     armL.position.set(-1.375, 0.42, 0);
-    armL.castShadow = true;
-    loungeGroup.add(armL);
+    armL.parent = loungeGroup;
+    armL.material = this.materials.sofaBody;
+    this.shadowCasters.push(armL);
 
-    const armR = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.55, 1.2), this.materials.sofaBody);
+    const armR = BABYLON.MeshBuilder.CreateBox("sofaArmR", { width: 0.25, height: 0.55, depth: 1.2 }, this.scene);
     armR.position.set(1.375, 0.42, 0);
-    armR.castShadow = true;
-    loungeGroup.add(armR);
+    armR.parent = loungeGroup;
+    armR.material = this.materials.sofaBody;
+    this.shadowCasters.push(armR);
 
-    // Cushions
+    // 坐垫
     for (let i = 0; i < 3; i++) {
-      const cushion = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.15, 0.85), this.materials.sofaCushion);
+      const cushion = BABYLON.MeshBuilder.CreateBox("sofaCushion_" + i, { width: 0.82, height: 0.15, depth: 0.85 }, this.scene);
       cushion.position.set(-0.82 + i * 0.82, 0.38, 0.05);
-      cushion.castShadow = true;
-      loungeGroup.add(cushion);
+      cushion.parent = loungeGroup;
+      cushion.material = this.materials.sofaCushion;
+      this.shadowCasters.push(cushion);
     }
 
-    // Coffee table
-    const tableGroup = new THREE.Group();
+    // 茶几
+    const tableGroup = new BABYLON.TransformNode("coffeeTable", this.scene);
     tableGroup.position.set(0, 0, 0.9);
+    tableGroup.parent = loungeGroup;
 
-    const top = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.06, 0.8), this.materials.wood);
+    const top = BABYLON.MeshBuilder.CreateBox("coffeeTableTop", { width: 1.6, height: 0.06, depth: 0.8 }, this.scene);
     top.position.y = 0.35;
-    top.castShadow = true;
-    tableGroup.add(top);
+    top.parent = tableGroup;
+    top.material = this.materials.wood;
+    this.shadowCasters.push(top);
 
-    const legGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.35, 4);
-    const legL = new THREE.Mesh(legGeo, this.materials.wood);
+    const legGeo = { diameterTop: 0.08, diameterBottom: 0.08, height: 0.35, tessellation: 4 };
+    const legL = BABYLON.MeshBuilder.CreateCylinder("coffeeTableLegL", legGeo, this.scene);
     legL.position.set(-0.7, 0.175, 0);
-    legL.castShadow = true;
-    tableGroup.add(legL);
+    legL.parent = tableGroup;
+    legL.material = this.materials.wood;
+    this.shadowCasters.push(legL);
 
-    const legR = new THREE.Mesh(legGeo, this.materials.wood);
+    const legR = BABYLON.MeshBuilder.CreateCylinder("coffeeTableLegR", legGeo, this.scene);
     legR.position.set(0.7, 0.175, 0);
-    legR.castShadow = true;
-    tableGroup.add(legR);
+    legR.parent = tableGroup;
+    legR.material = this.materials.wood;
+    this.shadowCasters.push(legR);
 
-    // Table flower pot
-    const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.06, 0.12, 5), this.materials.coconut);
+    // 桌面小花盆
+    const pot = BABYLON.MeshBuilder.CreateCylinder("coffeeTablePot", { diameterTop: 0.16, diameterBottom: 0.12, height: 0.12, tessellation: 5 }, this.scene);
     pot.position.set(0, 0.44, 0);
-    pot.castShadow = true;
-    tableGroup.add(pot);
+    pot.parent = tableGroup;
+    pot.material = this.materials.coconut;
 
-    const potPlant = new THREE.Mesh(new THREE.SphereGeometry(0.1, 5, 5), this.materials.leaves);
+    const potPlant = BABYLON.MeshBuilder.CreateSphere("coffeeTablePlant", { diameter: 0.2, segments: 5 }, this.scene);
     potPlant.position.set(0, 0.52, 0);
-    tableGroup.add(potPlant);
-
-    loungeGroup.add(tableGroup);
-    this.group.add(loungeGroup);
+    potPlant.parent = tableGroup;
+    potPlant.material = this.materials.leaves;
   }
 
   createDiningTable(x, z) {
-    const tableGroup = new THREE.Group();
+    const tableGroup = new BABYLON.TransformNode("diningTableGroup", this.scene);
     tableGroup.position.set(x, 0.12, z);
+    tableGroup.parent = this.group;
 
-    const tabletop = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 2.5), this.materials.wood);
+    const tabletop = BABYLON.MeshBuilder.CreateBox("diningTableTop", { width: 0.9, height: 0.08, depth: 2.5 }, this.scene);
     tabletop.position.y = 1.0;
-    tabletop.castShadow = true;
-    tableGroup.add(tabletop);
+    tabletop.parent = tableGroup;
+    tabletop.material = this.materials.wood;
+    this.shadowCasters.push(tabletop);
 
-    const tLegGeo = new THREE.CylinderGeometry(0.035, 0.035, 1.0, 4);
+    const tLegGeo = { diameterTop: 0.07, diameterBottom: 0.07, height: 1.0, tessellation: 4 };
     const tLegOffsets = [
       { x: -0.38, z: -1.1 },
       { x: 0.38, z: -1.1 },
       { x: -0.38, z: 1.1 },
       { x: 0.38, z: 1.1 }
     ];
-    tLegOffsets.forEach(offset => {
-      const leg = new THREE.Mesh(tLegGeo, this.materials.wood);
+    tLegOffsets.forEach((offset, idx) => {
+      const leg = BABYLON.MeshBuilder.CreateCylinder("diningTableLeg_" + idx, tLegGeo, this.scene);
       leg.position.set(offset.x, 0.5, offset.z);
-      leg.castShadow = true;
-      tableGroup.add(leg);
+      leg.parent = tableGroup;
+      leg.material = this.materials.wood;
+      this.shadowCasters.push(leg);
     });
 
-    // Chairs
-    const chairGeo = new THREE.BoxGeometry(0.42, 0.06, 0.42);
-    const chairLegGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.5, 4);
+    // 书桌椅
+    const chairGeo = { width: 0.42, height: 0.06, depth: 0.42 };
+    const chairLegGeo = { diameterTop: 0.04, diameterBottom: 0.04, height: 0.5, tessellation: 4 };
 
     for (let side = -1; side <= 1; side += 2) {
-      const chairGroup = new THREE.Group();
+      const chairGroup = new BABYLON.TransformNode("diningChair_" + side, this.scene);
       chairGroup.position.set(0.68 * side, 0, 0);
+      chairGroup.parent = tableGroup;
       
-      const seat = new THREE.Mesh(chairGeo, this.materials.wood);
+      const seat = BABYLON.MeshBuilder.CreateBox("chairSeat", chairGeo, this.scene);
       seat.position.y = 0.53;
-      seat.castShadow = true;
-      chairGroup.add(seat);
+      seat.parent = chairGroup;
+      seat.material = this.materials.wood;
+      this.shadowCasters.push(seat);
 
+      let lIdx = 0;
       for (let cx = -1; cx <= 1; cx += 2) {
         for (let cz = -1; cz <= 1; cz += 2) {
-          const leg = new THREE.Mesh(chairLegGeo, this.materials.wood);
+          const leg = BABYLON.MeshBuilder.CreateCylinder("chairLeg_" + lIdx++, chairLegGeo, this.scene);
           leg.position.set(0.16 * cx, 0.25, 0.16 * cz);
-          leg.castShadow = true;
-          chairGroup.add(leg);
+          leg.parent = chairGroup;
+          leg.material = this.materials.wood;
+          this.shadowCasters.push(leg);
         }
       }
 
-      const back = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.5, 0.42), this.materials.wood);
+      const back = BABYLON.MeshBuilder.CreateBox("chairBack", { width: 0.06, height: 0.5, depth: 0.42 }, this.scene);
       back.position.set(0.18 * side, 0.78, 0);
-      back.castShadow = true;
-      chairGroup.add(back);
-
-      tableGroup.add(chairGroup);
+      back.parent = chairGroup;
+      back.material = this.materials.wood;
+      this.shadowCasters.push(back);
     }
 
-    // Books on table
+    // 桌上叠放书籍
     const bookColors = [0xd50000, 0x1e88e5, 0xffb300];
     for (let i = 0; i < 3; i++) {
-      const book = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.06, 0.3), new THREE.MeshLambertMaterial({ color: bookColors[i], flatShading: true }));
+      const bookMat = this.createFlatMaterial("bookMat_" + i, bookColors[i]);
+      const book = BABYLON.MeshBuilder.CreateBox("book", { width: 0.38, height: 0.06, depth: 0.3 }, this.scene);
       book.position.set(-0.06, 1.07 + i * 0.062, 0.3);
       book.rotation.y = 0.12 * i - 0.08;
-      book.castShadow = true;
-      tableGroup.add(book);
+      book.parent = tableGroup;
+      book.material = bookMat;
+      this.shadowCasters.push(book);
     }
 
-    // Vase plant on table
-    const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.09, 0.22, 5), this.materials.white);
+    // 桌面小盆栽
+    const pot = BABYLON.MeshBuilder.CreateCylinder("tablePot", { diameterTop: 0.24, diameterBottom: 0.18, height: 0.22, tessellation: 5 }, this.scene);
     pot.position.set(0, 1.15, -0.5);
-    pot.castShadow = true;
-    tableGroup.add(pot);
+    pot.parent = tableGroup;
+    pot.material = this.materials.white;
+    this.shadowCasters.push(pot);
 
-    const leaves = new THREE.Mesh(new THREE.SphereGeometry(0.16, 6, 6), this.materials.leaves);
+    const leaves = BABYLON.MeshBuilder.CreateSphere("tablePlant", { diameter: 0.32, segments: 6 }, this.scene);
     leaves.position.set(0, 1.3, -0.5);
-    tableGroup.add(leaves);
+    leaves.parent = tableGroup;
+    leaves.material = this.materials.leaves;
 
-    // Small cozy table lamp on dining table
-    const tableLampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.04, 4), this.materials.metalGold);
+    // 桌上护眼小台灯
+    const tableLampBase = BABYLON.MeshBuilder.CreateCylinder("tableLampBase", { diameterTop: 0.16, diameterBottom: 0.16, height: 0.04, tessellation: 4 }, this.scene);
     tableLampBase.position.set(0.2, 1.06, 0.8);
-    tableGroup.add(tableLampBase);
+    tableLampBase.parent = tableGroup;
+    tableLampBase.material = this.materials.metalGold;
 
-    const tableLampStem = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.35, 4), this.materials.metalGold);
+    const tableLampStem = BABYLON.MeshBuilder.CreateCylinder("tableLampStem", { diameterTop: 0.03, diameterBottom: 0.03, height: 0.35, tessellation: 4 }, this.scene);
     tableLampStem.position.set(0.2, 1.22, 0.8);
     tableLampStem.rotation.z = -0.2;
-    tableGroup.add(tableLampStem);
+    tableLampStem.parent = tableGroup;
+    tableLampStem.material = this.materials.metalGold;
 
-    const tableLampShade = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.14, 0.16, 6), this.materials.white);
+    const tableLampShade = BABYLON.MeshBuilder.CreateCylinder("tableLampShade", { diameterTop: 0.16, diameterBottom: 0.28, height: 0.16, tessellation: 6 }, this.scene);
     tableLampShade.position.set(0.13, 1.38, 0.8);
-    tableGroup.add(tableLampShade);
+    tableLampShade.parent = tableGroup;
+    tableLampShade.material = this.materials.white;
 
-    const tableLampLight = new THREE.PointLight(0xffffe0, 0.8, 6, 1.2);
-    tableLampLight.position.set(0.13, 1.34, 0.8);
-    tableGroup.add(tableLampLight);
-
-    this.group.add(tableGroup);
+    const tableLampLight = new BABYLON.PointLight("tableLampLight", new BABYLON.Vector3(x + 0.13, 1.34 + 0.12, z + 0.8), this.scene);
+    tableLampLight.diffuse = convertColor(0xffffe0);
+    tableLampLight.specular = new BABYLON.Color3(0, 0, 0);
+    tableLampLight.intensity = 0.8;
+    tableLampLight.range = 6;
+    tableLampLight.parent = this.group;
   }
 
   createMonstera(x, z) {
-    const monstera = new THREE.Group();
+    const monstera = new BABYLON.TransformNode("monstera", this.scene);
     monstera.position.set(x, 0.12, z);
+    monstera.parent = this.group;
 
-    const bigPot = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.28, 0.6, 6), this.materials.carpet);
+    const bigPot = BABYLON.MeshBuilder.CreateCylinder("monsteraPot", { diameterTop: 0.7, diameterBottom: 0.56, height: 0.6, tessellation: 6 }, this.scene);
     bigPot.position.y = 0.3;
-    bigPot.castShadow = true;
-    monstera.add(bigPot);
+    bigPot.parent = monstera;
+    bigPot.material = this.materials.carpet;
+    this.shadowCasters.push(bigPot);
 
-    const stemGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.9, 4);
+    const stemGeo = { diameterTop: 0.06, diameterBottom: 0.06, height: 0.9, tessellation: 4 };
     for (let i = 0; i < 5; i++) {
-      const stem = new THREE.Mesh(stemGeo, this.materials.wood);
+      const stem = BABYLON.MeshBuilder.CreateCylinder("monsteraStem_" + i, stemGeo, this.scene);
       const angle = (i / 5) * Math.PI * 2;
       stem.position.set(Math.cos(angle) * 0.14, 0.6, Math.sin(angle) * 0.14);
       stem.rotation.z = Math.cos(angle) * 0.45;
       stem.rotation.x = Math.sin(angle) * 0.45;
-      monstera.add(stem);
+      stem.parent = monstera;
+      stem.material = this.materials.wood;
 
-      const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.35, 5, 5), this.materials.leaves);
-      leaf.scale.set(1.3, 0.2, 1.8);
+      const leaf = BABYLON.MeshBuilder.CreateSphere("monsteraLeaf_" + i, { diameter: 0.7, segments: 5 }, this.scene);
+      leaf.scaling.set(1.3, 0.2, 1.8);
       leaf.position.set(Math.cos(angle) * 0.52, 0.96, Math.sin(angle) * 0.52);
       leaf.rotation.y = angle;
       leaf.rotation.x = 0.45;
-      leaf.castShadow = true;
-      monstera.add(leaf);
+      leaf.parent = monstera;
+      leaf.material = this.materials.leaves;
+      this.shadowCasters.push(leaf);
     }
-    this.group.add(monstera);
   }
 
   createSunsetPainting(x, z) {
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(4.2, 2.0, 0.05), this.materials.wood);
+    const frame = BABYLON.MeshBuilder.CreateBox("paintingFrame", { width: 4.2, height: 2.0, depth: 0.05 }, this.scene);
     frame.position.set(x, 3.0, z);
-    frame.castShadow = true;
-    this.group.add(frame);
+    frame.parent = this.group;
+    frame.material = this.materials.wood;
+    this.shadowCasters.push(frame);
 
-    const art = new THREE.Mesh(new THREE.BoxGeometry(3.8, 1.6, 0.02), this.materials.paintingArt);
+    const art = BABYLON.MeshBuilder.CreateBox("paintingArtPlate", { width: 3.8, height: 1.6, depth: 0.02 }, this.scene);
     art.position.set(x, 3.0, z + 0.035);
-    this.group.add(art);
+    art.parent = this.group;
+    art.material = this.materials.paintingArt;
 
-    const sun = new THREE.Mesh(new THREE.SphereGeometry(0.24, 6, 6), this.materials.paintingSun);
+    const sun = BABYLON.MeshBuilder.CreateSphere("paintingSunSphere", { diameter: 0.48, segments: 6 }, this.scene);
     sun.position.set(x + 0.8, 3.2, z + 0.05);
-    this.group.add(sun);
+    sun.parent = this.group;
+    sun.material = this.materials.paintingSun;
   }
 
   createReservedSpot(x, z) {
-    const reserveGroup = new THREE.Group();
+    const reserveGroup = new BABYLON.TransformNode("reserveSpot", this.scene);
     reserveGroup.position.set(x, 0.12, z);
+    reserveGroup.parent = this.group;
 
-    const border = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.02, 3.0), new THREE.MeshLambertMaterial({ color: 0x90a4ae, flatShading: true, transparent: true, opacity: 0.5 }));
+    const borderMat = new BABYLON.StandardMaterial("reserveBorderMat", this.scene);
+    borderMat.diffuseColor = convertColor(0x90a4ae);
+    borderMat.alpha = 0.5;
+    borderMat.backFaceCulling = false;
+    borderMat.specularColor = new BABYLON.Color3(0, 0, 0);
+
+    const border = BABYLON.MeshBuilder.CreateBox("reserveBorder", { width: 3.0, height: 0.02, depth: 3.0 }, this.scene);
     border.position.y = 0.01;
-    reserveGroup.add(border);
+    border.parent = reserveGroup;
+    border.material = borderMat;
 
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.45, 4), this.materials.wood);
+    const post = BABYLON.MeshBuilder.CreateCylinder("reservePost", { diameterTop: 0.04, diameterBottom: 0.04, height: 0.45, tessellation: 4 }, this.scene);
     post.position.set(0, 0.22, 0);
-    post.castShadow = true;
-    reserveGroup.add(post);
+    post.parent = reserveGroup;
+    post.material = this.materials.wood;
+    this.shadowCasters.push(post);
 
-    const signBoard = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.25, 0.03), this.materials.wood);
+    const signBoard = BABYLON.MeshBuilder.CreateBox("reserveSign", { width: 0.6, height: 0.25, depth: 0.03 }, this.scene);
     signBoard.position.set(0, 0.44, 0);
-    signBoard.castShadow = true;
-    reserveGroup.add(signBoard);
- 
-    this.group.add(reserveGroup);
+    signBoard.parent = reserveGroup;
+    signBoard.material = this.materials.wood;
+    this.shadowCasters.push(signBoard);
   }
 
   createCeilingLight() {
-    // Hang lamp from the middle beam (X = 0, Y = 5.4, Z = 0)
-    const ceilGroup = new THREE.Group();
+    const ceilGroup = new BABYLON.TransformNode("ceilingLightGroup", this.scene);
     ceilGroup.position.set(0, 5.4, 0);
+    ceilGroup.parent = this.group;
 
-    // Ceiling rose cap
-    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.06, 6), this.materials.wood);
-    ceilGroup.add(cap);
+    // 吸顶盖
+    const cap = BABYLON.MeshBuilder.CreateCylinder("ceilCap", { diameterTop: 0.4, diameterBottom: 0.4, height: 0.06, tessellation: 6 }, this.scene);
+    cap.parent = ceilGroup;
+    cap.material = this.materials.wood;
 
-    // Thin black cord
-    const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 1.2, 4), new THREE.MeshLambertMaterial({ color: 0x111111 }));
+    // 细电线
+    const cordMat = this.createFlatMaterial("ceilCordMat", 0x111111);
+    const cord = BABYLON.MeshBuilder.CreateCylinder("ceilCord", { diameterTop: 0.03, diameterBottom: 0.03, height: 1.2, tessellation: 4 }, this.scene);
     cord.position.y = -0.6;
-    ceilGroup.add(cord);
+    cord.parent = ceilGroup;
+    cord.material = cordMat;
 
-    // Golden socket & shade
-    const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.35, 0.28, 8), this.materials.metalGold);
+    // 金属灯罩
+    const shade = BABYLON.MeshBuilder.CreateCylinder("ceilShade", { diameterTop: 0.16, diameterBottom: 0.7, height: 0.28, tessellation: 8 }, this.scene);
     shade.position.y = -1.34;
-    shade.castShadow = true;
-    ceilGroup.add(shade);
+    shade.parent = ceilGroup;
+    shade.material = this.materials.metalGold;
+    this.shadowCasters.push(shade);
 
-    // Small glowing yellow bulb inside
-    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 6), new THREE.MeshBasicMaterial({ color: 0xfff9c4 }));
+    // 自发光灯泡
+    const bulbMat = new BABYLON.StandardMaterial("ceilBulbMat", this.scene);
+    bulbMat.diffuseColor = convertColor(0xfff9c4);
+    bulbMat.emissiveColor = convertColor(0xfff9c4);
+    bulbMat.specularColor = new BABYLON.Color3(0, 0, 0);
+
+    const bulb = BABYLON.MeshBuilder.CreateSphere("ceilBulb", { diameter: 0.24, segments: 6 }, this.scene);
     bulb.position.y = -1.48;
-    ceilGroup.add(bulb);
+    bulb.parent = ceilGroup;
+    bulb.material = bulbMat;
 
-    this.group.add(ceilGroup);
-
-    // Point Light source (warm gold tone, made brighter and larger range)
-    const light = new THREE.PointLight(0xffecc2, 1.7, 28, 1.2);
-    light.position.set(0, 3.82, 0); // slightly below bulb
-    light.castShadow = false;
-    this.group.add(light);
+    // 主室内吊灯光源 (大范围暖光)
+    const light = new BABYLON.PointLight("indoorCeilingLight", new BABYLON.Vector3(0, 3.82, 0), this.scene);
+    light.diffuse = convertColor(0xffecc2);
+    light.specular = new BABYLON.Color3(0, 0, 0);
+    light.intensity = 1.7;
+    light.range = 28;
+    light.parent = this.group;
   }
 
   createWindowScenery() {
-    const sceneGroup = new THREE.Group();
+    const sceneGroup = new BABYLON.TransformNode("windowSceneryGroup", this.scene);
     sceneGroup.position.set(-17.5, -1.2, 0.0);
+    sceneGroup.parent = this.group;
 
-    // 1. Floating Rock Island Base
-    const baseGeo = new THREE.CylinderGeometry(3.5, 2.5, 1.5, 8);
-    const baseMesh = new THREE.Mesh(baseGeo, this.materials.wood); // use wood color for dirt rock
-    baseMesh.receiveShadow = true;
-    sceneGroup.add(baseMesh);
+    // 1. 浮空岩岛底座
+    const baseMesh = BABYLON.MeshBuilder.CreateCylinder("sceneryBase", { diameterTop: 7.0, diameterBottom: 5.0, height: 1.5, tessellation: 8 }, this.scene);
+    baseMesh.parent = sceneGroup;
+    baseMesh.material = this.materials.wood;
+    baseMesh.receiveShadows = true;
 
-    const sandTop = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.4, 0.2, 8), this.materials.woodLight); // light sand top
+    const sandTop = BABYLON.MeshBuilder.CreateCylinder("scenerySand", { diameterTop: 7.0, diameterBottom: 6.8, height: 0.2, tessellation: 8 }, this.scene);
     sandTop.position.y = 0.85;
-    sandTop.receiveShadow = true;
-    sceneGroup.add(sandTop);
+    sandTop.parent = sceneGroup;
+    sandTop.material = this.materials.woodLight;
+    sandTop.receiveShadows = true;
 
-    // 2. Mini Palm Tree
-    const tree = new THREE.Group();
+    // 2. 迷你椰子树
+    const tree = new BABYLON.TransformNode("sceneryTree", this.scene);
     tree.position.set(0, 0.95, -0.6);
-    tree.scale.set(0.65, 0.65, 0.65);
+    tree.scaling.set(0.65, 0.65, 0.65);
+    tree.parent = sceneGroup;
 
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.25, 2.5, 5), this.materials.wood);
+    const trunk = BABYLON.MeshBuilder.CreateCylinder("sceneryTreeTrunk", { diameterTop: 0.36, diameterBottom: 0.5, height: 2.5, tessellation: 5 }, this.scene);
     trunk.position.y = 1.25;
     trunk.rotation.z = -0.12;
-    tree.add(trunk);
+    trunk.parent = tree;
+    trunk.material = this.materials.wood;
 
-    const leaves = new THREE.Group();
+    const leaves = new BABYLON.TransformNode("sceneryTreeLeaves", this.scene);
     leaves.position.set(-0.15, 2.5, 0);
-    const leafGeo = new THREE.BoxGeometry(1.4, 0.02, 0.35);
-    leafGeo.translate(0.7, 0, 0);
+    leaves.parent = tree;
+
     for (let i = 0; i < 6; i++) {
-      const leaf = new THREE.Mesh(leafGeo, this.materials.leaves);
-      leaf.rotation.y = (i / 6) * Math.PI * 2;
-      leaf.rotation.z = -0.2;
-      leaves.add(leaf);
-    }
-    tree.add(leaves);
-    sceneGroup.add(tree);
+      const leaf = BABYLON.MeshBuilder.CreateBox("sceneryLeaf", { width: 1.4, height: 0.02, depth: 0.35 }, this.scene);
+      leaf.setPivotPoint(new BABYLON.Vector3(-0.7, 0, 0));
+      leaf.position.set(0.7, 0, 0);
 
-    // 3. Glowing crescent moon/sphere higher in the dark sky
-    const moon = new THREE.Mesh(new THREE.SphereGeometry(1.2, 10, 10), new THREE.MeshBasicMaterial({ color: 0xffe082 }));
+      const leafPivot = new BABYLON.TransformNode("sceneryLeafPivot_" + i, this.scene);
+      leafPivot.parent = leaves;
+      leaf.parent = leafPivot;
+
+      leafPivot.rotation.y = (i / 6) * Math.PI * 2;
+      leafPivot.rotation.z = -0.2;
+
+      leaf.material = this.materials.leaves;
+    }
+
+    // 3. 悬挂明月 (自发光金色球体)
+    const moonMat = new BABYLON.StandardMaterial("sceneryMoonMat", this.scene);
+    moonMat.diffuseColor = convertColor(0xffe082);
+    moonMat.emissiveColor = convertColor(0xffe082);
+    moonMat.specularColor = new BABYLON.Color3(0, 0, 0);
+
+    const moon = BABYLON.MeshBuilder.CreateSphere("sceneryMoon", { diameter: 2.4, segments: 10 }, this.scene);
     moon.position.set(-4.5, 7.8, -4.5);
-    sceneGroup.add(moon);
+    moon.parent = sceneGroup;
+    moon.material = moonMat;
 
-    // Small cloud
-    const cloud = new THREE.Group();
+    // 4. 小云朵
+    const cloud = new BABYLON.TransformNode("sceneryCloud", this.scene);
     cloud.position.set(1.5, 4.0, 3.0);
-    const cloudMat = new THREE.MeshLambertMaterial({ color: 0xfafafa, flatShading: true });
+    cloud.parent = sceneGroup;
+
+    const cloudMat = this.createFlatMaterial("sceneryCloudMat", 0xfafafa);
     for (let i = 0; i < 3; i++) {
-      const puff = new THREE.Mesh(new THREE.SphereGeometry(0.35 + i * 0.1, 5, 5), cloudMat);
+      const puff = BABYLON.MeshBuilder.CreateSphere("cloudPuff_" + i, { diameter: (0.7 + i * 0.2), segments: 5 }, this.scene);
       puff.position.set(i * 0.4 - 0.4, 0, (i % 2) * 0.1);
-      cloud.add(puff);
+      puff.parent = cloud;
+      puff.material = cloudMat;
     }
-    sceneGroup.add(cloud);
 
-    // Soft cyan/blue moonlight point light to illuminate the floating island and palm tree
-    const moonLight = new THREE.PointLight(0x80deea, 1.5, 12, 1.2);
-    moonLight.position.set(-1.0, 3.2, -1.0);
-    sceneGroup.add(moonLight);
+    // 5. 皎洁的青蓝色月光点光源 (用来照亮悬浮外景)
+    const moonLight = new BABYLON.PointLight("sceneryMoonLight", new BABYLON.Vector3(-18.5, 2.0, -1.0), this.scene);
+    moonLight.diffuse = convertColor(0x80deea);
+    moonLight.specular = new BABYLON.Color3(0, 0, 0);
+    moonLight.intensity = 1.5;
+    moonLight.range = 12;
+    moonLight.parent = this.group;
 
-    // Tiny glowing stars suspended in the dark sky
-    const starGeo = new THREE.SphereGeometry(0.06, 4, 4);
-    const starMat = new THREE.MeshBasicMaterial({ color: 0xffecb3 });
+    // 6. 稀疏的背景挂载小星星
+    const starMat = new BABYLON.StandardMaterial("sceneryStarMat", this.scene);
+    starMat.diffuseColor = convertColor(0xffecb3);
+    starMat.emissiveColor = convertColor(0xffecb3);
+    starMat.specularColor = new BABYLON.Color3(0, 0, 0);
+
+    const starGeo = { diameter: 0.12, segments: 4 };
     const starCoords = [
       { x: -3.5, y: 5.5, z: -2.0 },
       { x: -2.0, y: 6.5, z: 2.0 },
@@ -732,47 +904,60 @@ export class HouseGenerator {
       { x: -1.2, y: 4.5, z: 3.5 },
       { x: -5.0, y: 6.0, z: 0.0 }
     ];
-    starCoords.forEach(coord => {
-      const star = new THREE.Mesh(starGeo, starMat);
+    starCoords.forEach((coord, idx) => {
+      const star = BABYLON.MeshBuilder.CreateSphere("sceneryStar_" + idx, starGeo, this.scene);
       star.position.set(coord.x, coord.y, coord.z);
-      sceneGroup.add(star);
+      star.parent = sceneGroup;
+      star.material = starMat;
     });
-
-    this.group.add(sceneGroup);
   }
 
   createFloorLamp(x, z) {
-    const lampGroup = new THREE.Group();
+    const lampGroup = new BABYLON.TransformNode("floorLamp", this.scene);
     lampGroup.position.set(x, 0.12, z);
+    lampGroup.parent = this.group;
 
-    // Base
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.05, 6), this.materials.metalGold);
-    base.castShadow = true;
-    lampGroup.add(base);
+    // 底座
+    const base = BABYLON.MeshBuilder.CreateCylinder("floorLampBase", { diameterTop: 0.6, diameterBottom: 0.6, height: 0.05, tessellation: 6 }, this.scene);
+    base.parent = lampGroup;
+    base.material = this.materials.metalGold;
+    this.shadowCasters.push(base);
 
-    // Pole
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.2, 4), this.materials.wood);
+    // 支撑立柱
+    const pole = BABYLON.MeshBuilder.CreateCylinder("floorLampPole", { diameterTop: 0.08, diameterBottom: 0.08, height: 2.2, tessellation: 4 }, this.scene);
     pole.position.y = 1.1;
-    pole.castShadow = true;
-    lampGroup.add(pole);
+    pole.parent = lampGroup;
+    pole.material = this.materials.wood;
+    this.shadowCasters.push(pole);
 
-    // Shade
-    const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.35, 0.4, 8), this.materials.white);
+    // 灯罩
+    const shade = BABYLON.MeshBuilder.CreateCylinder("floorLampShade", { diameterTop: 0.4, diameterBottom: 0.7, height: 0.4, tessellation: 8 }, this.scene);
     shade.position.y = 2.2;
-    shade.castShadow = true;
-    lampGroup.add(shade);
+    shade.parent = lampGroup;
+    shade.material = this.materials.white;
+    this.shadowCasters.push(shade);
 
-    // Bulb
-    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), new THREE.MeshBasicMaterial({ color: 0xffeb3b }));
+    // 灯泡
+    const bulbMat = new BABYLON.StandardMaterial("floorLampBulbMat", this.scene);
+    bulbMat.diffuseColor = convertColor(0xffeb3b);
+    bulbMat.emissiveColor = convertColor(0xffeb3b);
+    bulbMat.specularColor = new BABYLON.Color3(0, 0, 0);
+
+    const bulb = BABYLON.MeshBuilder.CreateSphere("floorLampBulb", { diameter: 0.16, segments: 6 }, this.scene);
     bulb.position.y = 2.1;
-    lampGroup.add(bulb);
+    bulb.parent = lampGroup;
+    bulb.material = bulbMat;
 
-    // Light
-    const floorLampLight = new THREE.PointLight(0xffd180, 1.2, 12, 1.2);
-    floorLampLight.position.set(0, 2.0, 0);
-    floorLampLight.castShadow = false;
-    lampGroup.add(floorLampLight);
+    // 灯光光源
+    const floorLampLight = new BABYLON.PointLight("floorLampLight", new BABYLON.Vector3(x, 2.12, z), this.scene);
+    floorLampLight.diffuse = convertColor(0xffd180);
+    floorLampLight.specular = new BABYLON.Color3(0, 0, 0);
+    floorLampLight.intensity = 1.2;
+    floorLampLight.range = 12;
+    floorLampLight.parent = this.group;
+  }
 
-    this.group.add(lampGroup);
+  getShadowCasters() {
+    return this.shadowCasters;
   }
 }

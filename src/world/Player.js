@@ -1,4 +1,16 @@
-import * as THREE from 'three';
+import * as BABYLON from '@babylonjs/core';
+
+function convertColor(hexVal) {
+  if (typeof hexVal === 'number') {
+    const hexStr = "#" + hexVal.toString(16).padStart(6, '0');
+    return BABYLON.Color3.FromHexString(hexStr);
+  }
+  if (typeof hexVal === 'string') {
+    if (!hexVal.startsWith('#')) return BABYLON.Color3.FromHexString('#' + hexVal);
+    return BABYLON.Color3.FromHexString(hexVal);
+  }
+  return new BABYLON.Color3(1, 1, 1);
+}
 
 export class Player {
   constructor(scene, camera, colliders, themeConfig) {
@@ -8,8 +20,8 @@ export class Player {
     this.themeConfig = themeConfig;
     
     // Physics and Movement state
-    this.position = new THREE.Vector3(0, 4, 0); // Spawn slightly in the air
-    this.velocity = new THREE.Vector3();
+    this.position = new BABYLON.Vector3(0, 4, 0); // Spawn slightly in the air
+    this.velocity = new BABYLON.Vector3();
     this.speed = 8.0;
     this.jumpForce = 7.0;
     this.gravity = 18.0;
@@ -37,8 +49,8 @@ export class Player {
   }
 
   initMesh() {
-    this.group = new THREE.Group();
-    this.group.position.copy(this.position);
+    this.group = new BABYLON.TransformNode("playerGroup", this.scene);
+    this.group.position.copyFrom(this.position);
     this.activeModel = 'girl'; // Default model is girl
 
     const hairColorHex = this.themeConfig.player.hairColor || 0xff8a80;
@@ -50,17 +62,9 @@ export class Player {
 
   rebuildMesh(hairColorHex, clothingColorHex, hatColorHex) {
     // Clear all children of this.group to rebuild
-    while (this.group.children.length > 0) {
-      const child = this.group.children[0];
-      this.group.remove(child);
-      if (child.geometry) child.geometry.dispose();
-      if (child.material) {
-        if (Array.isArray(child.material)) {
-          child.material.forEach(m => m.dispose());
-        } else {
-          child.material.dispose();
-        }
-      }
+    const children = this.group.getChildren();
+    for (let i = children.length - 1; i >= 0; i--) {
+      children[i].dispose();
     }
 
     // Clear old animation references
@@ -71,63 +75,115 @@ export class Player {
     const isChristmas = this.themeConfig.colors.sky === 0x050c18;
 
     // Materials
-    const skinMat = new THREE.MeshLambertMaterial({ color: 0xffe0bd, flatShading: true }); // skin
-    const whiteMat = new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true }); // white details
-    const hairMat = new THREE.MeshLambertMaterial({ color: hairColorHex, flatShading: true }); // hair / fur
+    const skinMat = new BABYLON.StandardMaterial("playerSkinMat", this.scene);
+    skinMat.diffuseColor = BABYLON.Color3.FromHexString("#ffe0bd");
+    skinMat.specularColor = new BABYLON.Color3(0, 0, 0);
+    skinMat.flatShading = true;
+
+    const whiteMat = new BABYLON.StandardMaterial("playerWhiteMat", this.scene);
+    whiteMat.diffuseColor = new BABYLON.Color3(1, 1, 1);
+    whiteMat.specularColor = new BABYLON.Color3(0, 0, 0);
+    whiteMat.flatShading = true;
+
+    const hairMat = new BABYLON.StandardMaterial("playerHairMat", this.scene);
+    hairMat.diffuseColor = convertColor(hairColorHex);
+    hairMat.specularColor = new BABYLON.Color3(0, 0, 0);
+    hairMat.flatShading = true;
     this.hairMat = hairMat;
 
     // 1. Torso & Clothes
-    const topGeo = new THREE.CylinderGeometry(0.2, 0.24, 0.35, 8);
-    const topMat = new THREE.MeshLambertMaterial({ color: clothingColorHex, flatShading: true });
+    const topMat = new BABYLON.StandardMaterial("playerTopMat", this.scene);
+    topMat.diffuseColor = convertColor(clothingColorHex);
+    topMat.specularColor = new BABYLON.Color3(0, 0, 0);
+    topMat.flatShading = true;
     this.clothingMat = topMat;
-    this.body = new THREE.Mesh(topGeo, topMat);
+
+    this.body = BABYLON.MeshBuilder.CreateCylinder("playerBody", {
+      diameterTop: 0.4,
+      diameterBottom: 0.48,
+      height: 0.35,
+      tessellation: 8
+    }, this.scene);
     this.body.position.y = 0.55;
-    this.body.castShadow = true;
-    this.group.add(this.body);
+    this.body.parent = this.group;
+    this.body.material = topMat;
 
     // Lower body (shorts/pants)
-    const lowerBodyColor = isChristmas ? 0x263238 : 0x3f51b5;
-    const shortsGeo = new THREE.CylinderGeometry(0.24, 0.3, 0.3, 8);
-    const lowerMat = new THREE.MeshLambertMaterial({ color: lowerBodyColor, flatShading: true });
-    const shorts = new THREE.Mesh(shortsGeo, lowerMat);
+    const lowerBodyColor = isChristmas ? "#263238" : "#3f51b5";
+    const lowerMat = new BABYLON.StandardMaterial("playerLowerMat", this.scene);
+    lowerMat.diffuseColor = BABYLON.Color3.FromHexString(lowerBodyColor);
+    lowerMat.specularColor = new BABYLON.Color3(0, 0, 0);
+    lowerMat.flatShading = true;
+
+    const shorts = BABYLON.MeshBuilder.CreateCylinder("playerShorts", {
+      diameterTop: 0.48,
+      diameterBottom: 0.6,
+      height: 0.3,
+      tessellation: 8
+    }, this.scene);
     shorts.position.y = 0.25;
-    shorts.castShadow = true;
-    this.group.add(shorts);
+    shorts.parent = this.group;
+    shorts.material = lowerMat;
 
     // 2. Head & Neck
-    const headGeo = new THREE.SphereGeometry(0.34, 8, 8);
-    this.head = new THREE.Mesh(headGeo, skinMat);
+    this.head = BABYLON.MeshBuilder.CreateSphere("playerHead", {
+      diameter: 0.68,
+      segments: 8
+    }, this.scene);
     this.head.position.y = 0.94;
-    this.head.castShadow = true;
-    this.group.add(this.head);
+    this.head.parent = this.group;
+    this.head.material = skinMat;
 
-    const neckGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.15, 6);
-    const neck = new THREE.Mesh(neckGeo, skinMat);
+    const neck = BABYLON.MeshBuilder.CreateCylinder("playerNeck", {
+      diameterTop: 0.16,
+      diameterBottom: 0.16,
+      height: 0.15,
+      tessellation: 6
+    }, this.scene);
     neck.position.y = 0.75;
-    this.group.add(neck);
+    neck.parent = this.group;
+    neck.material = skinMat;
 
     // 3. Sandals / Boots / Shoes
-    const sandalColor = isChristmas ? 0x5d4037 : (this.activeModel === 'boy' ? 0xff5252 : 0xffffff); // Red sneakers for boy, white sandals for girl
-    const sandalMat = new THREE.MeshLambertMaterial({ color: sandalColor, flatShading: true });
-    const footGeo = new THREE.SphereGeometry(0.09, 6, 6);
-    footGeo.scale(1, isChristmas ? 1.0 : 0.7, 1.3);
+    const sandalColor = isChristmas ? "#5d4037" : (this.activeModel === 'boy' ? "#ff5252" : "#ffffff");
+    const sandalMat = new BABYLON.StandardMaterial("playerSandalMat", this.scene);
+    sandalMat.diffuseColor = BABYLON.Color3.FromHexString(sandalColor);
+    sandalMat.specularColor = new BABYLON.Color3(0, 0, 0);
+    sandalMat.flatShading = true;
 
-    this.footL = new THREE.Mesh(footGeo, sandalMat);
+    // Foot L (拉扁的 Sphere 模拟鞋)
+    this.footL = BABYLON.MeshBuilder.CreateSphere("playerFootL", {
+      diameter: 0.18,
+      segments: 6
+    }, this.scene);
+    this.footL.scaling.set(1.0, isChristmas ? 1.0 : 0.7, 1.3);
     this.footL.position.set(-0.16, 0.04, 0);
-    this.footR = new THREE.Mesh(footGeo, sandalMat);
+    this.footL.parent = this.group;
+    this.footL.material = sandalMat;
+
+    this.footR = BABYLON.MeshBuilder.CreateSphere("playerFootR", {
+      diameter: 0.18,
+      segments: 6
+    }, this.scene);
+    this.footR.scaling.set(1.0, isChristmas ? 1.0 : 0.7, 1.3);
     this.footR.position.set(0.16, 0.04, 0);
+    this.footR.parent = this.group;
+    this.footR.material = sandalMat;
 
     if (!isChristmas && this.activeModel === 'girl') {
-      const sandalBowGeo = new THREE.BoxGeometry(0.12, 0.04, 0.08);
-      const sBowL = new THREE.Mesh(sandalBowGeo, sandalMat);
+      const sBowL = BABYLON.MeshBuilder.CreateBox("sBowL", {
+        width: 0.12,
+        height: 0.04,
+        depth: 0.08
+      }, this.scene);
       sBowL.position.set(-0.16, 0.06, 0.08);
-      const sBowR = new THREE.Mesh(sandalBowGeo, sandalMat);
+      sBowL.parent = this.group;
+      sBowL.material = sandalMat;
+
+      const sBowR = sBowL.clone("sBowR");
       sBowR.position.set(0.16, 0.06, 0.08);
-      this.group.add(sBowL);
-      this.group.add(sBowR);
+      sBowR.parent = this.group;
     }
-    this.group.add(this.footL);
-    this.group.add(this.footR);
 
     // Build model specific features
     if (this.activeModel === 'girl') {
@@ -139,512 +195,725 @@ export class Player {
     }
 
     // 4. Cardigan / Scarf (waving cape)
-    const capeColor = isChristmas ? 0xd50000 : 0xffffff;
-    const capeMat = new THREE.MeshLambertMaterial({
-      color: capeColor,
-      transparent: !isChristmas,
-      opacity: isChristmas ? 1.0 : 0.8,
-      side: THREE.DoubleSide,
-      flatShading: true
-    });
-    
+    const capeColor = isChristmas ? "#d50000" : "#ffffff";
+    const capeMat = new BABYLON.StandardMaterial("playerCapeMat", this.scene);
+    capeMat.diffuseColor = BABYLON.Color3.FromHexString(capeColor);
+    capeMat.specularColor = new BABYLON.Color3(0, 0, 0);
+    capeMat.alpha = isChristmas ? 1.0 : 0.8;
+    capeMat.backFaceCulling = false; // 双面可见
+    capeMat.flatShading = true;
+
     if (isChristmas) {
-      const capeGeo = new THREE.PlaneGeometry(0.55, 0.7, 2, 4);
-      this.cape = new THREE.Mesh(capeGeo, capeMat);
-      this.cape.position.set(0.05, 0.62, -0.22);
-      this.cape.rotation.x = 0.12;
+      // 圣诞斗篷用 subdivisions 模拟，用 CreateGround 代替并旋转
+      this.cape = BABYLON.MeshBuilder.CreateGround("playerCape", {
+        width: 0.55,
+        height: 0.7,
+        subdivisionsX: 2,
+        subdivisionsY: 4
+      }, this.scene);
+      this.cape.rotation.x = Math.PI / 2 + 0.12; // 沿 X 轴翻转，使之竖直并轻微向后偏
       this.cape.rotation.y = 0.05;
-      this.cape.castShadow = true;
-      this.group.add(this.cape);
+      this.cape.position.set(0.05, 0.62, -0.22);
+      this.cape.parent = this.group;
+      this.cape.material = capeMat;
     } else {
-      const capeGeo = new THREE.PlaneGeometry(0.65, 0.75, 3, 5);
-      this.cape = new THREE.Mesh(capeGeo, capeMat);
+      this.cape = BABYLON.MeshBuilder.CreateGround("playerCape", {
+        width: 0.65,
+        height: 0.75,
+        subdivisionsX: 3,
+        subdivisionsY: 5
+      }, this.scene);
+      this.cape.rotation.x = Math.PI / 2 + 0.15;
       this.cape.position.set(0, 0.48, -0.32);
-      this.cape.rotation.x = 0.15;
-      this.cape.castShadow = true;
-      this.group.add(this.cape);
+      this.cape.parent = this.group;
+      this.cape.material = capeMat;
     }
 
-    this.scene.add(this.group);
+    // 统一配置阴影 (如果有 shadowGenerator 另行添加)
+    const allMeshes = this.group.getChildMeshes();
+    allMeshes.forEach(mesh => {
+      mesh.receiveShadows = true;
+    });
   }
 
   buildGirlModel(hairMat, whiteMat, hatColorHex, isChristmas) {
     // Hair (helm, bangs, twin-tails)
-    const hairHelmGeo = new THREE.SphereGeometry(0.36, 8, 8);
-    const hairHelm = new THREE.Mesh(hairHelmGeo, hairMat);
+    const hairHelm = BABYLON.MeshBuilder.CreateSphere("hairHelm", {
+      diameter: 0.72,
+      segments: 8
+    }, this.scene);
     hairHelm.position.set(0, 0.98, -0.04);
-    this.group.add(hairHelm);
+    hairHelm.parent = this.group;
+    hairHelm.material = hairMat;
 
-    const bangGeo = new THREE.BoxGeometry(0.18, 0.18, 0.12);
-    const bangL = new THREE.Mesh(bangGeo, hairMat);
+    const bangL = BABYLON.MeshBuilder.CreateBox("bangL", {
+      width: 0.18,
+      height: 0.18,
+      depth: 0.12
+    }, this.scene);
     bangL.position.set(-0.12, 1.05, 0.26);
     bangL.rotation.z = -0.2;
     bangL.rotation.y = 0.1;
-    this.group.add(bangL);
+    bangL.parent = this.group;
+    bangL.material = hairMat;
 
-    const bangR = new THREE.Mesh(bangGeo, hairMat);
+    const bangR = BABYLON.MeshBuilder.CreateBox("bangR", {
+      width: 0.18,
+      height: 0.18,
+      depth: 0.12
+    }, this.scene);
     bangR.position.set(0.12, 1.05, 0.26);
     bangR.rotation.z = 0.2;
     bangR.rotation.y = -0.1;
-    this.group.add(bangR);
+    bangR.parent = this.group;
+    bangR.material = hairMat;
 
-    const tailGeo = new THREE.ConeGeometry(0.1, 0.52, 6);
-    tailGeo.rotateX(Math.PI);
-    
-    this.tailL = new THREE.Mesh(tailGeo, hairMat);
+    // 女孩双马尾 (圆锥)
+    // 注意：圆锥在 Babylon 中尖端向上，原本 Three 倒转 rotateX(Math.PI) 尖端向下
+    this.tailL = BABYLON.MeshBuilder.CreateCylinder("tailL", {
+      diameterTop: 0,
+      diameterBottom: 0.2,
+      height: 0.52,
+      tessellation: 6
+    }, this.scene);
+    this.tailL.rotation.x = Math.PI;
     this.tailL.position.set(-0.35, 0.94, -0.05);
     this.tailL.rotation.z = -0.25;
-    this.group.add(this.tailL);
+    this.tailL.parent = this.group;
+    this.tailL.material = hairMat;
 
-    this.tailR = new THREE.Mesh(tailGeo, hairMat);
+    this.tailR = BABYLON.MeshBuilder.CreateCylinder("tailR", {
+      diameterTop: 0,
+      diameterBottom: 0.2,
+      height: 0.52,
+      tessellation: 6
+    }, this.scene);
+    this.tailR.rotation.x = Math.PI;
     this.tailR.position.set(0.35, 0.94, -0.05);
     this.tailR.rotation.z = 0.25;
-    this.group.add(this.tailR);
+    this.tailR.parent = this.group;
+    this.tailR.material = hairMat;
 
     // Hair Clip
     if (isChristmas) {
-      const clip = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.04), whiteMat);
+      const clip = BABYLON.MeshBuilder.CreateBox("clip", {
+        width: 0.07,
+        height: 0.07,
+        depth: 0.04
+      }, this.scene);
       clip.position.set(0.24, 1.12, 0.24);
       clip.rotation.z = Math.PI / 4;
-      this.group.add(clip);
+      clip.parent = this.group;
+      clip.material = whiteMat;
     } else {
-      const clipRind = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.04), new THREE.MeshLambertMaterial({ color: 0x4caf50 }));
+      const greenClipMat = new BABYLON.StandardMaterial("clipGreenMat", this.scene);
+      greenClipMat.diffuseColor = BABYLON.Color3.FromHexString("#4caf50");
+      greenClipMat.specularColor = new BABYLON.Color3(0, 0, 0);
+
+      const redClipMat = new BABYLON.StandardMaterial("clipRedMat", this.scene);
+      redClipMat.diffuseColor = BABYLON.Color3.FromHexString("#ff5252");
+      redClipMat.specularColor = new BABYLON.Color3(0, 0, 0);
+
+      const clipRind = BABYLON.MeshBuilder.CreateBox("clipRind", {
+        width: 0.08,
+        height: 0.08,
+        depth: 0.04
+      }, this.scene);
       clipRind.position.set(0.24, 1.12, 0.24);
       clipRind.rotation.z = -0.4;
-      const clipFlesh = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.04), new THREE.MeshLambertMaterial({ color: 0xff5252 }));
+      clipRind.parent = this.group;
+      clipRind.material = greenClipMat;
+
+      const clipFlesh = BABYLON.MeshBuilder.CreateBox("clipFlesh", {
+        width: 0.06,
+        height: 0.06,
+        depth: 0.04
+      }, this.scene);
       clipFlesh.position.set(0.24, 1.14, 0.26);
       clipFlesh.rotation.z = -0.4;
-      this.group.add(clipRind);
-      this.group.add(clipFlesh);
+      clipFlesh.parent = this.group;
+      clipFlesh.material = redClipMat;
     }
 
     // Headwear (Santa Hat vs Straw Hat)
-    if (isChristmas) {
-      const hatGroup = new THREE.Group();
-      hatGroup.position.set(0, 1.25, -0.04);
+    const hatGroup = new BABYLON.TransformNode("hatGroup", this.scene);
+    hatGroup.parent = this.group;
 
-      const coneGeo = new THREE.ConeGeometry(0.35, 0.6, 8);
-      coneGeo.translate(0, 0.3, 0);
-      const redMat = new THREE.MeshLambertMaterial({ color: hatColorHex, flatShading: true });
-      this.hatMat = redMat;
-      const cone = new THREE.Mesh(coneGeo, redMat);
+    const strawMat = new BABYLON.StandardMaterial("playerHatMat", this.scene);
+    strawMat.diffuseColor = convertColor(hatColorHex);
+    strawMat.specularColor = new BABYLON.Color3(0, 0, 0);
+    strawMat.flatShading = true;
+    this.hatMat = strawMat;
+
+    if (isChristmas) {
+      hatGroup.position.set(0, 1.25, -0.04);
+      
+      const cone = BABYLON.MeshBuilder.CreateCylinder("santaCone", {
+        diameterTop: 0,
+        diameterBottom: 0.7,
+        height: 0.6,
+        tessellation: 8
+      }, this.scene);
+      cone.position.y = 0.3; // 原来 translate(0, 0.3, 0)
       cone.rotation.z = -0.15;
       cone.rotation.x = -0.1;
-      cone.castShadow = true;
-      hatGroup.add(cone);
+      cone.parent = hatGroup;
+      cone.material = strawMat;
 
-      const bandGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.12, 8);
-      const band = new THREE.Mesh(bandGeo, whiteMat);
+      const band = BABYLON.MeshBuilder.CreateCylinder("santaBand", {
+        diameterTop: 0.72,
+        diameterBottom: 0.72,
+        height: 0.12,
+        tessellation: 8
+      }, this.scene);
       band.position.y = 0.05;
-      hatGroup.add(band);
+      band.parent = hatGroup;
+      band.material = whiteMat;
 
-      const pomGeo = new THREE.SphereGeometry(0.08, 6, 6);
-      const pom = new THREE.Mesh(pomGeo, whiteMat);
+      const pom = BABYLON.MeshBuilder.CreateSphere("santaPom", {
+        diameter: 0.16,
+        segments: 6
+      }, this.scene);
       pom.position.set(0.08, 0.62, -0.04);
-      hatGroup.add(pom);
+      pom.parent = hatGroup;
+      pom.material = whiteMat;
 
-      this.group.add(hatGroup);
     } else {
-      const hatGroup = new THREE.Group();
       hatGroup.position.set(0, 1.28, -0.04);
-      
-      const brimGeo = new THREE.CylinderGeometry(0.72, 0.72, 0.04, 10);
-      const strawMat = new THREE.MeshLambertMaterial({ color: hatColorHex, flatShading: true });
-      this.hatMat = strawMat;
-      const brim = new THREE.Mesh(brimGeo, strawMat);
-      brim.castShadow = true;
-      hatGroup.add(brim);
 
-      const crownGeo = new THREE.CylinderGeometry(0.32, 0.38, 0.25, 8);
-      const crown = new THREE.Mesh(crownGeo, strawMat);
+      const brim = BABYLON.MeshBuilder.CreateCylinder("brim", {
+        diameterTop: 1.44,
+        diameterBottom: 1.44,
+        height: 0.04,
+        tessellation: 10
+      }, this.scene);
+      brim.parent = hatGroup;
+      brim.material = strawMat;
+
+      const crown = BABYLON.MeshBuilder.CreateCylinder("crown", {
+        diameterTop: 0.64,
+        diameterBottom: 0.76,
+        height: 0.25,
+        tessellation: 8
+      }, this.scene);
       crown.position.y = 0.14;
-      crown.castShadow = true;
-      hatGroup.add(crown);
+      crown.parent = hatGroup;
+      crown.material = strawMat;
 
-      const ribbonGeo = new THREE.CylinderGeometry(0.39, 0.39, 0.06, 8);
-      const ribbon = new THREE.Mesh(ribbonGeo, whiteMat);
+      const ribbon = BABYLON.MeshBuilder.CreateCylinder("ribbon", {
+        diameterTop: 0.78,
+        diameterBottom: 0.78,
+        height: 0.06,
+        tessellation: 8
+      }, this.scene);
       ribbon.position.y = 0.05;
-      hatGroup.add(ribbon);
-
-      this.group.add(hatGroup);
+      ribbon.parent = hatGroup;
+      ribbon.material = whiteMat;
     }
 
     // Glasses
-    const glassGroup = new THREE.Group();
+    const glassGroup = new BABYLON.TransformNode("glassGroup", this.scene);
     glassGroup.position.set(0, 1.22, 0.3);
     glassGroup.rotation.x = -0.15;
+    glassGroup.parent = this.group;
 
-    const lensGeo = new THREE.SphereGeometry(0.12, 6, 6);
-    lensGeo.scale(1, 1, 0.2);
-    const lensMat = new THREE.MeshBasicMaterial({ color: 0x1a1a1a });
-    const lensL = new THREE.Mesh(lensGeo, lensMat);
+    const lensMat = new BABYLON.StandardMaterial("lensMat", this.scene);
+    lensMat.diffuseColor = BABYLON.Color3.FromHexString("#1a1a1a");
+    lensMat.specularColor = new BABYLON.Color3(0, 0, 0);
+
+    const lensL = BABYLON.MeshBuilder.CreateSphere("lensL", {
+      diameter: 0.24,
+      segments: 6
+    }, this.scene);
+    lensL.scaling.set(1.0, 1.0, 0.2);
     lensL.position.x = -0.16;
-    const lensR = new THREE.Mesh(lensGeo, lensMat);
-    lensR.position.x = 0.16;
-    glassGroup.add(lensL);
-    glassGroup.add(lensR);
+    lensL.parent = glassGroup;
+    lensL.material = lensMat;
 
-    const frameColor = isChristmas ? 0xffffff : 0xff80ab;
-    const frameMat = new THREE.MeshLambertMaterial({ color: frameColor, flatShading: true });
-    
+    const lensR = lensL.clone("lensR");
+    lensR.position.x = 0.16;
+    lensR.parent = glassGroup;
+
+    const frameColor = isChristmas ? "#ffffff" : "#ff80ab";
+    const frameMat = new BABYLON.StandardMaterial("glassesFrameMat", this.scene);
+    frameMat.diffuseColor = BABYLON.Color3.FromHexString(frameColor);
+    frameMat.specularColor = new BABYLON.Color3(0, 0, 0);
+    frameMat.flatShading = true;
+
     if (isChristmas) {
-      const frameGeo = new THREE.BoxGeometry(0.48, 0.2, 0.06);
-      const frame = new THREE.Mesh(frameGeo, frameMat);
+      const frame = BABYLON.MeshBuilder.CreateBox("frameBar", {
+        width: 0.48,
+        height: 0.2,
+        depth: 0.06
+      }, this.scene);
       frame.position.set(0, 0, 0.02);
-      glassGroup.add(frame);
+      frame.parent = glassGroup;
+      frame.material = frameMat;
     } else {
-      const frameGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.05, 8);
-      frameGeo.rotateX(Math.PI / 2);
-      const frameL = new THREE.Mesh(frameGeo, frameMat);
+      const frameL = BABYLON.MeshBuilder.CreateCylinder("frameL", {
+        diameterTop: 0.3,
+        diameterBottom: 0.3,
+        height: 0.05,
+        tessellation: 8
+      }, this.scene);
+      frameL.rotation.x = Math.PI / 2;
       frameL.position.set(-0.16, 0, 0.02);
-      const frameR = new THREE.Mesh(frameGeo, frameMat);
+      frameL.parent = glassGroup;
+      frameL.material = frameMat;
+
+      const frameR = frameL.clone("frameR");
       frameR.position.set(0.16, 0, 0.02);
-      glassGroup.add(frameL);
-      glassGroup.add(frameR);
+      frameR.parent = glassGroup;
     }
-    this.group.add(glassGroup);
 
     // Hamster on Head
-    const hamster = new THREE.Group();
+    const hamster = new BABYLON.TransformNode("hamster", this.scene);
     hamster.position.set(0.1, isChristmas ? 1.55 : 1.48, -0.06);
-    const hamBodyGeo = new THREE.SphereGeometry(0.14, 6, 6);
-    hamBodyGeo.scale(1, 0.9, 1.1);
-    const hamColor = isChristmas ? 0xb0bec5 : 0xffd180;
-    const hamMat = new THREE.MeshLambertMaterial({ color: hamColor, flatShading: true });
-    const hamBody = new THREE.Mesh(hamBodyGeo, hamMat);
-    hamster.add(hamBody);
+    hamster.parent = this.group;
 
-    const earGeo = new THREE.SphereGeometry(0.04, 4, 4);
-    const earL = new THREE.Mesh(earGeo, hamMat);
+    const hamColor = isChristmas ? "#b0bec5" : "#ffd180";
+    const hamMat = new BABYLON.StandardMaterial("hamsterMat", this.scene);
+    hamMat.diffuseColor = BABYLON.Color3.FromHexString(hamColor);
+    hamMat.specularColor = new BABYLON.Color3(0, 0, 0);
+    hamMat.flatShading = true;
+
+    const hamBody = BABYLON.MeshBuilder.CreateSphere("hamBody", {
+      diameter: 0.28,
+      segments: 6
+    }, this.scene);
+    hamBody.scaling.set(1, 0.9, 1.1);
+    hamBody.parent = hamster;
+    hamBody.material = hamMat;
+
+    const earL = BABYLON.MeshBuilder.CreateSphere("hamEarL", {
+      diameter: 0.08,
+      segments: 4
+    }, this.scene);
     earL.position.set(-0.06, 0.09, 0.05);
-    const earR = new THREE.Mesh(earGeo, hamMat);
-    earR.position.set(0.06, 0.09, 0.05);
-    hamster.add(earL);
-    hamster.add(earR);
+    earL.parent = hamster;
+    earL.material = hamMat;
 
-    const hamBlush = new THREE.Mesh(new THREE.SphereGeometry(0.02, 4, 4), new THREE.MeshLambertMaterial({ color: 0xff8a80 }));
+    const earR = earL.clone("hamEarR");
+    earR.position.x = 0.06;
+    earR.parent = hamster;
+
+    const blushMat = new BABYLON.StandardMaterial("hamBlushMat", this.scene);
+    blushMat.diffuseColor = BABYLON.Color3.FromHexString("#ff8a80");
+    blushMat.specularColor = new BABYLON.Color3(0, 0, 0);
+
+    const hamBlush = BABYLON.MeshBuilder.CreateSphere("hamBlush", {
+      diameter: 0.04,
+      segments: 4
+    }, this.scene);
     hamBlush.position.set(0.08, 0, 0.11);
-    hamster.add(hamBlush);
+    hamBlush.parent = hamster;
+    hamBlush.material = blushMat;
 
     if (isChristmas) {
-      const scarfGeo = new THREE.CylinderGeometry(0.11, 0.11, 0.04, 6);
-      const scarf = new THREE.Mesh(scarfGeo, new THREE.MeshLambertMaterial({ color: 0xc62828 }));
+      const redScarfMat = new BABYLON.StandardMaterial("hamScarfMat", this.scene);
+      redScarfMat.diffuseColor = BABYLON.Color3.FromHexString("#c62828");
+      redScarfMat.specularColor = new BABYLON.Color3(0, 0, 0);
+
+      const scarf = BABYLON.MeshBuilder.CreateCylinder("hamScarf", {
+        diameterTop: 0.22,
+        diameterBottom: 0.22,
+        height: 0.04,
+        tessellation: 6
+      }, this.scene);
       scarf.position.y = -0.06;
-      hamster.add(scarf);
+      scarf.parent = hamster;
+      scarf.material = redScarfMat;
     } else {
-      const flower = new THREE.Mesh(new THREE.SphereGeometry(0.02, 4, 4), whiteMat);
+      const flower = BABYLON.MeshBuilder.CreateSphere("hamFlower", {
+        diameter: 0.04,
+        segments: 4
+      }, this.scene);
       flower.position.set(0.06, 0.12, 0.08);
-      hamster.add(flower);
+      flower.parent = hamster;
+      flower.material = whiteMat;
     }
-    this.group.add(hamster);
 
-    // Interactive Toy in Hands
+    // Toy in Hands
     if (isChristmas) {
-      const giftGroup = new THREE.Group();
+      const giftGroup = new BABYLON.TransformNode("giftGroup", this.scene);
       giftGroup.position.set(0, 0.58, 0.3);
-      const boxMesh = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.25, 0.25), new THREE.MeshLambertMaterial({ color: 0x2e7d32, flatShading: true }));
-      boxMesh.castShadow = true;
-      giftGroup.add(boxMesh);
-      const ribbonMesh = new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.05, 0.27), new THREE.MeshLambertMaterial({ color: 0xd50000, flatShading: true }));
-      giftGroup.add(ribbonMesh);
-      this.group.add(giftGroup);
+      giftGroup.parent = this.group;
+
+      const greenBoxMat = new BABYLON.StandardMaterial("giftBoxMat", this.scene);
+      greenBoxMat.diffuseColor = BABYLON.Color3.FromHexString("#2e7d32");
+      greenBoxMat.specularColor = new BABYLON.Color3(0, 0, 0);
+      greenBoxMat.flatShading = true;
+
+      const boxMesh = BABYLON.MeshBuilder.CreateBox("giftBox", {
+        width: 0.25,
+        height: 0.25,
+        depth: 0.25
+      }, this.scene);
+      boxMesh.parent = giftGroup;
+      boxMesh.material = greenBoxMat;
+
+      const redRibbonMat = new BABYLON.StandardMaterial("giftRibMat", this.scene);
+      redRibbonMat.diffuseColor = BABYLON.Color3.FromHexString("#d50000");
+      redRibbonMat.specularColor = new BABYLON.Color3(0, 0, 0);
+      redRibbonMat.flatShading = true;
+
+      const ribbonMesh = BABYLON.MeshBuilder.CreateBox("giftRibbon", {
+        width: 0.27,
+        height: 0.05,
+        depth: 0.27
+      }, this.scene);
+      ribbonMesh.parent = giftGroup;
+      ribbonMesh.material = redRibbonMat;
     } else {
-      const wmGroup = new THREE.Group();
+      const wmGroup = new BABYLON.TransformNode("wmGroup", this.scene);
       wmGroup.position.set(0, 0.58, 0.35);
-      const fleshGeo = new THREE.BoxGeometry(0.3, 0.16, 0.06);
-      const wmFlesh = new THREE.Mesh(fleshGeo, new THREE.MeshLambertMaterial({ color: 0xff5252 }));
-      wmGroup.add(wmFlesh);
-      const rindGeo = new THREE.BoxGeometry(0.32, 0.04, 0.08);
-      const wmrind = new THREE.Mesh(rindGeo, new THREE.MeshLambertMaterial({ color: 0x4caf50 }));
+      wmGroup.parent = this.group;
+
+      const redMat = new BABYLON.StandardMaterial("melonRedMat", this.scene);
+      redMat.diffuseColor = BABYLON.Color3.FromHexString("#ff5252");
+
+      const greenMat = new BABYLON.StandardMaterial("melonGreenMat", this.scene);
+      greenMat.diffuseColor = BABYLON.Color3.FromHexString("#4caf50");
+
+      const wmFlesh = BABYLON.MeshBuilder.CreateBox("wmFlesh", {
+        width: 0.3,
+        height: 0.16,
+        depth: 0.06
+      }, this.scene);
+      wmFlesh.parent = wmGroup;
+      wmFlesh.material = redMat;
+
+      const wmrind = BABYLON.MeshBuilder.CreateBox("wmrind", {
+        width: 0.32,
+        height: 0.04,
+        depth: 0.08
+      }, this.scene);
       wmrind.position.y = -0.09;
-      wmGroup.add(wmrind);
-      this.group.add(wmGroup);
+      wmrind.parent = wmGroup;
+      wmrind.material = greenMat;
     }
 
     this.buildFaceDetails();
   }
 
   buildBoyModel(hairMat, whiteMat, hatColorHex, isChristmas) {
-    // Spiky Hair
-    const hairHelmGeo = new THREE.SphereGeometry(0.35, 8, 8);
-    const hairHelm = new THREE.Mesh(hairHelmGeo, hairMat);
-    hairHelm.position.set(0, 0.98, -0.04);
-    this.group.add(hairHelm);
+    // Boy Hair (Spiky short hair)
+    const hairGroup = new BABYLON.TransformNode("boyHair", this.scene);
+    hairGroup.parent = this.group;
 
-    // Spiky Bangs
-    const spikeGeo = new THREE.ConeGeometry(0.08, 0.22, 4);
-    spikeGeo.rotateX(Math.PI / 1.8);
-    
-    for (let i = 0; i < 4; i++) {
-      const spike = new THREE.Mesh(spikeGeo, hairMat);
-      const offset = -0.15 + i * 0.1;
-      spike.position.set(offset, 1.08, 0.26);
-      spike.rotation.y = offset * 0.5;
-      spike.castShadow = true;
-      this.group.add(spike);
-    }
+    const baseHelm = BABYLON.MeshBuilder.CreateSphere("boyHairBase", {
+      diameter: 0.72,
+      segments: 8
+    }, this.scene);
+    baseHelm.position.set(0, 0.98, -0.04);
+    baseHelm.parent = hairGroup;
+    baseHelm.material = hairMat;
 
-    // Top spiky tufts
-    const topSpikeGeo = new THREE.ConeGeometry(0.07, 0.22, 4);
-    topSpikeGeo.rotateX(-0.3);
-    const topSpikeOffsets = [
-      { x: -0.14, y: 1.25, z: -0.08 },
-      { x: 0.14, y: 1.25, z: -0.08 },
-      { x: 0, y: 1.28, z: -0.04 },
-      { x: -0.08, y: 1.24, z: -0.2 },
-      { x: 0.08, y: 1.24, z: -0.2 }
+    // Spiky bits (Cones)
+    const spikeGeoOpts = { diameterTop: 0, diameterBottom: 0.14, height: 0.24, tessellation: 4 };
+    const spikePositions = [
+      { x: -0.16, y: 1.25, z: 0.06, rx: -0.3, rz: 0.2 },
+      { x: 0.16, y: 1.25, z: 0.06, rx: -0.3, rz: -0.2 },
+      { x: 0, y: 1.3, z: -0.08, rx: 0.1, rz: 0 },
+      { x: -0.24, y: 1.15, z: -0.12, rx: 0.3, rz: 0.5 },
+      { x: 0.24, y: 1.15, z: -0.12, rx: 0.3, rz: -0.5 }
     ];
-    topSpikeOffsets.forEach(offset => {
-      const tSpike = new THREE.Mesh(topSpikeGeo, hairMat);
-      tSpike.position.set(offset.x, offset.y, offset.z);
-      tSpike.castShadow = true;
-      this.group.add(tSpike);
+
+    spikePositions.forEach((pos, idx) => {
+      const spike = BABYLON.MeshBuilder.CreateCylinder(`spike_${idx}`, spikeGeoOpts, this.scene);
+      spike.position.set(pos.x, pos.y, pos.z);
+      spike.rotation.set(pos.rx, 0, pos.rz);
+      spike.parent = hairGroup;
+      spike.material = hairMat;
     });
 
-    // Baseball Cap
-    const hatGroup = new THREE.Group();
-    hatGroup.position.set(0, 1.24, -0.04);
-    const capMat = new THREE.MeshLambertMaterial({ color: hatColorHex, flatShading: true });
+    const bangGeo = { width: 0.16, height: 0.15, depth: 0.1 };
+    const bangL = BABYLON.MeshBuilder.CreateBox("boyBangL", bangGeo, this.scene);
+    bangL.position.set(-0.1, 1.08, 0.26);
+    bangL.rotation.z = -0.15;
+    bangL.parent = hairGroup;
+    bangL.material = hairMat;
+
+    const bangR = bangL.clone("boyBangR");
+    bangR.position.x = 0.1;
+    bangR.rotation.z = 0.15;
+    bangR.parent = hairGroup;
+
+    // Headwear (Baseball Cap vs Santa Hat)
+    const hatGroup = new BABYLON.TransformNode("boyHatGroup", this.scene);
+    hatGroup.parent = this.group;
+
+    const capMat = new BABYLON.StandardMaterial("boyCapMat", this.scene);
+    capMat.diffuseColor = convertColor(hatColorHex);
+    capMat.specularColor = new BABYLON.Color3(0, 0, 0);
+    capMat.flatShading = true;
     this.hatMat = capMat;
 
-    const crownGeo = new THREE.CylinderGeometry(0.35, 0.36, 0.22, 8);
-    const crown = new THREE.Mesh(crownGeo, capMat);
-    crown.castShadow = true;
-    hatGroup.add(crown);
+    if (isChristmas) {
+      hatGroup.position.set(0, 1.25, -0.04);
+      const cone = BABYLON.MeshBuilder.CreateCylinder("boySantaCone", {
+        diameterTop: 0,
+        diameterBottom: 0.7,
+        height: 0.6,
+        tessellation: 8
+      }, this.scene);
+      cone.position.y = 0.3;
+      cone.rotation.z = -0.15;
+      cone.parent = hatGroup;
+      cone.material = capMat;
 
-    const visorGeo = new THREE.BoxGeometry(0.46, 0.02, 0.35);
-    const visor = new THREE.Mesh(visorGeo, capMat);
-    visor.position.set(0, -0.06, 0.28);
-    visor.rotation.x = 0.14;
-    visor.castShadow = true;
-    hatGroup.add(visor);
+      const band = BABYLON.MeshBuilder.CreateCylinder("boySantaBand", {
+        diameterTop: 0.72,
+        diameterBottom: 0.72,
+        height: 0.12,
+        tessellation: 8
+      }, this.scene);
+      band.position.y = 0.05;
+      band.parent = hatGroup;
+      band.material = whiteMat;
 
-    const btnGeo = new THREE.SphereGeometry(0.04, 4, 4);
-    const button = new THREE.Mesh(btnGeo, whiteMat);
-    button.position.y = 0.12;
-    hatGroup.add(button);
-    this.group.add(hatGroup);
+      const pom = BABYLON.MeshBuilder.CreateSphere("boySantaPom", {
+        diameter: 0.16,
+        segments: 6
+      }, this.scene);
+      pom.position.set(0.08, 0.62, -0.04);
+      pom.parent = hatGroup;
+      pom.material = whiteMat;
+    } else {
+      hatGroup.position.set(0, 1.22, -0.04);
+      
+      const capDome = BABYLON.MeshBuilder.CreateSphere("capDome", {
+        diameter: 0.76,
+        segments: 8
+      }, this.scene);
+      // 压扁一半作为鸭舌帽顶
+      capDome.scaling.set(1.0, 0.72, 1.0);
+      capDome.parent = hatGroup;
+      capDome.material = capMat;
 
-    // Sunglasses
-    const glassGroup = new THREE.Group();
-    glassGroup.position.set(0, 1.22, 0.3);
-    
-    const lensGeo = new THREE.BoxGeometry(0.14, 0.09, 0.02);
-    const lensMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
-    const lensL = new THREE.Mesh(lensGeo, lensMat);
-    lensL.position.x = -0.16;
-    const lensR = new THREE.Mesh(lensGeo, lensMat);
-    lensR.position.x = 0.16;
-    glassGroup.add(lensL);
-    glassGroup.add(lensR);
+      const visor = BABYLON.MeshBuilder.CreateBox("visor", {
+        width: 0.44,
+        height: 0.03,
+        depth: 0.36
+      }, this.scene);
+      visor.position.set(0, -0.1, 0.42);
+      visor.rotation.x = 0.1;
+      visor.parent = hatGroup;
+      visor.material = capMat;
+    }
 
-    const frameMat = new THREE.MeshLambertMaterial({ color: isChristmas ? 0xffffff : 0x2196f3, flatShading: true });
-    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.02, 0.03), frameMat);
-    bridge.position.set(0, 0, 0.01);
-    glassGroup.add(bridge);
+    // Toy in Hands (Snowball vs Wooden Sword)
+    if (isChristmas) {
+      const snow = BABYLON.MeshBuilder.CreateSphere("handSnowball", {
+        diameter: 0.18,
+        segments: 6
+      }, this.scene);
+      snow.position.set(0, 0.58, 0.3);
+      snow.parent = this.group;
+      snow.material = whiteMat;
+    } else {
+      // 极简木剑
+      const sword = new BABYLON.TransformNode("handWoodSword", this.scene);
+      sword.position.set(0, 0.58, 0.3);
+      sword.rotation.set(Math.PI / 2, 0, Math.PI / 4);
+      sword.parent = this.group;
 
-    const sideL = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.11, 0.04), frameMat);
-    sideL.position.set(-0.24, 0, 0.01);
-    const sideR = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.11, 0.04), frameMat);
-    sideR.position.set(0.24, 0, 0.01);
-    glassGroup.add(sideL);
-    glassGroup.add(sideR);
-    this.group.add(glassGroup);
+      const hiltMat = new BABYLON.StandardMaterial("woodHiltMat", this.scene);
+      hiltMat.diffuseColor = BABYLON.Color3.FromHexString("#8d6e63");
+      const hilt = BABYLON.MeshBuilder.CreateCylinder("wHilt", {
+        diameterTop: 0.04,
+        diameterBottom: 0.04,
+        height: 0.15,
+        tessellation: 4
+      }, this.scene);
+      hilt.position.y = -0.12;
+      hilt.parent = sword;
+      hilt.material = hiltMat;
 
-    // Crab on Shoulder
-    const crab = new THREE.Group();
-    crab.position.set(-0.35, 0.65, 0.05);
-    crab.scale.set(0.8, 0.8, 0.8);
-    const crabMat = new THREE.MeshLambertMaterial({ color: 0xff5252, flatShading: true });
-    const crabBody = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.12, 0.15), crabMat);
-    crabBody.castShadow = true;
-    crab.add(crabBody);
-
-    const cEyeGeo = new THREE.SphereGeometry(0.03, 4, 4);
-    const cEyeL = new THREE.Mesh(cEyeGeo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
-    cEyeL.position.set(-0.05, 0.08, 0.08);
-    const cEyeR = new THREE.Mesh(cEyeGeo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
-    cEyeR.position.set(0.05, 0.08, 0.08);
-    crab.add(cEyeL);
-    crab.add(cEyeR);
-
-    const clawGeo = new THREE.SphereGeometry(0.06, 5, 5);
-    clawGeo.scale(1.2, 0.8, 1);
-    const clawL = new THREE.Mesh(clawGeo, crabMat);
-    clawL.position.set(-0.14, 0.04, 0.08);
-    const clawR = new THREE.Mesh(clawGeo, crabMat);
-    clawR.position.set(0.14, 0.04, 0.08);
-    crab.add(clawL);
-    crab.add(clawR);
-    this.group.add(crab);
-
-    // Toy (surfboard)
-    const surfGroup = new THREE.Group();
-    surfGroup.position.set(0.25, 0.52, 0.28);
-    surfGroup.rotation.set(-0.15, -0.4, 0.35);
-    const surfMat = new THREE.MeshLambertMaterial({ color: 0x00e676, flatShading: true });
-    const board = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.9, 0.04), surfMat);
-    board.castShadow = true;
-    surfGroup.add(board);
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.2, 0.05), new THREE.MeshLambertMaterial({ color: 0xffeb3b, flatShading: true }));
-    stripe.position.y = 0.05;
-    surfGroup.add(stripe);
-    this.group.add(surfGroup);
+      const bladeMat = new BABYLON.StandardMaterial("woodBladeMat", this.scene);
+      bladeMat.diffuseColor = BABYLON.Color3.FromHexString("#ffd180");
+      const blade = BABYLON.MeshBuilder.CreateBox("wBlade", {
+        width: 0.06,
+        height: 0.45,
+        depth: 0.02
+      }, this.scene);
+      blade.parent = sword;
+      blade.material = bladeMat;
+    }
 
     this.buildFaceDetails();
   }
 
   buildKittyModel(hairMat, whiteMat, hatColorHex, isChristmas) {
+    // Fur color is hairColorHex
     const furMat = hairMat;
 
-    // Cat Snout
-    const snoutGeo = new THREE.SphereGeometry(0.07, 6, 6);
-    snoutGeo.scale(1.3, 0.8, 1);
-    const snout = new THREE.Mesh(snoutGeo, whiteMat);
-    snout.position.set(0, 0.86, 0.29);
-    this.group.add(snout);
+    // Cat Ears
+    const earL = BABYLON.MeshBuilder.CreateCylinder("catEarL", {
+      diameterTop: 0,
+      diameterBottom: 0.18,
+      height: 0.28,
+      tessellation: 4
+    }, this.scene);
+    earL.position.set(-0.24, 1.25, 0.08);
+    earL.rotation.set(0.1, 0, 0.38);
+    earL.parent = this.group;
+    earL.material = furMat;
 
-    const noseGeo = new THREE.SphereGeometry(0.035, 4, 4);
-    const noseMat = new THREE.MeshLambertMaterial({ color: 0xff8a80 });
-    const nose = new THREE.Mesh(noseGeo, noseMat);
-    nose.position.set(0, 0.89, 0.35);
-    this.group.add(nose);
+    const earR = BABYLON.MeshBuilder.CreateCylinder("catEarR", {
+      diameterTop: 0,
+      diameterBottom: 0.18,
+      height: 0.28,
+      tessellation: 4
+    }, this.scene);
+    earR.position.set(0.24, 1.25, 0.08);
+    earR.rotation.set(0.1, 0, -0.38);
+    earR.parent = this.group;
+    earR.material = furMat;
+
+    // Cat Tail (Cylinder chain or smooth segment)
+    // 建立单独猫尾节点用于摆动
+    this.catTail = new BABYLON.TransformNode("catTail", this.scene);
+    this.catTail.position.set(0, 0.24, -0.28);
+    this.catTail.rotation.x = -0.6;
+    this.catTail.parent = this.group;
+
+    const tailPart = BABYLON.MeshBuilder.CreateCylinder("tailPart", {
+      diameterTop: 0.08,
+      diameterBottom: 0.08,
+      height: 0.55,
+      tessellation: 6
+    }, this.scene);
+    tailPart.position.y = -0.22;
+    tailPart.parent = this.catTail;
+    tailPart.material = furMat;
+
+    const bellMat = new BABYLON.StandardMaterial("bellMat", this.scene);
+    bellMat.diffuseColor = convertColor(hatColorHex);
+    bellMat.specularColor = new BABYLON.Color3(0.6, 0.6, 0);
+    this.hatMat = bellMat;
+
+    if (isChristmas) {
+      // 圣诞帽
+      const hatGroup = new BABYLON.TransformNode("catHat", this.scene);
+      hatGroup.position.set(0, 1.25, -0.04);
+      hatGroup.parent = this.group;
+
+      const cone = BABYLON.MeshBuilder.CreateCylinder("santaCone", {
+        diameterTop: 0,
+        diameterBottom: 0.65,
+        height: 0.52,
+        tessellation: 8
+      }, this.scene);
+      cone.position.y = 0.26;
+      cone.rotation.z = -0.12;
+      cone.parent = hatGroup;
+      cone.material = new BABYLON.StandardMaterial("santaRed", this.scene);
+      cone.material.diffuseColor = BABYLON.Color3.FromHexString("#d50000");
+
+      const band = BABYLON.MeshBuilder.CreateCylinder("santaBand", {
+        diameterTop: 0.68,
+        diameterBottom: 0.68,
+        height: 0.1,
+        tessellation: 8
+      }, this.scene);
+      band.position.y = 0.04;
+      band.parent = hatGroup;
+      band.material = whiteMat;
+    } else {
+      // 胸前金铃铛
+      const collarMat = new BABYLON.StandardMaterial("collarMat", this.scene);
+      collarMat.diffuseColor = BABYLON.Color3.FromHexString("#d50000");
+
+      const collar = BABYLON.MeshBuilder.CreateCylinder("catCollar", {
+        diameterTop: 0.44,
+        diameterBottom: 0.44,
+        height: 0.05,
+        tessellation: 8
+      }, this.scene);
+      collar.position.y = 0.72;
+      collar.parent = this.group;
+      collar.material = collarMat;
+
+      const bell = BABYLON.MeshBuilder.CreateSphere("catBell", {
+        diameter: 0.12,
+        segments: 6
+      }, this.scene);
+      bell.position.set(0, 0.66, 0.22);
+      bell.parent = this.group;
+      bell.material = bellMat;
+    }
 
     // Cat Whiskers
-    const whiskerGeo = new THREE.BoxGeometry(0.26, 0.015, 0.015);
-    const whiskerMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+    const whiskerMat = new BABYLON.StandardMaterial("whiskerMat", this.scene);
+    whiskerMat.diffuseColor = BABYLON.Color3.FromHexString("#757575");
+    whiskerMat.disableLighting = true;
+    whiskerMat.emissiveColor = whiskerMat.diffuseColor;
+
+    const wGeoOpts = { width: 0.28, height: 0.016, depth: 0.01 };
+    
+    // Whiskers Left (3根)
     for (let i = 0; i < 3; i++) {
-      const wL = new THREE.Mesh(whiskerGeo, whiskerMat);
-      wL.position.set(-0.26, 0.86 + (i - 1) * 0.04, 0.25);
-      wL.rotation.z = -(i - 1) * 0.12 - 0.05;
-      wL.rotation.y = 0.2;
-      this.group.add(wL);
+      const wL = BABYLON.MeshBuilder.CreateBox(`whiskerL_${i}`, wGeoOpts, this.scene);
+      wL.position.set(-0.25, 0.88 + (i - 1) * 0.05, 0.26);
+      wL.rotation.z = -0.15 + i * 0.15;
+      wL.rotation.y = -0.2;
+      wL.parent = this.group;
+      wL.material = whiskerMat;
 
-      const wR = new THREE.Mesh(whiskerGeo, whiskerMat);
-      wR.position.set(0.26, 0.86 + (i - 1) * 0.04, 0.25);
-      wR.rotation.z = (i - 1) * 0.12 + 0.05;
-      wR.rotation.y = -0.2;
-      this.group.add(wR);
+      const wR = BABYLON.MeshBuilder.CreateBox(`whiskerR_${i}`, wGeoOpts, this.scene);
+      wR.position.set(0.25, 0.88 + (i - 1) * 0.05, 0.26);
+      wR.rotation.z = 0.15 - i * 0.15;
+      wR.rotation.y = 0.2;
+      wR.parent = this.group;
+      wR.material = whiskerMat;
     }
-
-    // Cat Ears
-    const earGeo = new THREE.ConeGeometry(0.12, 0.28, 4);
-    earGeo.rotateX(0.1);
-    const earL = new THREE.Mesh(earGeo, furMat);
-    earL.position.set(-0.22, 1.2, 0.06);
-    earL.rotation.z = 0.25;
-    earL.castShadow = true;
-    this.group.add(earL);
-
-    const earR = new THREE.Mesh(earGeo, furMat);
-    earR.position.set(0.22, 1.2, 0.06);
-    earR.rotation.z = -0.25;
-    earR.castShadow = true;
-    this.group.add(earR);
-
-    // Inner Ears
-    const innerEarMat = new THREE.MeshLambertMaterial({ color: 0xff8a80, flatShading: true });
-    const innerEarGeo = new THREE.ConeGeometry(0.08, 0.2, 4);
-    innerEarGeo.rotateX(0.1);
-    const innerEarL = new THREE.Mesh(innerEarGeo, innerEarMat);
-    innerEarL.position.set(-0.21, 1.21, 0.09);
-    innerEarL.rotation.z = 0.25;
-    this.group.add(innerEarL);
-
-    const innerEarR = new THREE.Mesh(innerEarGeo, innerEarMat);
-    innerEarR.position.set(0.21, 1.21, 0.09);
-    innerEarR.rotation.z = -0.25;
-    this.group.add(innerEarR);
-
-    // Collar
-    const collarColor = isChristmas ? 0x2e7d32 : 0xd50000;
-    const collarMat = new THREE.MeshLambertMaterial({ color: collarColor, flatShading: true });
-    const collarGeo = new THREE.CylinderGeometry(0.21, 0.21, 0.06, 8);
-    const collar = new THREE.Mesh(collarGeo, collarMat);
-    collar.position.y = 0.73;
-    this.group.add(collar);
-
-    // Gold Bell (bound to hat color customization)
-    const bellMat = new THREE.MeshLambertMaterial({ color: hatColorHex, flatShading: true });
-    this.hatMat = bellMat;
-    const bellGeo = new THREE.SphereGeometry(0.07, 6, 6);
-    const bell = new THREE.Mesh(bellGeo, bellMat);
-    bell.position.set(0, 0.69, 0.28);
-    this.group.add(bell);
-
-    const loopGeo = new THREE.TorusGeometry(0.03, 0.01, 4, 8);
-    const loop = new THREE.Mesh(loopGeo, bellMat);
-    loop.position.set(0, 0.74, 0.25);
-    this.group.add(loop);
-
-    // Cat Tail
-    this.catTail = new THREE.Group();
-    this.catTail.position.set(0, 0.22, -0.28);
-    let prevSegment = this.catTail;
-    const segCount = 4;
-    const segGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.18, 5);
-    segGeo.translate(0, 0.09, 0);
-    for (let i = 0; i < segCount; i++) {
-      const seg = new THREE.Mesh(segGeo, furMat);
-      seg.position.set(0, i === 0 ? 0 : 0.15, i === 0 ? 0 : -0.05);
-      seg.rotation.x = -0.3;
-      seg.castShadow = true;
-      prevSegment.add(seg);
-      prevSegment = seg;
-    }
-    this.group.add(this.catTail);
-
-    // Little Toy (blue fish)
-    const fishGroup = new THREE.Group();
-    fishGroup.position.set(0, 0.56, 0.32);
-    fishGroup.rotation.set(0.1, -0.4, 0.2);
-    const fishMat = new THREE.MeshLambertMaterial({ color: 0x00bcd4, flatShading: true });
-    const fishBody = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.09, 0.05), fishMat);
-    fishBody.castShadow = true;
-    fishGroup.add(fishBody);
-
-    const tailGeoF = new THREE.ConeGeometry(0.05, 0.08, 3);
-    tailGeoF.rotateX(Math.PI / 2);
-    const fishTail = new THREE.Mesh(tailGeoF, fishMat);
-    fishTail.position.set(-0.11, 0, 0);
-    fishGroup.add(fishTail);
-
-    const eyeF = new THREE.Mesh(new THREE.SphereGeometry(0.012, 4, 4), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-    eyeF.position.set(0.06, 0.02, 0.03);
-    fishGroup.add(eyeF);
-    this.group.add(fishGroup);
 
     this.buildFaceDetails();
   }
 
   buildFaceDetails() {
-    const eyeGeo = new THREE.SphereGeometry(0.06, 5, 5);
-    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x4e342e });
-    const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
-    eyeL.position.set(-0.11, 0.94, 0.27);
-    const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
-    eyeR.position.set(0.11, 0.94, 0.27);
-    this.group.add(eyeL);
-    this.group.add(eyeR);
+    const eyeMat = new BABYLON.StandardMaterial("eyeMat", this.scene);
+    eyeMat.diffuseColor = BABYLON.Color3.FromHexString("#4e342e");
+    eyeMat.specularColor = new BABYLON.Color3(0, 0, 0);
 
-    const blushGeo = new THREE.SphereGeometry(0.05, 4, 4);
-    const blushMat = new THREE.MeshLambertMaterial({ color: 0xff8a80, flatShading: true });
-    const blushL = new THREE.Mesh(blushGeo, blushMat);
+    const eyeL = BABYLON.MeshBuilder.CreateSphere("eyeL", {
+      diameter: 0.12,
+      segments: 5
+    }, this.scene);
+    eyeL.position.set(-0.11, 0.94, 0.27);
+    eyeL.parent = this.group;
+    eyeL.material = eyeMat;
+
+    const eyeR = eyeL.clone("eyeR");
+    eyeR.position.set(0.11, 0.94, 0.27);
+    eyeR.parent = this.group;
+
+    const blushMat = new BABYLON.StandardMaterial("blushMat", this.scene);
+    blushMat.diffuseColor = BABYLON.Color3.FromHexString("#ff8a80");
+    blushMat.specularColor = new BABYLON.Color3(0, 0, 0);
+    blushMat.flatShading = true;
+
+    const blushL = BABYLON.MeshBuilder.CreateSphere("blushL", {
+      diameter: 0.1,
+      segments: 4
+    }, this.scene);
     blushL.position.set(-0.19, 0.87, 0.25);
-    const blushR = new THREE.Mesh(blushGeo, blushMat);
+    blushL.parent = this.group;
+    blushL.material = blushMat;
+
+    const blushR = blushL.clone("blushR");
     blushR.position.set(0.19, 0.87, 0.25);
-    this.group.add(blushL);
-    this.group.add(blushR);
+    blushR.parent = this.group;
   }
 
   updateModel(modelType) {
     if (this.activeModel === modelType) return;
     this.activeModel = modelType;
 
-    // Preserve current colors
-    const hairColor = this.hairMat ? this.hairMat.color.getHex() : (this.themeConfig.player.hairColor || 0xff8a80);
-    const clothingColor = this.clothingMat ? this.clothingMat.color.getHex() : (this.themeConfig.player.clothingColor || 0xffffff);
-    const hatColor = this.hatMat ? this.hatMat.color.getHex() : (this.themeConfig.player.hatColor || 0xffd180);
+    const hairColor = this.hairMat ? this.hairMat.diffuseColor.toHexString() : (this.themeConfig.player.hairColor || 0xff8a80);
+    const clothingColor = this.clothingMat ? this.clothingMat.diffuseColor.toHexString() : (this.themeConfig.player.clothingColor || 0xffffff);
+    const hatColor = this.hatMat ? this.hatMat.diffuseColor.toHexString() : (this.themeConfig.player.hatColor || 0xffd180);
 
     this.rebuildMesh(hairColor, clothingColor, hatColor);
   }
@@ -671,7 +940,15 @@ export class Player {
       if (e.key === 'Shift') this.keys.shift = isDown;
     };
 
-    window.addEventListener('keydown', (e) => handleKey(e, true));
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (window.parent && window.parent !== window) {
+          const evt = new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true });
+          window.parent.dispatchEvent(evt);
+        }
+      }
+      handleKey(e, true);
+    });
     window.addEventListener('keyup', (e) => handleKey(e, false));
 
     // Mouse drag Orbit Controls
@@ -689,7 +966,7 @@ export class Player {
       const deltaX = e.clientX - previousMousePosition.x;
       const deltaY = e.clientY - previousMousePosition.y;
 
-      this.cameraAngleH -= deltaX * 0.005;
+      this.cameraAngleH += deltaX * 0.005;
       this.cameraAngleV = Math.max(0.1, Math.min(1.2, this.cameraAngleV + deltaY * 0.005));
 
       previousMousePosition = { x: e.clientX, y: e.clientY };
@@ -741,81 +1018,35 @@ export class Player {
       
       if (!cameraTouch) return;
       
-      // 阻止默认行为以防触发移动端手势返回上一页
       e.preventDefault();
       
       const deltaX = cameraTouch.clientX - previousMousePosition.x;
       const deltaY = cameraTouch.clientY - previousMousePosition.y;
 
-      this.cameraAngleH -= deltaX * 0.005;
+      this.cameraAngleH += deltaX * 0.005;
       this.cameraAngleV = Math.max(0.1, Math.min(1.2, this.cameraAngleV + deltaY * 0.005));
 
       previousMousePosition = { x: cameraTouch.clientX, y: cameraTouch.clientY };
     }, { passive: false });
 
-    const handleCameraTouchEnd = (e) => {
-      if (cameraTouchId === null) return;
-      
-      let ended = false;
+    document.addEventListener('touchend', (e) => {
       for (let i = 0; i < e.changedTouches.length; i++) {
         if (e.changedTouches[i].identifier === cameraTouchId) {
-          ended = true;
+          isDragging = false;
+          cameraTouchId = null;
           break;
         }
       }
-      
-      if (ended) {
-        isDragging = false;
-        cameraTouchId = null;
-      }
-    };
-
-    document.addEventListener('touchend', handleCameraTouchEnd);
-    document.addEventListener('touchcancel', handleCameraTouchEnd);
-
-    // Lock/Unlock controls based on modal popups
-    window.addEventListener('modal-opened', () => {
-      this.controlsLocked = true;
-      this.resetInputs();
     });
-
-    window.addEventListener('modal-closed', () => {
-      this.controlsLocked = false;
-    });
-
-    // Mobile Virtual buttons
-    const btnJump = document.getElementById('btn-jump');
-    if (btnJump) {
-      btnJump.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        if (this.isSitting || this.isLyingDown) {
-          this.standUp();
-          return;
-        }
-        if (!this.controlsLocked) this.keys.space = true;
-      });
-      btnJump.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        this.keys.space = false;
-      });
-    }
-
-    const btnRun = document.getElementById('btn-run');
-    if (btnRun) {
-      btnRun.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        if (!this.controlsLocked) this.keys.shift = true;
-      });
-      btnRun.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        this.keys.shift = false;
-      });
-    }
   }
 
   resetInputs() {
     this.keys = { w: false, a: false, s: false, d: false, space: false, shift: false };
-    this.velocity.set(0, this.velocity.y, 0);
+    const parentJoystick = window.parent && window.parent.joystickDir ? window.parent.joystickDir : window.joystickDir;
+    if (parentJoystick) {
+      parentJoystick.x = 0;
+      parentJoystick.y = 0;
+    }
   }
 
   update(delta, time) {
@@ -847,7 +1078,7 @@ export class Player {
     if (this.isLyingDown) {
       this.velocity.set(0, 0, 0);
       this.isGrounded = true;
-      this.group.position.copy(this.position);
+      this.group.position.copyFrom(this.position);
       
       if (this.lyingRotation) {
         this.group.rotation.x = this.lyingRotation.x;
@@ -866,12 +1097,17 @@ export class Player {
       this.head.position.y = 0.88;
 
       this.cape.rotation.x = 0.15;
-      const capePositions = this.cape.geometry.attributes.position;
-      for (let i = 0; i < capePositions.count; i++) {
-        capePositions.setZ(i, 0);
+      
+      // 平整化更新披风位置 (在躺下时披风放平)
+      const positions = this.cape.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+      if (positions) {
+        for (let i = 0; i < positions.length / 3; i++) {
+          positions[i * 3 + 2] = 0;
+        }
+        this.cape.updateVerticesData(BABYLON.VertexBuffer.PositionKind, positions);
       }
-      capePositions.needsUpdate = true;
 
+      // 相机平滑跟随
       const targetCamX = this.position.x + Math.sin(this.cameraAngleH) * Math.cos(this.cameraAngleV) * this.cameraDistance;
       const targetCamY = this.position.y + Math.sin(this.cameraAngleV) * this.cameraDistance + 0.8;
       const targetCamZ = this.position.z + Math.cos(this.cameraAngleH) * Math.cos(this.cameraAngleV) * this.cameraDistance;
@@ -880,18 +1116,18 @@ export class Player {
       this.camera.position.y += (targetCamY - this.camera.position.y) * 0.08;
       this.camera.position.z += (targetCamZ - this.camera.position.z) * 0.08;
 
-      const lookAtTarget = this.position.clone().add(new THREE.Vector3(0, 0.4, 0));
-      this.camera.lookAt(lookAtTarget);
+      const lookAtTarget = this.position.add(new BABYLON.Vector3(0, 0.4, 0));
+      this.camera.setTarget(lookAtTarget);
       return;
     }
 
     if (this.isSitting && this.swingRef) {
       if (this.swingRef.isStatic) {
-        this.position.copy(this.swingRef.position);
+        this.position.copyFrom(this.swingRef.position);
         this.position.y += 0.22; // 贴合石凳高度
         this.velocity.set(0, 0, 0);
         this.isGrounded = true;
-        this.group.position.copy(this.position);
+        this.group.position.copyFrom(this.position);
         this.group.rotation.y = this.swingRef.rotationY;
       } else {
         const rotationX = this.swingRef.rotation.x;
@@ -902,7 +1138,7 @@ export class Player {
 
         this.velocity.set(0, 0, 0);
         this.isGrounded = true;
-        this.group.position.copy(this.position);
+        this.group.position.copyFrom(this.position);
         this.group.rotation.y = 0; // Face Z axis
       }
 
@@ -914,11 +1150,14 @@ export class Player {
 
       // Cape and twins sway with swing
       this.cape.rotation.x = -0.1 + Math.sin(time * 0.002) * 0.05;
-      const capePositions = this.cape.geometry.attributes.position;
-      for (let i = 0; i < capePositions.count; i++) {
-        capePositions.setZ(i, 0);
+      
+      const positions = this.cape.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+      if (positions) {
+        for (let i = 0; i < positions.length / 3; i++) {
+          positions[i * 3 + 2] = 0;
+        }
+        this.cape.updateVerticesData(BABYLON.VertexBuffer.PositionKind, positions);
       }
-      capePositions.needsUpdate = true;
 
       if (this.tailL) this.tailL.rotation.z = -0.2 - Math.sin(time * 0.002) * 0.1;
       if (this.tailR) this.tailR.rotation.z = 0.2 + Math.sin(time * 0.002) * 0.1;
@@ -936,8 +1175,8 @@ export class Player {
       this.camera.position.y += (targetCamY - this.camera.position.y) * 0.08;
       this.camera.position.z += (targetCamZ - this.camera.position.z) * 0.08;
 
-      const lookAtTarget = this.position.clone().add(new THREE.Vector3(0, 0.8, 0));
-      this.camera.lookAt(lookAtTarget);
+      const lookAtTarget = this.position.add(new BABYLON.Vector3(0, 0.8, 0));
+      this.camera.setTarget(lookAtTarget);
 
       return;
     }
@@ -946,37 +1185,68 @@ export class Player {
     let moveX = 0;
     let moveZ = 0;
 
+    const parentJoystick = window.parent && window.parent.joystickDir ? window.parent.joystickDir : window.joystickDir;
+
     if (!this.controlsLocked) {
-      if (this.keys.w) moveZ -= 1;
-      if (this.keys.s) moveZ += 1;
+      if (this.keys.w) moveZ += 1;
+      if (this.keys.s) moveZ -= 1;
       if (this.keys.a) moveX -= 1;
       if (this.keys.d) moveX += 1;
 
-      // 融合外壳的虚拟摇杆方向
-      if (window.self !== window.top && window.parent && window.parent.joystickDir) {
-        const joy = window.parent.joystickDir;
-        if (joy.x !== 0 || joy.y !== 0) {
-          moveX += joy.x;
-          moveZ += joy.y;
-        }
+      // Joystick input override (joystickDir has x, y in [-1, 1])
+      if (parentJoystick && (parentJoystick.x !== 0 || parentJoystick.y !== 0)) {
+        moveX = parentJoystick.x;
+        moveZ = parentJoystick.y; // 摇杆上推为前，统一为正方向
       }
     }
 
-    const direction = new THREE.Vector3(moveX, 0, moveZ).normalize();
-    const rotatedDirection = direction.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), this.cameraAngleH);
+    // Apply camera rotation to movement vector (使用相机的前向与右向正交计算)
+    const cameraForward = this.camera.getForwardRay().direction;
+    const forwardX = cameraForward.x;
+    const forwardZ = cameraForward.z;
+    const lenF = Math.sqrt(forwardX * forwardX + forwardZ * forwardZ);
+    
+    let fX = 0;
+    let fZ = 0;
+    if (lenF > 0.001) {
+      fX = forwardX / lenF;
+      fZ = forwardZ / lenF;
+    }
+    
+    // 右向量 (Y 轴与前向量叉乘在左手系下为 [fZ, 0, -fX])
+    const rX = fZ;
+    const rZ = -fX;
 
-    const currentSpeed = this.keys.shift ? this.speed * 1.6 : this.speed;
-    this.velocity.x = rotatedDirection.x * currentSpeed;
-    this.velocity.z = rotatedDirection.z * currentSpeed;
+    const directionX = fX * moveZ + rX * moveX;
+    const directionZ = fZ * moveZ + rZ * moveX;
 
-    // 2. Physics & Gravity
+    const isRunning = this.keys.shift;
+    const currentSpeed = isRunning ? this.speed * 1.55 : this.speed;
+
+    // Normalize movement vector if length > 0
+    const len = Math.sqrt(directionX * directionX + directionZ * directionZ);
+    if (len > 0.01) {
+      // If using joystick, don't force full speed unless fully tilted
+      const hasJoystick = parentJoystick && (parentJoystick.x !== 0 || parentJoystick.y !== 0);
+      const speedScale = hasJoystick ? Math.min(Math.sqrt(parentJoystick.x * parentJoystick.x + parentJoystick.y * parentJoystick.y), 1.0) : 1.0;
+      this.velocity.x = (directionX / len) * currentSpeed * speedScale;
+      this.velocity.z = (directionZ / len) * currentSpeed * speedScale;
+    } else {
+      this.velocity.x = 0;
+      this.velocity.z = 0;
+    }
+
+    // 2. Apply Gravity
     if (!this.isGrounded) {
       this.velocity.y -= this.gravity * delta;
     }
 
-    this.position.addScaledVector(this.velocity, delta);
+    // Update position
+    this.position.x += this.velocity.x * delta;
+    this.position.z += this.velocity.z * delta;
+    this.position.y += this.velocity.y * delta;
 
-    // Clamp coordinates
+    // Boundaries check
     if (this.app && this.app.currentMap === 'house') {
       const boundary = 11.5;
       if (this.position.x < -boundary) this.position.x = -boundary;
@@ -992,20 +1262,22 @@ export class Player {
       }
     }
 
-    // 3. Collisions
+    // 3. Floor Collisions
     let onFloor = false;
     let highestFloorY = -999;
 
-    for (const col of this.colliders) {
-      if (col.type === 'floor') {
-        const dx = this.position.x - col.worldX;
-        const dz = this.position.z - col.worldZ;
-        const dist2D = Math.sqrt(dx * dx + dz * dz);
+    if (this.colliders) {
+      for (const col of this.colliders) {
+        if (col.type === 'floor') {
+          const dx = this.position.x - col.worldX;
+          const dz = this.position.z - col.worldZ;
+          const dist2D = Math.sqrt(dx * dx + dz * dz);
 
-        if (dist2D < col.radius + 0.1) {
-          if (this.position.y >= col.worldY - 0.8 && this.position.y <= col.worldY + 0.1) {
-            highestFloorY = Math.max(highestFloorY, col.worldY);
-            onFloor = true;
+          if (dist2D < col.radius + 0.1) {
+            if (this.position.y >= col.worldY - 0.8 && this.position.y <= col.worldY + 0.1) {
+              highestFloorY = Math.max(highestFloorY, col.worldY);
+              onFloor = true;
+            }
           }
         }
       }
@@ -1029,6 +1301,7 @@ export class Player {
     }
 
     const isRadialOpen = window.parent && window.parent.isRadialMenuOpen;
+    
     // 4. Jump
     if (this.keys.space && this.isGrounded && !this.controlsLocked && !isRadialOpen) {
       this.velocity.y = this.jumpForce;
@@ -1040,7 +1313,7 @@ export class Player {
     }
 
     // 5. Update character rotations & animations
-    this.group.position.copy(this.position);
+    this.group.position.copyFrom(this.position);
 
     const horizontalSpeed = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.z * this.velocity.z);
     
@@ -1048,37 +1321,40 @@ export class Player {
       this.targetRotation = Math.atan2(this.velocity.x, this.velocity.z);
       
       let diff = this.targetRotation - this.group.rotation.y;
-      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-      this.group.rotation.y += diff * 0.15;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      this.group.rotation.y += diff * 0.25;
 
-      const feetSpeed = this.keys.shift ? 24 : 16;
-      this.footL.position.z = Math.sin(time * 0.001 * feetSpeed) * 0.25;
-      this.footL.position.y = 0.05 + Math.max(0, Math.cos(time * 0.001 * feetSpeed)) * 0.12;
-      
-      this.footR.position.z = -Math.sin(time * 0.001 * feetSpeed) * 0.25;
-      this.footR.position.y = 0.05 + Math.max(0, -Math.cos(time * 0.001 * feetSpeed)) * 0.12;
+      // Running / Walking bounce animations
+      const bounceSpeed = isRunning ? 16 : 10;
+      const angleBounce = Math.sin(time * 0.001 * bounceSpeed);
 
-      if (this.tailL) this.tailL.rotation.z = -0.2 - Math.abs(Math.sin(time * 0.001 * feetSpeed)) * 0.18;
-      if (this.tailR) this.tailR.rotation.z = 0.2 + Math.abs(Math.sin(time * 0.001 * feetSpeed)) * 0.18;
+      this.body.position.y = 0.55 + Math.abs(angleBounce) * 0.04;
+      this.head.position.y = 0.94 + Math.abs(angleBounce) * 0.035;
+
+      this.footL.position.y = 0.04 + Math.max(0, angleBounce) * 0.12;
+      this.footR.position.y = 0.04 + Math.max(0, -angleBounce) * 0.12;
+      this.footL.position.z = Math.max(0, -angleBounce) * 0.12;
+      this.footR.position.z = Math.max(0, angleBounce) * 0.12;
+
+      this.body.rotation.y = Math.sin(time * 0.001 * bounceSpeed) * 0.08;
+
+      if (this.tailL) this.tailL.rotation.z = -0.25 - Math.abs(angleBounce) * 0.15;
+      if (this.tailR) this.tailR.rotation.z = 0.25 + Math.abs(angleBounce) * 0.15;
 
       if (this.catTail) {
-        this.catTail.rotation.y = Math.sin(time * 0.001 * feetSpeed * 1.5) * 0.35;
-        this.catTail.rotation.z = Math.cos(time * 0.001 * feetSpeed * 1.5) * 0.06;
+        this.catTail.rotation.y = Math.sin(time * 0.004) * 0.28;
+        this.catTail.rotation.x = -0.6 + Math.cos(time * 0.004) * 0.12;
       }
-
-      this.body.rotation.x = this.keys.shift ? 0.22 : 0.1;
-
-      this.body.position.y = 0.38 + Math.abs(Math.sin(time * 0.001 * feetSpeed)) * 0.06;
-      this.head.position.y = 0.88 + Math.abs(Math.sin(time * 0.001 * feetSpeed)) * 0.04;
     } else {
-      this.body.rotation.x = 0;
-      this.footL.position.set(-0.16, 0.05, 0);
-      this.footR.position.set(0.16, 0.05, 0);
-      this.body.position.y = 0.38 + Math.sin(time * 0.003) * 0.02;
-      this.head.position.y = 0.88 + Math.sin(time * 0.003) * 0.02;
+      // Idle breathing animations
+      this.footL.position.set(-0.16, 0.04, 0);
+      this.footR.position.set(0.16, 0.04, 0);
+      this.body.position.y = 0.55 + Math.sin(time * 0.003) * 0.015;
+      this.head.position.y = 0.94 + Math.sin(time * 0.003) * 0.012;
 
-      if (this.tailL) this.tailL.rotation.z = -0.2 + Math.sin(time * 0.003) * 0.04;
-      if (this.tailR) this.tailR.rotation.z = 0.2 - Math.sin(time * 0.003) * 0.04;
+      if (this.tailL) this.tailL.rotation.z = -0.25 - Math.sin(time * 0.003) * 0.05;
+      if (this.tailR) this.tailR.rotation.z = 0.25 + Math.sin(time * 0.003) * 0.05;
 
       if (this.catTail) {
         this.catTail.rotation.y = Math.sin(time * 0.003) * 0.15;
@@ -1087,22 +1363,27 @@ export class Player {
     }
 
     // 6. Cape/Scarf wave wave wave
-    const capePositions = this.cape.geometry.attributes.position;
-    const waveSpeed = 18;
-    const waveFrequency = 2.2;
-    const waveAmplitude = 0.08 + (horizontalSpeed * 0.03);
+    const positions = this.cape.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+    if (positions) {
+      const waveSpeed = 18;
+      const waveFrequency = 2.2;
+      const waveAmplitude = 0.08 + (horizontalSpeed * 0.03);
 
-    for (let i = 0; i < capePositions.count; i++) {
-      const x = capePositions.getX(i);
-      const y = capePositions.getY(i);
-      const distFromTop = 0.4 - y; 
-      const zOffset = Math.sin((time * 0.001 * waveSpeed) - (distFromTop * waveFrequency)) * waveAmplitude * (distFromTop / 0.8);
-      
-      capePositions.setZ(i, zOffset);
+      for (let i = 0; i < positions.length / 3; i++) {
+        // 由于 CreateGround 在 XZ 平面，我们用 Z 轴旋转 90度 + X 轴旋转 90度后，
+        // 原本的 y 对应高低，x 对应左右
+        const lx = positions[i * 3];     // X 坐标
+        const ly = positions[i * 3 + 1]; // Y 坐标 (在 Ground 里是 Z，但在平面里是垂直方向高度)
+        const distFromTop = 0.4 - ly;
+        const zOffset = Math.sin((time * 0.001 * waveSpeed) - (distFromTop * waveFrequency)) * waveAmplitude * (distFromTop / 0.8);
+        
+        // 我们通过修改 Z 轴坐标来产生波浪
+        positions[i * 3 + 2] = zOffset;
+      }
+      this.cape.updateVerticesData(BABYLON.VertexBuffer.PositionKind, positions);
     }
-    capePositions.needsUpdate = true;
 
-    // 7. Update camera horizontal & vertical angles
+    // 7. Update camera horizontal & vertical angles (Orbit)
     const targetCamX = this.position.x + Math.sin(this.cameraAngleH) * Math.cos(this.cameraAngleV) * this.cameraDistance;
     const targetCamY = this.position.y + Math.sin(this.cameraAngleV) * this.cameraDistance + 0.8;
     const targetCamZ = this.position.z + Math.cos(this.cameraAngleH) * Math.cos(this.cameraAngleV) * this.cameraDistance;
@@ -1111,8 +1392,8 @@ export class Player {
     this.camera.position.y += (targetCamY - this.camera.position.y) * 0.08;
     this.camera.position.z += (targetCamZ - this.camera.position.z) * 0.08;
 
-    const lookAtTarget = this.position.clone().add(new THREE.Vector3(0, 0.8, 0));
-    this.camera.lookAt(lookAtTarget);
+    const lookAtTarget = this.position.add(new BABYLON.Vector3(0, 0.8, 0));
+    this.camera.setTarget(lookAtTarget);
   }
 
   sit(swingSeatGroup) {
@@ -1124,32 +1405,31 @@ export class Player {
   lieDown(bedPos, customRotation) {
     this.isLyingDown = true;
     this.controlsLocked = true;
-    this.position.copy(bedPos);
-    this.position.y = bedPos.y + 0.58; // relative bed elevation (lies on top of mattress)
+    this.position.copyFrom(bedPos);
+    this.position.y = bedPos.y + 0.58; // relative bed elevation
+    
     if (customRotation) {
       this.lyingRotation = customRotation;
     } else {
       this.lyingRotation = null;
     }
 
-    // 隐藏移动端 HUD 摇杆和按钮，解决触碰事件遮挡的问题
     if (window.parent && window.parent.appShell && typeof window.parent.appShell.hideMobileControls === 'function') {
       window.parent.appShell.hideMobileControls();
     }
-    // 更新每日小憩任务进度
     if (window.gameApp && typeof window.gameApp.updateTaskProgress === 'function') {
       window.gameApp.updateTaskProgress('rest', 1);
     }
   }
 
   updateOutfit(type, colorHex) {
-    const color = parseInt(colorHex);
+    const color = convertColor(colorHex);
     if (type === 'hair' && this.hairMat) {
-      this.hairMat.color.setHex(color);
+      this.hairMat.diffuseColor = color;
     } else if (type === 'clothing' && this.clothingMat) {
-      this.clothingMat.color.setHex(color);
+      this.clothingMat.diffuseColor = color;
     } else if (type === 'hat' && this.hatMat) {
-      this.hatMat.color.setHex(color);
+      this.hatMat.diffuseColor = color;
     }
   }
 
@@ -1162,17 +1442,15 @@ export class Player {
       this.group.rotation.z = 0;
       if (this.lyingRotation) {
         this.lyingRotation = null;
-        // 躺椅起身，向旁边退开
         this.position.x += 1.0;
       } else {
-        this.position.z += 1.4; // Dismount forward from bed
+        this.position.z += 1.4;
       }
-      this.position.y = 0.8; // Set standing height directly to indoor floor level
+      this.position.y = 0.8;
       
       const bedHud = document.getElementById('bed-hud');
       if (bedHud) bedHud.style.display = 'none';
 
-      // 恢复移动端 HUD 摇杆和按钮
       if (window.parent && window.parent.appShell && typeof window.parent.appShell.showMobileControls === 'function') {
         window.parent.appShell.showMobileControls();
       }
@@ -1186,7 +1464,6 @@ export class Player {
     this.controlsLocked = false;
     
     if (isStaticSeat) {
-      // 站在石凳后面
       if (this.position.x > 0) {
         this.position.x += 0.9;
       } else {

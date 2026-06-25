@@ -9,8 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "nipplejs": "^1.0.4",
-    "three": "^0.160.0"
+    "@babylonjs/core": "^7.11.0",
+    "@babylonjs/gui": "^7.11.0",
+    "nipplejs": "^1.0.4"
   },
   "devDependencies": {
     "lucide-static": "^1.18.0",

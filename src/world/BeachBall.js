@@ -1,54 +1,81 @@
-import * as THREE from 'three';
+import * as BABYLON from '@babylonjs/core';
+
+function convertColor(hexVal) {
+  if (typeof hexVal === 'number') {
+    const hexStr = "#" + hexVal.toString(16).padStart(6, '0');
+    return BABYLON.Color3.FromHexString(hexStr);
+  }
+  if (typeof hexVal === 'string') {
+    if (!hexVal.startsWith('#')) return BABYLON.Color3.FromHexString('#' + hexVal);
+    return BABYLON.Color3.FromHexString(hexVal);
+  }
+  return new BABYLON.Color3(1, 1, 1);
+}
 
 export class BeachBall {
   constructor(scene, x, y, z, colorHex) {
     this.scene = scene;
-    this.radius = 0.36; // Nice play size
+    this.radius = 0.36; // 沙滩球半径
 
-    // Physics state
-    this.position = new THREE.Vector3(x, y, z);
-    this.velocity = new THREE.Vector3(
-      (Math.random() - 0.5) * 1.5, // Spawn drift
-      3.2,                          // Hop on spawn
+    // 物理状态
+    this.position = new BABYLON.Vector3(x, y, z);
+    this.velocity = new BABYLON.Vector3(
+      (Math.random() - 0.5) * 1.5, // 随机水平初速
+      3.2,                          // 初始弹跳高度
       (Math.random() - 0.5) * 1.5
     );
     this.gravity = 15.0;
-    this.friction = 0.985;        // Rolling resistance
-    this.bounceElasticity = 0.65; // Ground bounce dampener
+    this.friction = 0.985;        // 滚动阻力
+    this.bounceElasticity = 0.65; // 弹力系数
     this.isGrounded = false;
-    this.throwNoCollideTimer = 0; // Cooldown timer for player collision on release
+    this.throwNoCollideTimer = 0; // 防止抛出瞬间被玩家踢飞的冷却时间
+    this.app = null; // 由外部挂载 App 实例
 
     this.initMesh(colorHex);
   }
 
   initMesh(colorHex) {
-    this.group = new THREE.Group();
-    this.group.position.copy(this.position);
+    this.group = new BABYLON.TransformNode("beachBallGroup", this.scene);
+    this.group.position.copyFrom(this.position);
 
-    // Ball Base Sphere
-    const ballGeo = new THREE.SphereGeometry(this.radius, 12, 12);
-    const mainMat = new THREE.MeshLambertMaterial({ color: colorHex, flatShading: true });
-    this.ballMesh = new THREE.Mesh(ballGeo, mainMat);
-    this.ballMesh.castShadow = true;
-    this.ballMesh.receiveShadow = true;
-    this.group.add(this.ballMesh);
+    // 材质
+    const mainMat = new BABYLON.StandardMaterial("ballMainMat", this.scene);
+    mainMat.diffuseColor = convertColor(colorHex);
+    mainMat.specularColor = new BABYLON.Color3(0, 0, 0);
+    mainMat.flatShading = true;
 
-    // Stripes to visualize rolling rotation
-    const stripeMat = new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true });
+    // 球体网格
+    this.ballMesh = BABYLON.MeshBuilder.CreateSphere("ballMesh", { diameter: this.radius * 2, segments: 12 }, this.scene);
+    this.ballMesh.parent = this.group;
+    this.ballMesh.material = mainMat;
 
-    // Vertical stripe ring
-    const stripeLGeo = new THREE.CylinderGeometry(this.radius + 0.005, this.radius + 0.005, this.radius * 0.25, 12, 1, true);
-    const stripeL = new THREE.Mesh(stripeLGeo, stripeMat);
+    // 滚条装饰（用于观察滚动效果）
+    const stripeMat = new BABYLON.StandardMaterial("ballStripeMat", this.scene);
+    stripeMat.diffuseColor = new BABYLON.Color3(1, 1, 1);
+    stripeMat.specularColor = new BABYLON.Color3(0, 0, 0);
+    stripeMat.flatShading = true;
+
+    // 纵向色条
+    const stripeL = BABYLON.MeshBuilder.CreateCylinder("stripeL", {
+      diameterTop: (this.radius + 0.005) * 2,
+      diameterBottom: (this.radius + 0.005) * 2,
+      height: this.radius * 0.25,
+      tessellation: 12
+    }, this.scene);
     stripeL.rotation.x = Math.PI / 2;
-    this.group.add(stripeL);
+    stripeL.parent = this.group;
+    stripeL.material = stripeMat;
 
-    // Horizontal stripe ring
-    const stripeRGeo = new THREE.CylinderGeometry(this.radius + 0.004, this.radius + 0.004, this.radius * 0.25, 12, 1, true);
-    const stripeR = new THREE.Mesh(stripeRGeo, stripeMat);
+    // 横向色条
+    const stripeR = BABYLON.MeshBuilder.CreateCylinder("stripeR", {
+      diameterTop: (this.radius + 0.004) * 2,
+      diameterBottom: (this.radius + 0.004) * 2,
+      height: this.radius * 0.25,
+      tessellation: 12
+    }, this.scene);
     stripeR.rotation.z = Math.PI / 2;
-    this.group.add(stripeR);
-
-    this.scene.add(this.group);
+    stripeR.parent = this.group;
+    stripeR.material = stripeMat;
   }
 
   update(delta, player) {
@@ -57,35 +84,35 @@ export class BeachBall {
     }
 
     if (this.isCarried) {
-      // Hold ball in front of player's chest
-      const playerForward = new THREE.Vector3(0, 0, 1).applyQuaternion(player.group.quaternion);
-      this.position.copy(player.position).addScaledVector(playerForward, 0.65);
+      // 抱着球时，将球绑定在玩家胸前 (前方向 0.65m，高度 +0.65m)
+      const playerForward = player.group.forward;
+      this.position.copyFrom(player.position).addInPlace(playerForward.scale(0.65));
       this.position.y += 0.65;
       
       this.velocity.set(0, 0, 0);
       this.isGrounded = false;
-      this.group.position.copy(this.position);
+      this.group.position.copyFrom(this.position);
       return;
     }
 
-    // 1. Apply gravity if in the air
+    // 1. 在空中时应用重力
     if (!this.isGrounded) {
       this.velocity.y -= this.gravity * delta;
     }
 
-    // Apply rolling friction to horizontal velocity
+    // 应用水平滚动阻力
     this.velocity.x *= Math.pow(this.friction, delta * 60);
     this.velocity.z *= Math.pow(this.friction, delta * 60);
 
-    // Update position
-    this.position.addScaledVector(this.velocity, delta);
+    // 位移更新
+    this.position.addInPlace(this.velocity.scale(delta));
 
-    // 2. Floor collision
+    // 2. 地板碰撞判定 (小木屋地板为 0.12，大厅及其他岛屿为 0.6)
     const floorY = (this.app && this.app.currentMap === 'house') ? 0.12 : 0.6;
     if (this.position.y - this.radius <= floorY) {
       this.position.y = floorY + this.radius;
 
-      // Bounce if velocity is downwards
+      // 如果下坠速度足够，则反弹
       if (this.velocity.y < -1.5) {
         this.velocity.y = -this.velocity.y * this.bounceElasticity;
       } else {
@@ -96,10 +123,10 @@ export class BeachBall {
       this.isGrounded = false;
     }
 
-    // 3. Boundary bounce (rectangular house walls vs circular island boundary)
+    // 3. 边界碰撞 (小木屋是 11.8 的正方形墙面，大厅是半径 21.8 的圆形海滩边界)
     if (this.app && this.app.currentMap === 'house') {
-      const limit = 11.8 - this.radius; // Wall inside face is at 11.75
-      // Check X wall collision
+      const limit = 11.8 - this.radius;
+      // X 轴墙面判定
       if (this.position.x < -limit) {
         this.position.x = -limit;
         this.velocity.x = -this.velocity.x * this.bounceElasticity;
@@ -109,7 +136,7 @@ export class BeachBall {
         this.velocity.x = -this.velocity.x * this.bounceElasticity;
         this.playKickSound();
       }
-      // Check Z wall collision
+      // Z 轴墙面判定
       if (this.position.z < -limit) {
         this.position.z = -limit;
         this.velocity.z = -this.velocity.z * this.bounceElasticity;
@@ -120,7 +147,7 @@ export class BeachBall {
         this.playKickSound();
       }
     } else {
-      // Circular island boundary bounce (Outer radius 21.8)
+      // 圆形岛屿反弹
       const maxRadius = 21.5;
       const distFromCenter = Math.sqrt(this.position.x * this.position.x + this.position.z * this.position.z);
 
@@ -128,7 +155,7 @@ export class BeachBall {
         const nx = this.position.x / distFromCenter;
         const nz = this.position.z / distFromCenter;
 
-        // Reflect horizontal velocity off boundary wall
+        // 反射水平行进方向
         const dot = this.velocity.x * nx + this.velocity.z * nz;
         if (dot > 0) {
           this.velocity.x -= 2 * dot * nx;
@@ -137,59 +164,56 @@ export class BeachBall {
           this.velocity.z *= 0.68;
         }
 
-        // Clamp position to boundary
         this.position.x = nx * (maxRadius - this.radius);
         this.position.z = nz * (maxRadius - this.radius);
       }
     }
 
-    // 4. Collision/Kick interaction with the player
+    // 4. 与玩家接触时触发踢球
     if (this.throwNoCollideTimer <= 0) {
       const dx = this.position.x - player.position.x;
       const dz = this.position.z - player.position.z;
       const dist2D = Math.sqrt(dx * dx + dz * dz);
       const kickDistance = (player.radius || 0.6) + this.radius - 0.05;
 
-      // Check if player overlaps the ball in 2D and is vertically close
+      // 判定 2D 重叠以及高度在脚踢感应区间内
       if (dist2D < kickDistance && Math.abs(this.position.y - player.position.y) < 1.3) {
         const angle = Math.atan2(dx, dz);
-        const kickDir = new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
+        const kickDir = new BABYLON.Vector3(Math.sin(angle), 0, Math.cos(angle));
 
-        // Push ball slightly out of intersection to prevent sticking
+        // 推出重叠区，防止粘滞
         const overlap = kickDistance - dist2D;
         this.position.x += kickDir.x * overlap;
         this.position.z += kickDir.z * overlap;
 
-        // Get player speed
+        // 获取玩家当前物理速度并赋予球体受力速度
         const playerSpeed = Math.sqrt(player.velocity.x * player.velocity.x + player.velocity.z * player.velocity.z);
         const baseForce = 4.8;
         const speedBonus = playerSpeed * 1.3;
         const totalForce = baseForce + speedBonus;
 
-        // Set velocity: kick forward + pop up
         this.velocity.x = kickDir.x * totalForce;
         this.velocity.z = kickDir.z * totalForce;
         this.velocity.y = 2.4 + speedBonus * 0.45;
         this.isGrounded = false;
 
-        // Trigger kick sound
         this.playKickSound();
       }
     }
 
-    // 5. Visual rolling rotation
+    // 5. 滚动的动画旋转效果
     const speed = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.z * this.velocity.z);
     if (speed > 0.08) {
-      // Perpendicular axis for rolling
       const rx = -this.velocity.z / speed;
       const rz = this.velocity.x / speed;
       const rollAngle = (speed / this.radius) * delta;
 
-      this.ballMesh.rotateOnWorldAxis(new THREE.Vector3(rx, 0, rz), rollAngle);
+      // 在世界坐标空间下旋转球体内部 Mesh，展现逼真滚动
+      this.ballMesh.rotate(new BABYLON.Vector3(rx, 0, rz), rollAngle, BABYLON.Space.WORLD);
     }
 
-    // Sync group position
-    this.group.position.copy(this.position);
+    // 同步节点位置
+    this.group.position.copyFrom(this.position);
   }
 
   playKickSound() {
@@ -199,14 +223,6 @@ export class BeachBall {
   }
 
   destroy() {
-    this.scene.remove(this.group);
-    this.group.traverse((child) => {
-      if (child.isMesh) {
-        child.geometry.dispose();
-        if (child.material && child.material.dispose) {
-          child.material.dispose();
-        }
-      }
-    });
+    this.group.dispose();
   }
 }

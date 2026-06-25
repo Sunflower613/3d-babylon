@@ -4,31 +4,36 @@
 
 export class ModalManager {
   constructor() {
+    const pDoc = document;
+    const lDoc = document;
+
     this.modals = {
-      about: document.getElementById('modal-about'),
-      skills: document.getElementById('modal-skills'),
-      projects: document.getElementById('modal-projects'),
-      arcade: document.getElementById('modal-arcade'),
-      easel: document.getElementById('modal-easel'),
-      wardrobe: document.getElementById('modal-wardrobe'),
-      leaderboard: document.getElementById('modal-leaderboard'),
-      tasks: document.getElementById('modal-tasks'),
-      farm: document.getElementById('modal-farm'),
-      pk: document.getElementById('modal-pk'),
-      bag: document.getElementById('modal-bag'),
-      home: document.getElementById('modal-home'),
-      exit: document.getElementById('modal-exit'),
-      map: document.getElementById('modal-map'),
-      shop: document.getElementById('modal-shop'),
-      piano: document.getElementById('modal-piano')
+      about: pDoc.getElementById('modal-about'),
+      skills: pDoc.getElementById('modal-skills'),
+      projects: pDoc.getElementById('modal-projects'),
+      arcade: lDoc.getElementById('modal-arcade'),
+      easel: lDoc.getElementById('modal-easel'),
+      wardrobe: lDoc.getElementById('modal-wardrobe'),
+      leaderboard: pDoc.getElementById('modal-leaderboard'),
+      tasks: pDoc.getElementById('modal-tasks'),
+      farm: pDoc.getElementById('modal-farm'),
+      pk: pDoc.getElementById('modal-pk'),
+      bag: pDoc.getElementById('modal-bag'),
+      home: lDoc.getElementById('modal-home'),
+      exit: lDoc.getElementById('modal-exit'),
+      map: pDoc.getElementById('modal-map'),
+      shop: pDoc.getElementById('modal-shop'),
+      piano: lDoc.getElementById('modal-piano')
     };
     
-    this.iframe = document.getElementById('arcade-iframe');
-    this.arcadeLobby = document.getElementById('arcade-lobby');
-    this.arcadeTitle = document.getElementById('arcade-title');
-    this.arcadeBackBtn = document.getElementById('btn-arcade-back');
-    this.closeButtons = document.querySelectorAll('.modal-close');
-    this.overlayList = document.querySelectorAll('.modal-overlay');
+    this.iframe = lDoc.getElementById('arcade-iframe');
+    this.arcadeLobby = lDoc.getElementById('arcade-lobby');
+    this.arcadeTitle = lDoc.getElementById('arcade-title');
+    this.arcadeBackBtn = lDoc.getElementById('btn-arcade-back');
+    
+    // 只绑定子页面中特定模态框的关闭与遮罩
+    this.closeButtons = lDoc.querySelectorAll('.modal-close');
+    this.overlayList = lDoc.querySelectorAll('.modal-overlay');
     this.isAnyModalOpen = false;
 
     this.init();
@@ -57,11 +62,38 @@ export class ModalManager {
       });
     });
 
-    // ESC key closes modals
+    // ESC key closes modals or toggles sidebar
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this.isAnyModalOpen) {
-        this.closeAllModals();
+      if (e.key === 'Escape') {
+        if (this.isAnyModalOpen) {
+          e.preventDefault();
+          this.closeAllModals();
+        } else {
+          // 转发给 appShell
+          const appShell = window.appShell || (window.parent && window.parent.appShell);
+          if (appShell && typeof appShell.toggleSidebar === 'function') {
+            e.preventDefault();
+            appShell.toggleSidebar();
+          }
+        }
       }
+    });
+
+    // 绑定出门目的地选择按钮点击事件
+    const exitChoiceBtns = document.querySelectorAll('.exit-choice-btn');
+    exitChoiceBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        let targetMap = btn.getAttribute('data-target');
+        if (targetMap === 'pk') {
+          targetMap = 'pk_arena';
+        }
+        if (window.gameApp && typeof window.gameApp.switchMap === 'function') {
+          window.gameApp.switchMap(targetMap);
+        } else {
+          console.warn('[退出] 找不到 gameApp 实例或 switchMap 方法');
+        }
+        this.closeModal('exit');
+      });
     });
   }
 
@@ -226,16 +258,22 @@ export class ModalManager {
         easelIframe.src = './paint.html';
       }
     }
-
     modal.classList.add('open');
     this.isAnyModalOpen = true;
+
+    // 锁定玩家移动并重置输入
+    if (window.gameApp && window.gameApp.player) {
+      window.gameApp.player.controlsLocked = true;
+      window.gameApp.player.resetInputs();
+    }
 
     // Dispatch custom event to lock player controls
     window.dispatchEvent(new CustomEvent('modal-opened', { detail: { modalId: id } }));
 
-    // Notify parent window appShell to hide HUD UI
-    if (window.parent && window.parent.appShell && typeof window.parent.appShell.onModalOpened === 'function') {
-      window.parent.appShell.onModalOpened(id);
+    // Notify appShell to hide HUD UI
+    const appShell = window.appShell || (window.parent && window.parent.appShell);
+    if (appShell && typeof appShell.onModalOpened === 'function') {
+      appShell.onModalOpened(id);
     }
   }
 
@@ -262,11 +300,17 @@ export class ModalManager {
     );
 
     if (!this.isAnyModalOpen) {
+      // 解锁玩家移动
+      if (window.gameApp && window.gameApp.player) {
+        window.gameApp.player.controlsLocked = false;
+      }
+
       window.dispatchEvent(new CustomEvent('modal-closed', { detail: { modalId: id } }));
       
-      // Notify parent window appShell to restore HUD UI
-      if (window.parent && window.parent.appShell && typeof window.parent.appShell.onModalClosed === 'function') {
-        window.parent.appShell.onModalClosed(id);
+      // Notify appShell to restore HUD UI
+      const appShell = window.appShell || (window.parent && window.parent.appShell);
+      if (appShell && typeof appShell.onModalClosed === 'function') {
+        appShell.onModalClosed(id);
       }
     }
   }

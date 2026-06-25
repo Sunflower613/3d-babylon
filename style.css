@@ -398,6 +398,19 @@ body, html {
   pointer-events: none; /* Let touches pass through except on active buttons */
 }
 
+/* 市集 “已持有” 在详情区域内右上角悬浮 */
+.shop-detail-content .shop-detail-owned {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding: 6px 10px;
+  border-radius: 10px;
+  pointer-events: none; /* 不阻塞点击 */
+}
+
 .action-btn {
   position: absolute;
   width: 52px;
@@ -547,7 +560,7 @@ body, html {
 }
 
 .modal-body {
-  padding: 10px 30px 30px;
+  padding: 10px;
   font-size: 0.95rem;
   line-height: 1.7;
   color: #d1d5db;
@@ -3599,10 +3612,20 @@ body.is-mobile #radial-seed-menu .radial-key-hint {
 /* 右侧购买详情控制台 */
 .shop-detail-content {
   color: #fff;
+  position: relative; /* 使内部绝对定位的元素相对于此容器 */
 }
 .shop-detail-content h3 {
   color: #fff !important;
   margin: 0;
+}
+.shop-detail-title {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #fff !important;
+  margin: 0 !important;
 }
 .shop-detail-content p {
   color: var(--text-muted) !important;
@@ -3655,11 +3678,14 @@ body.is-mobile .shop-detail-header {
 }
 
 body.is-mobile .shop-detail-title {
+  position: absolute !important;
+  top: 8px !important;
+  left: 8px !important;
   font-size: 0.9rem !important;
-  margin-top: 2px !important;
+  margin: 0 !important;
 }
 
-body.is-mobile .shop-detail-owned {
+body.is-mobile .shop-detail-content .shop-detail-owned {
   font-size: 0.7rem !important;
 }
 

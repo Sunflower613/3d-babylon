@@ -1,0 +1,695 @@
+<!-- ==================== SSO HUD Header & Sidebar ==================== -->
+<div style="position: absolute; inset: 0; z-index: 10; pointer-events: none; width: 100%; height: 100%;">
+    
+    <header class="hud-header">
+      <!-- SSO 统一登录/用户状态小部件 -->
+      <div id="sso-profile-container" class="sso-profile-bar">
+        <!-- 未登录：仅显示 person 图标 -->
+        <button id="sso-login-btn" class="sso-login-btn" style="display: none;" title="打开侧边栏">
+          <svg style="display: flex;"
+  class="lucide lucide-user"
+  xmlns="http://www.w3.org/2000/svg"
+  width="20"
+  height="20"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+  <circle cx="12" cy="7" r="4" />
+</svg>
+        </button>
+        <!-- 已登录：显示头像，点击触发侧边栏 -->
+        <button id="sso-user-info" class="sso-user-info" style="display: none; border: none; background: none; outline: none; padding: 0; cursor: pointer; width: 100%; height: 100%;" title="打开侧边栏">
+          <div class="sso-avatar-wrapper" title="打开侧边栏">
+            <img id="sso-avatar" class="sso-avatar" src="" alt="头像">
+          </div>
+        </button>
+      </div>
+    </header>
+
+
+
+    <!-- 侧边栏遮罩层 -->
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+    <!-- 原神风格侧边栏 -->
+    <div id="sso-sidebar" class="sso-sidebar">
+      <!-- 左侧系统迷你侧边栏 (竖向) -->
+      <div class="sidebar-aside">
+        <!-- 音量开关 -->
+        <button id="sidebar-audio-btn" class="aside-btn" title="背景音乐">
+          
+<svg id="sidebar-audio-icon-mute" style="display: flex;"
+  class="lucide lucide-volume-x"
+  xmlns="http://www.w3.org/2000/svg"
+  width="20"
+  height="20"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" />
+  <line x1="22" x2="16" y1="9" y2="15" />
+  <line x1="16" x2="22" y1="9" y2="15" />
+</svg>
+          
+<svg id="sidebar-audio-icon-on" style="display: none;"
+  class="lucide lucide-volume-2"
+  xmlns="http://www.w3.org/2000/svg"
+  width="20"
+  height="20"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" />
+  <path d="M16 9a5 5 0 0 1 0 6" />
+  <path d="M19.364 18.364a9 9 0 0 0 0-12.728" />
+</svg>
+        </button>
+        <!-- 脱离卡死 -->
+        <button id="sidebar-stuck-btn" class="aside-btn" title="脱离卡死">
+          <svg style="display: flex;"
+  class="lucide lucide-life-buoy"
+  xmlns="http://www.w3.org/2000/svg"
+  width="20"
+  height="20"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <circle cx="12" cy="12" r="10" />
+  <path d="m4.93 4.93 4.24 4.24" />
+  <path d="m14.83 9.17 4.24-4.24" />
+  <path d="m14.83 14.83 4.24 4.24" />
+  <path d="m9.17 14.83-4.24 4.24" />
+  <circle cx="12" cy="12" r="4" />
+</svg>
+        </button>
+        <div style="flex: 1;"></div>
+        <!-- 返回 2D 主页 -->
+        <button id="sidebar-back-2d-btn" class="aside-btn" title="返回2D主页">
+          <svg style="display: flex;"
+  class="lucide lucide-undo-2"
+  xmlns="http://www.w3.org/2000/svg"
+  width="20"
+  height="20"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M9 14 4 9l5-5" />
+  <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" />
+</svg>
+        </button>
+        <!-- 退出登录 -->
+        <button id="sidebar-logout-btn" class="aside-btn" title="退出登录" style="display: none;">
+          <svg style="display: flex;"
+  class="lucide lucide-power"
+  xmlns="http://www.w3.org/2000/svg"
+  width="20"
+  height="20"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M12 2v10" />
+  <path d="M18.4 6.6a9 9 0 1 1-12.77.04" />
+</svg>
+        </button>
+      </div>
+
+      <!-- 右侧内容面板 -->
+      <div class="sidebar-main">
+        <button class="sidebar-close" id="sidebar-close-btn">&times;</button>
+        
+        <div class="sidebar-user-section">
+          <img id="sidebar-avatar" class="sidebar-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M12 14c-4 0-6 2-6 4v2h12v-2c0-2-2-4-6-4z'/%3E%3C/svg%3E" alt="头像">
+          <div class="sidebar-user-meta">
+            <div class="user-meta-top">
+              <h3 id="sidebar-username">未登录</h3>
+              <button id="sidebar-login-btn" class="sso-inline-login-btn">立即登录</button>
+            </div>
+            <span id="sidebar-user-status" class="status-badge">游客</span>
+          </div>
+        </div>
+        
+        <div class="sidebar-content scrollable">
+          <!-- 1. 地图选择 -->
+          <div class="sidebar-item expandable" id="sidebar-map-btn" title="地图选择">
+            <div class="sidebar-item-icon">
+              <svg style="display: flex;"
+  class="lucide lucide-map"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z" />
+  <path d="M15 5.764v15" />
+  <path d="M9 3.236v15" />
+</svg>
+            </div>
+            <span>地图选择</span>
+            <div class="sidebar-submenu" id="sidebar-map-submenu">
+              <div class="submenu-option" id="btn-map-island">治愈群岛</div>
+              <div class="submenu-option" id="btn-map-house">温馨小屋</div>
+              <div class="submenu-option" id="btn-map-lake">云顶天池</div>
+              <div class="submenu-option" id="btn-map-castle">粉色庄园</div>
+            </div>
+          </div>
+
+          <div class="sidebar-grid">
+            <!-- 2. 排行榜 -->
+            <button class="sidebar-item" id="btn-sidebar-leaderboard" title="排行榜">
+              <svg style="display: flex;"
+  class="lucide lucide-trophy"
+  xmlns="http://www.w3.org/2000/svg"
+  width="20"
+  height="20"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M10 14.66v1.626a2 2 0 0 1-.976 1.696A5 5 0 0 0 7 21.978" />
+  <path d="M14 14.66v1.626a2 2 0 0 0 .976 1.696A5 5 0 0 1 17 21.978" />
+  <path d="M18 9h1.5a1 1 0 0 0 0-5H18" />
+  <path d="M4 22h16" />
+  <path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z" />
+  <path d="M6 9H4.5a1 1 0 0 1 0-5H6" />
+</svg>
+              <span>排行榜</span>
+            </button>
+
+            <!-- 3. 游戏任务 -->
+            <button class="sidebar-item" id="btn-sidebar-tasks" title="游戏任务">
+              <svg style="display: flex;"
+  class="lucide lucide-clipboard-list"
+  xmlns="http://www.w3.org/2000/svg"
+  width="20"
+  height="20"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+  <path d="M12 11h4" />
+  <path d="M12 16h4" />
+  <path d="M8 11h.01" />
+  <path d="M8 16h.01" />
+</svg>
+              <span>游戏任务</span>
+            </button>
+
+            <!-- 4. 我的农田 -->
+            <button class="sidebar-item" id="btn-sidebar-farm" title="我的农田">
+              <svg style="display: flex;"
+  class="lucide lucide-sprout"
+  xmlns="http://www.w3.org/2000/svg"
+  width="20"
+  height="20"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M14 9.536V7a4 4 0 0 1 4-4h1.5a.5.5 0 0 1 .5.5V5a4 4 0 0 1-4 4 4 4 0 0 0-4 4c0 2 1 3 1 5a5 5 0 0 1-1 3" />
+  <path d="M4 9a5 5 0 0 1 8 4 5 5 0 0 1-8-4" />
+  <path d="M5 21h14" />
+</svg>
+              <span>我的农田</span>
+            </button>
+
+            <!-- 5. PK大厅 -->
+            <button class="sidebar-item" id="btn-sidebar-pk" title="PK大厅">
+              <svg style="display: flex;"
+  class="lucide lucide-swords"
+  xmlns="http://www.w3.org/2000/svg"
+  width="20"
+  height="20"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5" />
+  <line x1="13" x2="19" y1="19" y2="13" />
+  <line x1="16" x2="20" y1="16" y2="20" />
+  <line x1="19" x2="21" y1="21" y2="19" />
+  <polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5" />
+  <line x1="5" x2="9" y1="14" y2="18" />
+  <line x1="7" x2="4" y1="17" y2="20" />
+  <line x1="3" x2="5" y1="19" y2="21" />
+</svg>
+              <span>PK大厅</span>
+            </button>
+
+            <!-- 6. 我的背包 -->
+            <button class="sidebar-item" id="btn-sidebar-bag" title="我的背包">
+              <svg style="display: flex;"
+  class="lucide lucide-briefcase"
+  xmlns="http://www.w3.org/2000/svg"
+  width="20"
+  height="20"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+  <rect width="20" height="14" x="2" y="6" rx="2" />
+</svg>
+              <span>我的背包</span>
+            </button>
+
+            <!-- 7. 我的家园 -->
+            <button class="sidebar-item" id="btn-sidebar-home" title="我的家园">
+              <svg style="display: flex;"
+  class="lucide lucide-home"
+  xmlns="http://www.w3.org/2000/svg"
+  width="20"
+  height="20"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
+  <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+</svg>
+              <span>我的家园</span>
+            </button>
+
+            <!-- 8. 市集商店 -->
+            <button class="sidebar-item" id="btn-sidebar-shop" title="市集商店">
+              <svg style="display: flex;"
+  class="lucide lucide-shopping-cart"
+  xmlns="http://www.w3.org/2000/svg"
+  width="20"
+  height="20"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <circle cx="8" cy="21" r="1"/>
+  <circle cx="19" cy="21" r="1"/>
+  <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+</svg>
+              <span>市集商店</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+<!-- ==================== Mobile Floating Control Overlays ==================== -->
+
+<!-- 移动端虚拟摇杆与动作按钮 -->
+<div class="mobile-controls" id="mobile-controls">
+  <div class="joystick-wrapper">
+    <div id="joystick-zone"></div>
+  </div>
+  <div class="action-buttons">
+    <button class="action-btn" id="btn-interact" style="display: none;" aria-label="交互" title="交互">
+      <svg style="display: flex;" class="lucide lucide-sparkles" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" />
+        <path d="M20 2v4" />
+        <path d="M22 4h-4" />
+        <circle cx="4" cy="20" r="2" />
+      </svg>
+    </button>
+    <button class="action-btn" id="btn-pk-attack" style="display: none;" aria-label="攻击" title="攻击">
+      <svg style="display: flex;" class="lucide lucide-swords" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5" />
+        <line x1="13" x2="19" y1="19" y2="13" />
+        <line x1="16" x2="20" y1="16" y2="20" />
+        <line x1="19" x2="21" y1="21" y2="19" />
+        <polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5" />
+        <line x1="5" x2="9" y1="14" y2="18" />
+        <line x1="7" x2="4" y1="17" y2="20" />
+        <line x1="3" x2="5" y1="19" y2="21" />
+      </svg>
+    </button>
+    <button class="action-btn" id="btn-run" aria-label="加速" title="加速">
+      <svg style="display: flex;" class="lucide zap" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" />
+      </svg>
+    </button>
+    <button class="action-btn" id="btn-jump" aria-label="跳跃" title="跳跃">
+      <svg style="display: flex;" class="lucide lucide-chevrons-up" xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m17 11-5-5-5 5" />
+        <path d="m17 18-5-5-5 5" />
+      </svg>
+    </button>
+  </div>
+</div>
+
+
+<!-- ==================== Global Modals Overlays ==================== -->
+<div class="modal-overlay" id="modal-about">
+    <div class="modal-card">
+      <button class="modal-close" data-close="modal-about">&times;</button>
+      <div class="modal-header">
+        <span class="modal-emoji">🏠</span>
+        <h2>林间树屋 · 关于我</h2>
+      </div>
+      <div class="modal-body scrollable">
+        <div class="profile-section">
+          <div class="avatar-placeholder">🐱</div>
+          <div class="profile-info">
+            <h3>您的名字 / 开发者</h3>
+            <p class="tagline">热爱 3D 视觉与创意编程的前端工程师</p>
+          </div>
+        </div>
+        <div class="bio-text">
+          <p>你好！欢迎光临我的 3D 浮空岛。我是一名热衷于创造有趣、灵动且具备卓越交互体验的网页开发者。</p>
+          <p>我相信网页不只是静态的文档，更可以是承载故事与乐趣的数字化空间。这也是我尝试将个人主页做成 3D 可探索游戏的原因。</p>
+          <p>在这里，你可以四处走走，查看我的技术栈，或者在街机前坐下，玩一把我亲手制作的 21点扑克游戏！</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-skills">
+    <div class="modal-card">
+      <button class="modal-close" data-close="modal-skills">&times;</button>
+      <div class="modal-header">
+        <span class="modal-emoji">🌳</span>
+        <h2>知识神树 · 技术栈</h2>
+      </div>
+      <div class="modal-body scrollable">
+        <p class="description">这是我日常开发积累的技能板块，主要聚焦在前端开发与视觉交互领域：</p>
+        
+        <div class="skill-category">
+          <h3>🎨 前端核心 & 3D 视觉</h3>
+          <div class="skill-item">
+            <span class="skill-name">Three.js / WebGL</span>
+            <div class="progress-bar"><div class="progress-fill" style="width: 85%;"></div></div>
+          </div>
+          <div class="skill-item">
+            <span class="skill-name">HTML5 / CSS3 / ES6+</span>
+            <div class="progress-bar"><div class="progress-fill" style="width: 95%;"></div></div>
+          </div>
+          <div class="skill-item">
+            <span class="skill-name">React / Vue / Vite</span>
+            <div class="progress-bar"><div class="progress-fill" style="width: 90%;"></div></div>
+          </div>
+        </div>
+
+        <div class="skill-category">
+          <h3>⚙️ 后端及工具链</h3>
+          <div class="skill-item">
+            <span class="skill-name">Node.js / Express</span>
+            <div class="progress-bar"><div class="progress-fill" style="width: 75%;"></div></div>
+          </div>
+          <div class="skill-item">
+            <span class="skill-name">Git / CI/CD</span>
+            <div class="progress-bar"><div class="progress-fill" style="width: 80%;"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-projects">
+    <div class="modal-card modal-large">
+      <button class="modal-close" data-close="modal-projects">&times;</button>
+      <div class="modal-header">
+        <span class="modal-emoji">🎬</span>
+        <h2>时光放映机 · 项目展示</h2>
+      </div>
+      <div class="modal-body scrollable">
+        <div class="projects-grid">
+          <!-- 项目 1 -->
+          <div class="project-item">
+            <div class="project-img">🃏</div>
+            <div class="project-detail">
+              <h3>21点扑克牌游戏</h3>
+              <p>一款基于纯原生 HTML/CSS/JS 开发的经典 21 点纸牌游戏，具备流畅的抽牌发牌动画、筹码下注逻辑与音效提示。</p>
+              <span class="tag">Vanilla JS</span> <span class="tag">CSS Animation</span>
+            </div>
+          </div>
+          <!-- 项目 2 -->
+          <div class="project-item">
+            <div class="project-img">✨</div>
+            <div class="project-detail">
+              <h3>3D 治愈群岛主页</h3>
+              <p>当前你正在探索的项目！利用 Three.js 构建的一个 low-poly 风格 of 3D 浮空群岛，融合了物理检测与毛玻璃 overlay。</p>
+              <span class="tag">Three.js</span> <span class="tag">Vite</span> <span class="tag">Physics</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-leaderboard">
+    <div class="modal-card">
+      <button class="modal-close" data-close="modal-leaderboard">&times;</button>
+      <div class="modal-header">
+        <span class="modal-emoji">🏆</span>
+        <h2>个人大厅 · 排行榜</h2>
+      </div>
+      <div class="modal-body no-padding" style="display: flex; flex-direction: column; overflow: hidden; flex: 1; min-height: 0;">
+        <div class="leaderboard-tabs">
+          <button class="tab-btn active" data-tab="pkPoints">⚔️ 战力榜</button>
+          <button class="tab-btn" data-tab="coins">💰 财富榜</button>
+          <button class="tab-btn" data-tab="level">✨ 等级榜</button>
+        </div>
+        <div class="leaderboard-container scrollable" style="flex-grow: 1; padding: 20px; overflow-y: auto;">
+          <div class="leaderboard-list-view" id="leaderboard-list-view">
+            <!-- 动态生成排行 -->
+          </div>
+        </div>
+        <div class="leaderboard-my-rank" id="leaderboard-my-rank">
+          <!-- 当前用户排行 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-tasks">
+    <div class="modal-card modal-large">
+      <button class="modal-close" data-close="modal-tasks">&times;</button>
+      <div class="modal-header">
+        <span class="modal-emoji">📋</span>
+        <h2>治愈旅途 · 每日任务</h2>
+      </div>
+      <div class="modal-body no-padding" style="display: flex; flex: 1; min-height: 0; overflow: hidden;">
+        <!-- 左侧：宝箱区域 -->
+        <div class="tasks-left" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; border-right: 1px solid var(--glass-border); text-align: center; gap: 12px; background: rgba(255,255,255,0.01);">
+          <div class="tasks-chest-icon" id="tasks-chest-btn" style="font-size: 4rem; cursor: pointer; transition: all 0.3s; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2)); user-select: none;">🎁</div>
+          <div style="font-size: 0.95rem; font-weight: bold; color: #fff;">活跃度宝箱</div>
+          <div style="width: 100%; padding: 0 10px; box-sizing: border-box;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">
+              <span>任务进度</span>
+              <span id="tasks-progress-text">0 / 5</span>
+            </div>
+            <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; position: relative;">
+              <div id="tasks-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #ffd700, #ff9800); transition: width 0.4s ease; border-radius: 4px;"></div>
+            </div>
+          </div>
+          <p id="tasks-chest-tips" style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.4; margin: 0; padding: 0 8px;">完成今日全部 5 个任务即可开启宝箱，获得 300 金币与 100 经验！</p>
+          <button class="hud-btn" id="btn-tasks-claim-chest" style="width: 100%; padding: 8px 0; font-size: 0.8rem; font-weight: bold;" disabled>领取奖励</button>
+        </div>
+        <!-- 右侧：任务列表 -->
+        <div class="tasks-right scrollable" style="flex: 2.2; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; width: 100%;">
+          <div class="tasks-list" id="tasks-list" style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+            <!-- 动态生成任务 -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-map">
+    <div class="modal-card modal-large" style="max-width: 680px;">
+      <button class="modal-close" data-close="modal-map">&times;</button>
+      <div class="modal-header" style="justify-content: space-between; align-items: center; width: 100%;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <span class="modal-emoji">🗺️</span>
+          <h2>世界地图 · 快速传送</h2>
+        </div>
+      </div>
+      <div class="modal-body no-padding" style="display: flex; flex-direction: column; overflow: hidden; flex: 1; min-height: 0;">
+        <div class="world-map-container">
+          <div class="world-map-canvas">
+            <div class="map-decor compass">🧭</div>
+            <div class="map-decor sea-monster">🐳</div>
+            <div class="map-decor clouds cloud-1">☁️</div>
+            <div class="map-decor clouds cloud-2">☁️</div>
+            
+            <div class="map-node node-island" data-map="island">
+              <div class="node-icon">🌴</div>
+              <div class="node-label">海岛广场</div>
+              <div class="node-status">公共区域</div>
+            </div>
+            
+            <div class="map-node node-house" data-map="house">
+              <div class="node-icon">🏡</div>
+              <div class="node-label">个人小家</div>
+              <div class="node-status">我的空间</div>
+            </div>
+            
+            <div class="map-node node-farm" data-map="farm">
+              <div class="node-icon">🌽</div>
+              <div class="node-label">我的农地</div>
+              <div class="node-status">农耕种植</div>
+            </div>
+            
+            <div class="map-node node-pk" data-map="pk_arena">
+              <div class="node-icon">⚔️</div>
+              <div class="node-label">竞技赛场</div>
+              <div class="node-status">擂台PK</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-bag">
+    <div class="modal-card modal-large">
+      <button class="modal-close" data-close="modal-bag">&times;</button>
+      <div class="modal-header" style="justify-content: space-between; align-items: center; width: 100%;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <span class="modal-emoji">💼</span>
+          <h2>旅者囊匣 · 我的背包</h2>
+        </div>
+        <div class="modal-bag-coins" style="display: flex; align-items: center; gap: 6px; margin-right: 45px; font-weight: bold; color: #ffd700; font-size: 0.95rem;">
+          <span>🪙</span>
+          <span class="bag-coins-val">0</span>
+        </div>
+      </div>
+      <div class="modal-body no-padding" style="display: flex; flex: 1; min-height: 0; overflow: hidden;">
+        <div class="bag-left" style="flex: 1.8; display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--glass-border);">
+          <div class="bag-tabs" style="display: flex; background: rgba(0,0,0,0.15); border-bottom: 1px solid var(--glass-border);">
+            <button class="bag-tabactive active" data-tab="seed" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s;">消耗品</button>
+            <button class="bag-tabactive" data-tab="decor" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s;">装饰品</button>
+            <button class="bag-tabactive" data-tab="collect" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s;">珍藏品</button>
+          </div>
+          <div class="bag-grid scrollable" id="bag-grid" style="flex-grow: 1; padding: 16px; overflow-y: auto; display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; max-height: 280px; width: 100%;">
+            <!-- 10x4 网格 -->
+          </div>
+        </div>
+        <div class="bag-right" id="bag-item-detail" style="flex: 1.2; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; text-align: center; background: rgba(255,255,255,0.01); width: 100%; overflow-y: auto;">
+          <div class="item-detail-empty" style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+            <div style="font-size: 2.6rem; opacity: 0.2;">💼</div>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">点击左侧背包物品查看详情</p>
+          </div>
+          <div class="item-detail-content" style="display: none; width: 100%; height: auto; min-height: 100%; flex-direction: column; align-items: center; justify-content: space-between; gap: 16px;">
+            <!-- 动态内容 -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-shop">
+    <div class="modal-card modal-large">
+      <button class="modal-close" data-close="modal-shop">&times;</button>
+      <div class="modal-header" style="justify-content: space-between; align-items: center; width: 100%;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <span class="modal-emoji">🛒</span>
+          <h2>云端集市 · 市集商店</h2>
+        </div>
+        <div class="modal-shop-coins" style="display: flex; align-items: center; gap: 6px; margin-right: 45px; font-weight: bold; color: #ffd700; font-size: 0.95rem;">
+          <span>🪙 当前金币: </span>
+          <span class="shop-coins-val">0</span>
+        </div>
+      </div>
+      <div class="modal-body no-padding" style="display: flex; flex: 1; min-height: 0; overflow: hidden;">
+        <!-- 左侧区：包含 Tab 和商品网格 -->
+        <div class="shop-left" style="flex: 1.8; display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--glass-border);">
+          <div class="shop-tabs" style="display: flex; background: rgba(0,0,0,0.15); border-bottom: 1px solid var(--glass-border);">
+            <button class="shop-tabactive active" data-tab="agriculture" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px;">🌱 农业物资</button>
+            <button class="shop-tabactive" data-tab="decorations" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px;">🛋️ 装饰家具</button>
+            <button class="shop-tabactive" data-tab="topup" style="flex: 1; padding: 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px;">💎 金币充值</button>
+          </div>
+          <!-- 商品网格 -->
+          <div class="shop-grid scrollable" id="shop-grid" style="flex-grow: 1; padding: 16px; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-height: 280px; width: 100%;">
+            <!-- 动态渲染商品项 -->
+          </div>
+        </div>
+        <div class="shop-right" id="shop-item-detail" style="flex: 1.2; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; text-align: center; background: rgba(255,255,255,0.01); width: 100%; overflow-y: auto;">
+          <div class="shop-detail-empty" style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+            <div style="font-size: 2.6rem; opacity: 0.2;">🛒</div>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">点击左侧商品查看详情并购买</p>
+          </div>
+          <div class="shop-detail-content" style="display: none; width: 100%; height: auto; min-height: 100%; flex-direction: column; align-items: center; justify-content: flex-start; gap: 4px;">
+            <!-- 详情头部 -->
+            <span class="shop-detail-title" style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #fff;">向日葵种子</span>
+                <span class="shop-detail-owned">已持有: 0</span>
+            
+            <div class="shop-detail-header" style="display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0;">
+              <span class="shop-detail-icon" style="font-size: 3rem;filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));">🌻</span>
+              
+          
+            </div>
+            <!-- 描述 -->
+            <p class="shop-detail-desc" style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.3; margin: 2px 0; text-align: center; max-height: 50px; overflow-y: auto; width: 100%; padding: 0 10px; flex-shrink: 0;">成熟需要 30 秒。收割可获得 20 金币 + 15 经验。</p>
+            <!-- 购买控制面板 -->
+            <div class="shop-buy-panel" style="width: 100%; display: flex; flex-direction: column; gap: 6px; background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 14px; border: 1px solid var(--glass-border); flex-shrink: 0;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted);">
+                <span>单价: <strong class="shop-detail-unit-price" style="color: #ffd700;">🪙 10</strong></span>
+                <span>总价: <strong class="shop-detail-total-price" style="color: #ffd700;">🪙 10</strong></span>
+              </div>
+              <!-- 数量调节器 -->
+              <div class="shop-buy-count-control" style="display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%;">
+                <button class="bag-range-btn" id="btn-shop-count-minus" style="width: 24px; height: 24px;">-</button>
+                <input type="range" id="shop-buy-count-slider" min="1" max="99" value="1" style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.1); cursor: pointer; accent-color: var(--primary);">
+                <button class="bag-range-btn" id="btn-shop-count-plus" style="width: 24px; height: 24px;">+</button>
+                <button class="bag-range-btn" id="btn-shop-count-plus10" style="padding: 0 6px; height: 24px; font-size: 0.72rem; border-radius: 6px;">+10</button>
+              </div>
+            </div>
+            <!-- 最终购买按钮 -->
+            <button class="hud-btn" id="btn-shop-execute-buy" style="width: 100%; padding: 12px; font-weight: bold; font-size: 0.9rem; background: linear-gradient(135deg, var(--primary) 0%, #27ae60 100%); border-color: var(--primary); text-shadow: 0 1px 3px rgba(0,0,0,0.3); flex-shrink: 0; margin-top: 4px;">确认购买(<span id="shop-buy-count-text" style="margin-top: 4px;">1</span><span  style="margin-top: 4px;">)</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>

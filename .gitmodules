@@ -1,0 +1,3 @@
+[submodule "blueprint3d-babylon"]
+	path = blueprint3d-babylon
+	url = https://github.com/Sunflower613/blueprint3d-babylon.git
