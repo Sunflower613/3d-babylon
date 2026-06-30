@@ -1480,4 +1480,18 @@ export class Player {
       exitSittingHud.style.display = 'none';
     }
   }
+
+  // ==================== 实体生命周期合同（Task 5.4）====================
+  // Player 参与 core/lifecycle 约定（init / update / dispose），保留 `Player` 命名。
+  // update(delta, time) 已在上方实现；init 为兼容上下文挂钩，dispose 释放根节点。
+  init(ctx) {
+    // 运行时引用由 WorldManager 在构造后注入（app/scene/camera），此处保留扩展位。
+  }
+
+  dispose() {
+    if (this.group && typeof this.group.dispose === 'function') {
+      this.group.dispose();
+    }
+    this.group = null;
+  }
 }

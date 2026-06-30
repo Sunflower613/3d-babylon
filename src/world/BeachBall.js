@@ -225,4 +225,9 @@ export class BeachBall {
   destroy() {
     this.group.dispose();
   }
+
+  // 实体生命周期合同别名（Task 5.5）：统一 dispose() 释放入口。
+  dispose() {
+    this.destroy();
+  }
 }

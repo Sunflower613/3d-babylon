@@ -65,6 +65,9 @@ export default defineConfig({
       }
     }
   ],
+  optimizeDeps: {
+    exclude: ['@babylonjs/core', '@babylonjs/gui']
+  },
   server: {
     host: '0.0.0.0',
     port: 3000,
