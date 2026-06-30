@@ -8,6 +8,13 @@ export default defineConfig({
     {
       name: 'serve-parent-assets',
       configureServer(server) {
+        const blueprintRoot = path.resolve(__dirname, 'blueprint3d-babylon');
+        server.watcher.add([
+          path.join(blueprintRoot, 'example'),
+          path.join(blueprintRoot, 'src'),
+          path.join(blueprintRoot, 'example', 'app.js')
+        ]);
+
         server.middlewares.use((req, res, next) => {
           const relativeUrl = req.url.split('?')[0];
           
@@ -48,6 +55,13 @@ export default defineConfig({
           }
           next();
         });
+      },
+      handleHotUpdate({ file, server }) {
+        const blueprintRoot = path.resolve(__dirname, 'blueprint3d-babylon').replace(/\\/g, '/');
+        if (file.startsWith(`${blueprintRoot}/`)) {
+          server.ws.send({ type: 'full-reload', path: '*' });
+          return [];
+        }
       }
     }
   ],
@@ -55,6 +69,10 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 3000,
     open: true,
+    watch: {
+      usePolling: true,
+      interval: 250
+    },
     allowedHosts: ['.pengyg.top', 'pengyg.top'],
     fs: {
       allow: ['..'] // Allow importing siteConfig from parent directory
