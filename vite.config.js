@@ -65,8 +65,20 @@ export default defineConfig({
       }
     }
   ],
+  resolve: {
+    alias: [
+      {
+        find: 'blueprint3d-babylon/babylon-runtime',
+        replacement: path.resolve(__dirname, 'blueprint3d-babylon/src/core/babylon.production.js')
+      }
+    ]
+  },
   optimizeDeps: {
-    exclude: ['@babylonjs/core', '@babylonjs/gui']
+    exclude: [
+      '@babylonjs/core',
+      '@babylonjs/gui',
+      'blueprint3d-babylon/babylon-runtime'
+    ]
   },
   server: {
     host: '0.0.0.0',
