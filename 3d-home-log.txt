@@ -138,3 +138,51 @@ https://github.com/Sunflower613/3d-home
 ---
 
 请首先规划出要实现这 6 个面板在 HTML 节点注入、CSS Glassmorphism 样式追加、以及 main.js 业务重构的方案步骤，征求我的确认后，我们即可开始分步编写。
+
+---
+
+FRP 排查记录 2026-07-04
+
+1. 本机 FRP 客户端位置
+- frpc.exe: C:\Programs\frp\frpc.exe
+- 配置文件: C:\Programs\frp\frpc.toml
+- 日志文件: C:\Programs\frp\frpc.log
+- 启动脚本: C:\Programs\frp\startFrpc.vbs
+
+2. frpc 核心映射
+- 3389thvvtest -> tcp -> 127.0.0.1:3389 -> remotePort 33893
+- 3000thvvtest -> http -> 127.0.0.1:3000 -> 3000thvvtest.frp.pengyg.top
+- 8000thvvtest -> http -> 127.0.0.1:8000 -> 8000thvvtest.frp.pengyg.top
+- 8080thvvtest -> http -> 127.0.0.1:8080 -> 8080thvvtest.frp.pengyg.top
+
+3. 服务端信息
+- serverAddr = 121.43.177.72
+- serverPort = 7000
+- transport.tls.enable = true
+- auth.token 已脱敏，未写入日志
+
+4. 本次故障现象
+- 访问地址:
+  http://3000thvvtest.frp.pengyg.top/blueprint3d-babylon/example/index.html
+- 返回 frp 默认 404 页面
+
+5. 排查结论
+- 不是域名没配，也不是 frpc 没启动
+- frpc 在线，且已连接到 121.43.177.72:7000
+- 3000thvvtest 规则存在
+- 直接原因是本机 127.0.0.1:3000 当时没有服务监听
+
+6. 处理动作
+- 在 D:\code\3d-babylon 执行 npm run dev
+- 启动 Vite 前端服务
+- 该项目 vite.config.js 使用 3000 端口，并允许 .pengyg.top 主机访问
+
+7. 修复后验证
+- http://127.0.0.1:3000/blueprint3d-babylon/example/index.html 返回 200
+- http://3000thvvtest.frp.pengyg.top/blueprint3d-babylon/example/index.html 返回 200
+
+8. 后续排查顺序
+- 先看 frpc.exe 是否还在运行
+- 再看 C:\Programs\frp\frpc.log 是否报错
+- 再看本机 3000 端口是否在监听
+- 最后看 npm run dev 或常驻前端进程是否退出
