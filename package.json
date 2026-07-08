@@ -5,8 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:open": "vite --open",
+    "dev:service": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "frontend:check": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Check-FrpFrontend.ps1",
+    "frontend:restart": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Restart-FrpFrontend.ps1",
+    "frontend:ensure": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Ensure-Frontend.ps1",
+    "frontend:register-startup": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Register-FrontendWatchdogTask.ps1"
   },
   "dependencies": {
     "@babylonjs/core": "^7.11.0",
