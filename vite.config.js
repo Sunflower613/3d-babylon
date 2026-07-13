@@ -17,6 +17,22 @@ export default defineConfig({
 
         server.middlewares.use((req, res, next) => {
           const relativeUrl = req.url.split('?')[0];
+
+          // 拦截并服务子工程家具缩略图的开发服务器代理请求
+          if (relativeUrl.startsWith('/__furniture-images__/')) {
+            const requestedName = decodeURIComponent(relativeUrl.slice('/__furniture-images__/'.length));
+            const safeName = path.basename(requestedName);
+            const filePath = path.join(blueprintRoot, 'src/furniture/image', safeName);
+
+            if (safeName.endsWith('.png') && fs.existsSync(filePath)) {
+              res.writeHead(200, {
+                'Content-Type': 'image/png',
+                'Cache-Control': 'no-cache'
+              });
+              fs.createReadStream(filePath).pipe(res);
+              return;
+            }
+          }
           
           // Serve paint.html directly from public directory to bypass Vite's html fallback
           if (relativeUrl === '/paint.html') {
