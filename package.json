@@ -9,6 +9,8 @@
     "dev:service": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "frontend:public:build": "npm --prefix blueprint3d-babylon run build",
+    "frontend:public:serve": "node .\\scripts\\Serve-BlueprintStatic.mjs",
     "frontend:check": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Check-FrpFrontend.ps1",
     "frontend:restart": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Restart-FrpFrontend.ps1",
     "frontend:ensure": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Ensure-Frontend.ps1",

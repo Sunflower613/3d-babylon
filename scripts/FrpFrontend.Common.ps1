@@ -3,10 +3,14 @@ $script:FrpFrontendConfig = [ordered]@{
     Port             = 3000
     LocalUrl         = 'http://127.0.0.1:3000/blueprint3d-babylon/example/index.html'
     PublicUrl        = 'http://3000thvvtest.frp.pengyg.top/blueprint3d-babylon/example/index.html'
+    NodeCommand      = 'node.exe'
+    NodeArguments    = @((Join-Path (Split-Path -Parent $PSScriptRoot) 'scripts\Serve-BlueprintStatic.mjs'))
     NpmCommand       = 'npm.cmd'
-    NpmArguments     = @('run', 'dev:service')
+    BuildArguments   = @('--prefix', 'blueprint3d-babylon', 'run', 'build')
     OutputLog        = Join-Path (Split-Path -Parent $PSScriptRoot) '.codex-vite-3000.out.log'
     ErrorLog         = Join-Path (Split-Path -Parent $PSScriptRoot) '.codex-vite-3000.err.log'
+    BuildOutputLog   = Join-Path (Split-Path -Parent $PSScriptRoot) '.codex-blueprint-build.out.log'
+    BuildErrorLog    = Join-Path (Split-Path -Parent $PSScriptRoot) '.codex-blueprint-build.err.log'
     FrpcExe          = 'C:\Programs\frp\frpc.exe'
     FrpcConfig       = 'C:\Programs\frp\frpc.toml'
     WatchdogTaskName = '3d-babylon-frontend-watchdog'
@@ -95,10 +99,27 @@ function Stop-FrontendProcess {
     return $true
 }
 
-function Start-FrontendProcess {
-    Start-Process `
+function Build-FrontendAssets {
+    $process = Start-Process `
         -FilePath $script:FrpFrontendConfig.NpmCommand `
-        -ArgumentList $script:FrpFrontendConfig.NpmArguments `
+        -ArgumentList $script:FrpFrontendConfig.BuildArguments `
+        -WorkingDirectory $script:FrpFrontendConfig.RepoRoot `
+        -WindowStyle Hidden `
+        -RedirectStandardOutput $script:FrpFrontendConfig.BuildOutputLog `
+        -RedirectStandardError $script:FrpFrontendConfig.BuildErrorLog `
+        -PassThru `
+        -Wait
+
+    if ($process.ExitCode -ne 0) {
+        throw "Blueprint static build failed with exit code $($process.ExitCode). See $($script:FrpFrontendConfig.BuildErrorLog)"
+    }
+}
+
+function Start-FrontendProcess {
+    Build-FrontendAssets
+    Start-Process `
+        -FilePath $script:FrpFrontendConfig.NodeCommand `
+        -ArgumentList $script:FrpFrontendConfig.NodeArguments `
         -WorkingDirectory $script:FrpFrontendConfig.RepoRoot `
         -WindowStyle Hidden `
         -RedirectStandardOutput $script:FrpFrontendConfig.OutputLog `
